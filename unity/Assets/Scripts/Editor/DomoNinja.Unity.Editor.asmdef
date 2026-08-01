@@ -1,0 +1,20 @@
+{
+  "name": "DomoNinja.Unity.Editor",
+  "rootNamespace": "DomoNinja.Unity.Editor",
+  "references": [
+    "DomoNinja.Core",
+    "DomoNinja.Unity",
+    "DomoNinja.Unity.UI"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
