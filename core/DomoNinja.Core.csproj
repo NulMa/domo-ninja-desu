@@ -23,6 +23,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      ⚠️ 버전을 13.0.2 로 고정한 것은 임의 선택이 아니다.
+         Unity 의 com.unity.nuget.newtonsoft-json 3.2.2 가 내장한 DLL 이 정확히 13.0.2 다
+         (FileVersion 확인). 여기서 다른 버전을 쓰면 같은 JSON 을 두 런타임이 다르게
+         해석할 여지가 생기고, 그건 "sim 결과 == 게임 결과"라는 전제를 흔든다.
+         Unity 패키지 버전을 올릴 때 이 줄도 같이 올린다.
+
+      ★ 이 참조가 없던 동안 위험한 비대칭이 있었다 —
+        Unity 는 Newtonsoft 를 auto-referenced DLL 로 이미 보고 있었으므로
+        JSON 파싱 코드를 짜면 Unity 에서는 컴파일되고 dotnet build 에서만 깨진다.
+        csproj 주석에 적어둔 가드는 그 반대 방향(dotnet OK / Unity 실패)만 막고 있었다.
+    -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Unity 가 이 폴더를 UPM 패키지로 읽는다. dotnet 컴파일 대상은 아니다. -->
     <None Include="package.json" />
     <None Include="DomoNinja.Core.asmdef" />
