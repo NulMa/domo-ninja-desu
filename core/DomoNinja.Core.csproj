@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    순수 C# 전투 코어. UnityEngine 을 참조하지 않는다.
+
+    netstandard2.1 로 고정한 이유:
+      Unity 6 의 API Compatibility Level 이 .NET Standard 2.1 이다.
+      여기서 빌드가 통과하면 Unity 에서도 컴파일된다는 뜻이 된다.
+      net9.0 으로 두면 dotnet 에서만 되고 Unity 에서 깨지는 코드가 통과해버린다.
+
+    ⚠️ 이 프로젝트는 두 곳에서 컴파일된다 — dotnet(sim/tests) 과 Unity(asmdef).
+       그래서 의존 방향 가드도 두 겹이다:
+         ① DomoNinja.Core.asmdef 의 noEngineReferences  -> Unity 쪽
+         ② CI 의 UnityEngine grep 검사                  -> dotnet 쪽
+       asmdef 는 dotnet 빌드에 관여하지 않으므로 ②를 뺄 수 없다. (19 §2.3)
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>DomoNinja.Core</AssemblyName>
+    <RootNamespace>DomoNinja.Core</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Unity 가 이 폴더를 UPM 패키지로 읽는다. dotnet 컴파일 대상은 아니다. -->
+    <None Include="package.json" />
+    <None Include="DomoNinja.Core.asmdef" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    헤드리스 시뮬레이터. params.json -> metrics.json 콘솔 앱.
+
+    ★ 이 프로젝트가 CLI 인 것이 /tune 을 Python 으로 분리할 수 있게 한 근거다. (D-49-a)
+      외부 최적화 루프는 이 바이너리를 호출만 하면 되므로 어떤 언어로 짜도 된다.
+      "베이지안 최적화는 쓸 만한 C# 라이브러리가 없어 불채택" 이라던 판단은
+      외부 루프를 C# 으로 짜야 한다는 전제 위에 있었고, 그 전제가 틀렸다. (17 §8)
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>DomoNinja.Sim</AssemblyName>
+    <RootNamespace>DomoNinja.Sim</RootNamespace>
+    <IsPackable>false</IsPackable>
+
+    <!--
+      문화권 무관 실행. 이걸 켜지 않으면 숫자 서식이 OS 로케일을 따라가
+      한국어 Windows 와 CI 리눅스 러너의 출력이 달라진다.
+      metrics.json 을 기계가 읽는 구조라 이건 조용히 터지는 종류의 문제다.
+    -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../core/DomoNinja.Core.csproj" />
+  </ItemGroup>
+
+</Project>

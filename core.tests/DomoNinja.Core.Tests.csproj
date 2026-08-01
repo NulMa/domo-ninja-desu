@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ⚠️ NUnit 을 3.x 로 고정한다. 4.x 가 아니다.
+
+    이 테스트는 두 곳에서 돈다 — dotnet test 와 Unity Test Framework.
+    UTF 가 NUnit 3 계열을 쓰므로, 여기서 4.x 를 쓰면 같은 소스를 공유할 수 없다.
+    "코어 테스트를 양쪽에서 같은 어셈블리로 돌린다"는 전제(14 §3.2 O4)가 깨지고,
+    Unity 쪽 테스트를 따로 짜게 되는 순간 두 벌이 갈라진다.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>DomoNinja.Core.Tests</AssemblyName>
+    <RootNamespace>DomoNinja.Core.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../core/DomoNinja.Core.csproj" />
+  </ItemGroup>
+
+</Project>

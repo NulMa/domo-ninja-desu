@@ -1,0 +1,11 @@
+{
+  "name": "com.domoninja.core",
+  "version": "0.1.0",
+  "displayName": "Domo Ninja Core",
+  "description": "순수 C# 전투 코어. UnityEngine 을 참조하지 않는다. Unity·sim·tune 이 같은 어셈블리를 공유해 시뮬 결과와 게임 결과가 갈라지지 않게 한다.",
+  "unity": "6000.0",
+  "author": {
+    "name": "domo-ninja-desu"
+  },
+  "hideInEditor": false
+}

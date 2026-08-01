@@ -55,6 +55,12 @@ crashlytics-build.properties
 
 # --- .NET (core / core.tests / sim) ---------------------------
 
+# Directory.Build.props 가 모든 빌드 산출물을 여기로 모은다.
+# ⚠️ core/ 안에 bin/ 이 생기면 Unity 가 그 DLL 을 플러그인으로 가져가
+#    asmdef 로 컴파일한 어셈블리와 중복 충돌한다. 출력 위치 분리가 그 방지책이고
+#    이 줄은 그 결과물을 커밋에서 막는 것이다.
+artifacts/
+
 [Bb]in/
 [Oo]bj/
 *.suo
