@@ -1,0 +1,114 @@
+# ============================================================
+#  domo-ninja-desu / NAN 2026 사전과제
+#  09_커밋_규약.md §7 — 저장소 위생
+#
+#  ⚠️ 이 파일은 첫 커밋에 반드시 포함돼야 한다.
+#     나중에 추가하면 이미 커밋된 파일의 정규화가 바뀌지 않아
+#     `git add --renormalize` 커밋이 따로 필요해지고, 그 커밋이
+#     전 파일 변경으로 잡혀 히스토리 가독성을 망친다.
+# ============================================================
+
+# --- 기본 정책 -----------------------------------------------
+#
+# eol=lf 를 명시한다. text=auto 만 두면 작업 트리 줄바꿈이
+# 각자의 core.autocrlf 설정에 좌우되는데, 2인이 Windows에서
+# 작업하므로 설정이 갈리는 순간 diff가 파일 전체로 부풀어
+# "누가 무엇을 바꿨는가"를 읽을 수 없게 된다.
+# 히스토리가 심사 대상인 저장소에서 이건 실질적 손해다.
+
+* text=auto eol=lf
+
+# --- Unity 자산 ----------------------------------------------
+#
+# Unity YAML(씬·프리팹·에셋)은 텍스트다. 병합 충돌을 사람이 읽을 수 있어야
+# 하므로 binary 로 두지 않는다. 단 줄바꿈은 LF 로 고정한다.
+
+*.unity          text eol=lf
+*.prefab         text eol=lf
+*.asset          text eol=lf
+*.mat            text eol=lf
+*.anim           text eol=lf
+*.controller     text eol=lf
+*.overrideController text eol=lf
+*.physicMaterial text eol=lf
+*.physicsMaterial2D  text eol=lf
+*.playable       text eol=lf
+*.mask           text eol=lf
+*.spriteatlas    text eol=lf
+*.terrainlayer   text eol=lf
+*.meta           text eol=lf
+*.inputactions   text eol=lf
+*.asmdef         text eol=lf
+*.asmref         text eol=lf
+*.uxml           text eol=lf
+*.uss            text eol=lf
+*.shader         text eol=lf
+*.shadergraph    text eol=lf
+*.hlsl           text eol=lf
+*.cginc          text eol=lf
+
+# --- 소스 · 설정 ---------------------------------------------
+
+*.cs             text eol=lf diff=csharp
+*.py             text eol=lf diff=python
+*.md             text eol=lf
+*.json           text eol=lf
+*.yml            text eol=lf
+*.yaml           text eol=lf
+*.csproj         text eol=lf
+*.sln            text eol=lf
+*.props          text eol=lf
+*.targets        text eol=lf
+*.txt            text eol=lf
+*.gitignore      text eol=lf
+*.gitattributes  text eol=lf
+
+# 배치/셸은 각 플랫폼 줄바꿈을 지켜야 실행된다
+*.sh             text eol=lf
+*.bat            text eol=crlf
+*.cmd            text eol=crlf
+*.ps1            text eol=crlf
+
+# --- 바이너리 -------------------------------------------------
+#
+# 여기 없는 확장자가 text=auto 로 잘못 정규화되면 파일이 깨진다.
+# 에셋을 추가할 때 확장자가 이 목록에 있는지 먼저 확인할 것.
+
+*.png            binary
+*.jpg            binary
+*.jpeg           binary
+*.gif            binary
+*.bmp            binary
+*.tga            binary
+*.tif            binary
+*.tiff           binary
+*.psd            binary
+*.ico            binary
+*.ogg            binary
+*.wav            binary
+*.mp3            binary
+*.aif            binary
+*.aiff           binary
+*.mp4            binary
+*.mov            binary
+*.ttf            binary
+*.otf            binary
+*.fbx            binary
+*.blend          binary
+*.obj            binary
+*.dll            binary
+*.so             binary
+*.dylib          binary
+*.pdf            binary
+*.zip            binary
+*.unitypackage   binary
+*.cubemap        binary
+
+# --- linguist (GitHub 언어 통계) ------------------------------
+#
+# 저장소 첫 화면의 언어 비율도 심사자가 보는 정보다.
+# 문서·데이터가 코드 비율을 가리지 않게 한다.
+
+docs/**          linguist-documentation
+data/**          linguist-generated=false
+*.md             linguist-documentation
