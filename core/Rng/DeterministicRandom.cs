@@ -1,3 +1,8 @@
+// Unity 는 Directory.Build.props 를 읽지 않는다 — asmdef 컴파일 경로가 다르다.
+// 그래서 nullable 문맥이 dotnet 쪽에만 켜지고 Unity 쪽에는 꺼진 채로 갈라졌고,
+// 실제로 WebGL 빌드에서 CS8632 로 드러났다. 파일마다 명시해 두 컴파일러를 맞춘다.
+#nullable enable
+
 using System;
 
 namespace DomoNinja.Core.Rng
