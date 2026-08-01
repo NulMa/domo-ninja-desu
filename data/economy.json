@@ -1,0 +1,199 @@
+{
+  "$schema": "./_schema/README.md",
+  "_note": "초기값. 시뮬레이터가 조정할 대상이지 확정값이 아니다.",
+  "_revision": "v0.5 — A트랙 확정 반영. 보드 8x6, HP 누적(A-6), 회복 3층 구조, 보조 스킬, 전투 파라미터 신설",
+
+  "run": {
+    "_desc": "★ D-68 — 스테이지 = 1런. 초기 화면에서 스테이지를 골라 들어가면 그게 한 런이다(A4 정의).",
+    "totalRounds": 8,
+    "lives": 3,
+    "_livesNote": "패배 시 생명 1 소모, 라운드는 계속 진행. 생명 0이면 즉시 종료.",
+    "allowRetreat": true,
+    "_retreatNote": "인게임 옵션의 '퇴각'. 런을 포기하고 나간다. 도달 라운드만큼 메타 재화는 받는다."
+  },
+
+  "stages": {
+    "_desc": "D-68 — 예선은 2스테이지. 스테이지 1 클리어 시 2가 열린다.",
+    "unlockRule": "clearPrevious",
+    "list": [
+      { "id": "S1", "rounds": 8, "encounterSet": "stage1", "unlockedByDefault": true },
+      { "id": "S2", "rounds": 8, "encounterSet": "stage2", "unlockedByDefault": false }
+    ],
+    "_whySameRounds": "스테이지 2를 12라운드로 늘리면 M5(1런 3~5분)가 즉시 깨진다. 난이도는 라운드 수가 아니라 적 구성으로 올린다.",
+    "_infinityMode": "⏸ 팀원 기획에 있으나 예선 범위 밖. 엔드컨텐츠로 보류."
+  },
+
+  "roster": {
+    "_desc": "★ 로스터 크기와 출전 수는 코드에 박지 않는다. 시뮬로 6/3과 6/4를 비교할 수 있게 파라미터로 둔다.",
+    "poolSize": 6,
+    "deployCount": 3
+  },
+
+  "board": {
+    "_desc": "A-3/Q3 확정: 진영별 4x6, 자기 진영 전 구역 배치 가능. 상대 진영에는 배치 불가.",
+    "perSide": { "cols": 4, "rows": 6 },
+    "facing": "horizontal",
+    "_layout": "전체 8x6. 아군 x=0..3 / 적 x=4..7 / y=0..5. 좌우 대치이므로 최대 접근 거리는 가로 7칸.",
+    "_why": "세로 대치(4x12)면 데스크톱 브라우저 가로 화면에서 위아래가 잘린다. 60초 영상 가독성 기준으로 좌우 대치를 택했다."
+  },
+
+  "combat": {
+    "_desc": "A-5 확정 수치. 전부 데이터. 서든데스는 매 초 적용이며 램프는 틱 기준이다.",
+    "timeoutTicks": 900,
+    "_timeoutNote": "45초. 임시값이며 M5(1런 3~5분)와 M7(타임아웃 도달률)로 역산해 조정한다.",
+    "suddenDeath": {
+      "appliesTo": "ally",
+      "_appliesToNote": "★ A1 확정 (2026-08-01) — 아군 한정. 팀원 논거는 '고스트덱 상대가 아군보다 약해 양측 적용하면 반드시 클리어된다'였다.",
+      "_premiseChanged": "⚠️ D-59로 고스트덱이 빠지면서 위 논거의 전제가 사라졌다. authored 후반 보스는 아군보다 훨씬 세다. → 논쟁하지 않고 ally / both 양쪽을 시뮬로 돌려 M3b가 나은 쪽을 고른다. 현재 값은 A1 확정대로 ally 유지. 06 D-64 참조.",
+      "_tunable": ["ally", "both"],
+      "applyEveryTicks": 20,
+      "rampTicks": 600,
+      "fixedDamagePermille": { "start": 10, "max": 300 },
+      "healReductionPermille": { "start": 500, "max": 1000 },
+      "_formula": "value(t) = start + (max - start) * min(t, rampTicks) / rampTicks  (정수 나눗셈, t = 서든데스 발동 후 경과 틱)",
+      "_verified": "매 초 기준 만피 유닛 사망까지 약 13.4초. 의도한 '20초 내 종료'와 일치."
+    },
+    "mutualAnnihilation": "playerLoss",
+    "_mutualAnnihilationNote": "D-54 확정 — 양측이 같은 틱에 전멸하면 플레이어 패배. 무승부를 만들면 M1(클리어율)·M2 집계에 3번째 상태가 생겨 지표가 지저분해진다. 그리고 타임아웃까지 간 시점에 이미 이기지 못한 것이다."
+  },
+
+  "currency": {
+    "_desc": "★ 런 전용 재화. 런 종료 시 전액 소멸하고 다음 런으로 이월되지 않는다. 안 쓰고 라운드를 넘길 수 있다(저축 전략).",
+    "onWin": 6,
+    "onLose": 3,
+    "startingAmount": 0,
+    "carryOver": false,
+    "_twoCurrencies": "★ v0.7 — 화폐가 둘이다. 이건 런 전용이고, 영구 강화용 metaCurrency 는 meta.json 에 따로 있다. 둘을 섞지 않는다 — 섞으면 '런 안에서 잘하기'와 '런을 반복하기'가 같은 자원을 두고 경쟁해 밸런스 해석이 불가능해진다.",
+    "_metaLink": "meta.json 의 M-GOLD 강화가 onWin 을 최대 +3 올린다. 즉 메타 진행도가 런 내부 빌드 완성도에 영향을 준다."
+  },
+
+  "healing": {
+    "_desc": "★ 회복 3층 구조. A-6(HP 누적·부활 없음) + Q6(잘 죽지 않게) 를 재화 경쟁을 늘리지 않고 만족시킨다.",
+    "_layers": [
+      "1층 — 라운드 승리 자동 회복. 재화를 쓰지 않는다. 기본 안전망이자 승리 보상",
+      "2층 — 상점 회복 아이템. 지정 캐릭터 즉시 회복. 긴급 수단",
+      "3층 — 전투 중 회복은 C6-B(가호)로만. A-5 회복량 감소 디버프의 유일한 대상"
+    ],
+    "_v06Change": "★ A3로 보조 스킬이 '메인 강화'가 되면서 3층에 있던 S1 재생이 갈 곳을 잃었다. 팀원이 '회복을 스킬로 가진 유닛이 존재한다'고 명시했으므로 C6-B 가호를 회복형으로 전환했다. 딜레마 축(팀 방향)은 오히려 선명해졌다 — 적을 깎을 것인가, 아군을 살릴 것인가.",
+    "_watch": "⚠️ 전투 중 회복이 C6-B 하나뿐이라 C6이 준필수 픽이 될 위험이 있다 → M3a(출전률 20~80%) 감시. 넘으면 1층 회복량을 올리거나 회복 아이템을 싸게 한다.",
+    "roundEnd": {
+      "healOnWinPermille": 400,
+      "healOnLosePermille": 0,
+      "reviveDead": false,
+      "_reviveNote": "★ A6 확정 (2026-08-01) — 부활 없음. 상점 부활 아이템도 없음. 팀원 논거: 회복 수단이 이중(스킬+아이템)으로 충분하고, 부활까지 주면 고난도가 성립하지 않는다. '체력 회복 == 전략'. 우리 제안(라운드 승리 시 부활)은 기각됐고 되돌리지 않는다.",
+      "_why": "패배 시 회복이 없어야 연패가 실제 위험이 되고 생명 3 시스템이 유명무실해지지 않는다."
+    },
+    "_deathIsPermanent": "사망 유닛은 런 종료까지 부활하지 않는다(A-6 확정). 그래서 1층 회복과 C6-B(전투 중 회복)가 중요해졌다."
+  },
+
+  "shop": {
+    "_desc": "★ D-69 (v0.9) — 5칸이고 자리가 고정된다. 팀원 원안(3x3=9칸, 상단 스킬3 + 하단 아이템6)에서 아이템 자리만 줄였다.",
+    "slots": { "skill": 3, "item": 2 },
+    "_whyFixedSlots": "한 풀에서 무작위 추출하면 '이번 라운드엔 스킬이 하나도 안 나옴'이 생기고 M6(첫 활성화 라운드)이 그 노이즈를 먹는다. 자리를 나누면 스킬은 매 라운드 반드시 3개 나오고, 무엇이 나올지만 랜덤이다.",
+    "_whySkill3": "출전이 3명이라 한 명당 한 자리가 기대값이 된다. 2칸이면 매 라운드 한 명은 기회가 없고, 4칸이면 저축 전략의 긴장이 사라진다.",
+    "rerollCost": 2,
+    "rerollLimit": null,
+    "_rerollNote": "횟수 무제한. 팀원 원안은 최대 3회였으나 '재화 2로 무제한도 가능' 확인받았다. 재화가 곧 제한이다.",
+
+    "sell": {
+      "_desc": "★ D-70 — 아이템만 판매 가능. 스킬은 팔 수 없다.",
+      "skillSellable": false,
+      "_whyNotSkill": "스킬을 팔 수 있으면 배타 규칙(08 §2.2)이 무너지고 빌드 공간 4,320 전수 탐색의 전제가 통째로 날아간다. 팀원 확인 완료.",
+      "itemSellable": true,
+      "refundPermille": 500,
+      "_refundNote": "구매가의 50%. 손해를 남겨야 남발하지 않는다. 환급률이 높으면 '일단 사고 되팔기'가 정답이 되어 선택의 무게가 사라진다 → M6로 감시."
+    },
+
+    "poolRule": [
+      "출전 3명의 미구매 액티브 스킬만 포함 (벤치 3명 것은 나오지 않는다)",
+      "배타 규칙으로 제거된 스킬은 런 종료까지 풀에서 빠진다",
+      "활성화한 스킬의 다음 단계 강화만 풀에 진입한다",
+      "아이템 4종(캐릭터 지정 / 전체 / 조건부 / 회복)은 상시 풀에 있다"
+    ],
+    "supportSkill": {
+      "_desc": "★ A3 확정 — 캐릭터별 3종, 그중 최대 2개 선택. 선택한 메인(액티브) 스킬을 강화한다. 오버워치 특전 개념.",
+      "scope": "character",
+      "poolPerCharacter": 3,
+      "maxSelectPerCharacter": 2,
+      "sharesShopSlots": true,
+      "requiresMainSkillActive": true,
+      "_requiresNote": "메인 액티브를 활성화한 뒤에야 그 캐릭터의 보조 3종이 풀에 진입한다. 강화할 대상이 없으면 살 수 없다.",
+      "_desc_D51": "D-51 확정 — 상점 슬롯은 4칸 그대로. 보조가 그 안에서 경쟁한다.",
+      "_verify": "M6(첫 활성화 라운드 분포)와 M3c(보조 채택률)로 검증한다.",
+      "_replacesUpgrades": "★ v0.6 — 기존 3단계 누적 강화(upgrades)를 폐기하고 이것으로 통합했다. A3가 '보조 = 메인 강화 패시브'라고 정의했으므로 두 시스템이 같은 것이다. 시스템이 하나 줄어 10일 일정에 유리하다."
+    }
+  },
+
+  "placement": {
+    "_desc": "D-53 확정 (2026-08-01).",
+    "perRound": true,
+    "enemyRevealedBeforePlacement": true,
+    "_why": "적을 보고 대응하는 쪽이 직관적이다. 심사자가 3분 안에 이해해야 한다는 게 이 게임의 제약이다.",
+    "_cost": "배치가 플레이어의 주된 판단이 되므로 D-46(시뮬은 표준 배치 규칙 사용)과의 간극이 커진다. → M4는 '표준 배치 하의 정확값'임을 더 분명히 표기한다.",
+    "ownSideOnly": true
+  },
+
+  "prices": {
+    "skillActivate": 5,
+    "supportSkill": [3, 5],
+    "_supportSkillNote": "★ v0.7 조정 — [4,6]에서 낮췄다. A3로 보조가 캐릭터별이 되면서 비용이 3배(3명 x 10 = 30)가 됐는데 _budgetCheck 가 v0.5 값(8)로 남아 있었다. 그대로 두면 핵심 빌드만 45라 아이템을 한 개도 못 산다.",
+    "statBoost": 3,
+    "teamBoost": 6,
+    "conditionalBoost": 4,
+    "healItem": 3
+  },
+
+  "items": {
+    "_desc": "A-10 4종. '직군' 은 Q5 답변으로 제거됐고 그 자리에 회복이 들어왔다.",
+    "_stacking": "★ 퍼센트 버프는 전부 더한 뒤 마지막에 한 번만 곱한다(합연산). 결정론·예측가능성·정수 연산에 모두 유리.",
+
+    "statBoost": {
+      "targetsSpecificCharacter": true,
+      "_desc": "캐릭터를 지정해서 구매.",
+      "options": [
+        { "stat": "attack", "value": 0.15, "isMultiplier": true },
+        { "stat": "hp", "value": 0.2, "isMultiplier": true },
+        { "stat": "attackInterval", "value": 0.9, "isMultiplier": true }
+      ],
+      "runOnly": true
+    },
+
+    "teamBoost": {
+      "targetsSpecificCharacter": false,
+      "_desc": "아군 전체. 가격을 2배로 둬서 기회비용을 만든다.",
+      "_tension": "'사면 무조건 이득' 이라 선택의 무게가 없다는 우려가 있다. 가격으로 방어하되 M4 로 감시한다. 지배 빌드가 전부 이걸 사면 제거 대상.",
+      "options": [
+        { "stat": "attack", "value": 0.1, "isMultiplier": true },
+        { "stat": "hp", "value": 0.12, "isMultiplier": true }
+      ],
+      "runOnly": true
+    },
+
+    "conditionalBoost": {
+      "targetsSpecificCharacter": true,
+      "_desc": "조건이 붙는 대신 배율이 크다. 빌드 방향에 따라 가치가 갈린다.",
+      "options": [
+        { "condition": "hp_below", "value": 0.5, "stat": "attack", "mult": 0.4 },
+        { "condition": "enemies_above", "value": 3, "stat": "attack", "mult": 0.3 },
+        { "condition": "is_last_alive", "stat": "damageTaken", "mult": -0.35 }
+      ],
+      "runOnly": true
+    },
+
+    "healItem": {
+      "targetsSpecificCharacter": true,
+      "_desc": "구매 즉시 발동. 소지·전투 중 사용은 없다 — A-8(개입 지점은 배치와 상점뿐)을 지키기 위함.",
+      "healPermille": 500,
+      "_note": "사망 유닛에는 쓸 수 없다. 부활 수단이 아니다."
+    }
+  },
+
+  "_budgetCheck": {
+    "_fixed": "★ v0.7 — v0.5 값이 그대로 남아 있던 것을 바로잡았다. A3(보조 캐릭터별) 반영 누락이었다.",
+    "maxEarnable": "8라운드 전승 시 6*8 = 48 (메타 M-GOLD 만렙이면 9*8 = 72)",
+    "coreBuild": "액티브 3명 x 5 = 15 + 보조 3명 x (3+5) = 24  →  합 39",
+    "remainder": "전승 시 9 / 6승2패(42)면 3 — 아이템 1~3개가 실제 경쟁에 들어온다",
+    "comment": "의도적으로 빠듯하게. 모든 걸 살 수 없어야 선택이 성립한다. 다만 '핵심 빌드조차 못 채우는' 상태는 선택이 아니라 고장이다.",
+    "_metaEffect": "메타 M-GOLD 를 올리면 여유가 늘어 아이템 축이 살아난다. 이게 메타 강화의 체감 포인트 중 하나다."
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "$schema": "./_schema/README.md",
+  "_note": "초기값. 시뮬레이터가 조정할 대상이지 확정값이 아니다.",
+  "_revision": "v0.7 신설 — 팀원 확인 결과 '스탯 성장'은 뱀파이어 서바이버즈식 메인메뉴 공용 스탯 강화(메타 프로그레션)였다. 기존 '런 한정, 이월 없음' 설계를 뒤집는다.",
+
+  "_concept": [
+    "런 사이에 남는 영구 재화로, 메인 메뉴에서 전 캐릭터 공용 스탯을 영구 강화한다.",
+    "캐릭터를 지정하지 않는다 — 로스터 6명 전원에게 동일하게 적용된다. 그래야 M3a(출전률)에 영향을 주지 않는다.",
+    "런 내부 성장(스킬 2택 · 보조 · 아이템)과 완전히 분리된 축이다. 두 축이 섞이면 밸런스 해석이 불가능해진다."
+  ],
+
+  "currency": {
+    "name": "metaCurrency",
+    "_desc": "런 재화(economy.currency)와 다른 화폐다. 상점에서 쓸 수 없고, 메타 강화에만 쓴다.",
+    "earnPerRoundCleared": 2,
+    "earnOnRunClear": 10,
+    "_earnNote": "패배해도 도달 라운드만큼은 받는다. 뱀서라이크의 핵심 — 실패한 런도 다음 런을 위한 진전이 된다.",
+    "_maxPerRun": "전승 시 8*2 + 10 = 26"
+  },
+
+  "upgrades": [
+    {
+      "id": "M-ATK", "name": "공격", "stat": "attack",
+      "maxLevel": 5, "valuePerLevel": 0.04,
+      "costs": [8, 14, 22, 32, 44],
+      "_desc": "레벨당 전 캐릭터 공격력 +4%. 최대 +20%"
+    },
+    {
+      "id": "M-HP", "name": "체력", "stat": "hp",
+      "maxLevel": 5, "valuePerLevel": 0.05,
+      "costs": [8, 14, 22, 32, 44],
+      "_desc": "레벨당 전 캐릭터 최대체력 +5%. 최대 +25%"
+    },
+    {
+      "id": "M-HASTE", "name": "공속", "stat": "attackInterval",
+      "maxLevel": 4, "valuePerLevel": -0.03,
+      "costs": [12, 20, 30, 42],
+      "_desc": "레벨당 공격 간격 -3%. 최대 -12%"
+    },
+    {
+      "id": "M-MOVE", "name": "기동", "stat": "moveInterval",
+      "maxLevel": 3, "valuePerLevel": -0.05,
+      "costs": [10, 18, 28],
+      "_desc": "레벨당 이동 간격 -5%. 최대 -15%"
+    },
+    {
+      "id": "M-HEAL", "name": "회복", "stat": "roundEndHealPermille",
+      "maxLevel": 4, "valuePerLevel": 50,
+      "costs": [10, 16, 24, 34],
+      "_desc": "라운드 승리 회복량 +5%p. 최대 +20%p (기본 40% → 60%)"
+    },
+    {
+      "id": "M-GOLD", "name": "재화", "stat": "currencyOnWin",
+      "maxLevel": 3, "valuePerLevel": 1,
+      "costs": [14, 24, 36],
+      "_desc": "라운드 승리 보상 +1. 최대 +3 — 런 내부 빌드를 더 완성할 수 있게 된다"
+    }
+  ],
+
+  "_totalCost": "전 항목 만렙 = 558 (검증됨)",
+  "_runsToMax": "런당 최대 26 → 전승만 하면 22런. 실제로는 패배가 섞여 35~50런. 뱀서라이크와 같은 규모감이다.",
+
+  "_stacking": "메타 강화도 합연산(_schema §8)에 참여한다. 런 내부 아이템 버프와 전부 더한 뒤 마지막에 한 번만 곱한다.",
+
+  "persistence": {
+    "storage": "localStorage",
+    "keys": ["metaCurrency", "upgradeLevels", "unlockedStages"],
+    "_unlockedStagesNote": "★ D-68 — 스테이지 언락 상태. 초기값 [\"S1\"], 스테이지 1 클리어 시 \"S2\" 추가. 이것도 정수/문자열 배열이라 직렬화가 사소하다.",
+    "_desc": "★ 저장 대상은 이 셋뿐이다. 런 진행 상태는 저장하지 않는다(D-56 유지).",
+    "_why": "메타 강화 진행도는 정수 배열 몇 개라 직렬화가 사소하다. 반면 런 상태 전체(시드 스트림 위치·상점 풀·배타 제거 목록·HP 누적)는 결정론 부담이 크다. 경계를 여기에 긋는다.",
+    "resetAllowed": true,
+    "_resetNote": "초기화 버튼을 둔다. 심사자가 '강화 없는 상태'와 '강화된 상태'를 둘 다 볼 수 있어야 한다."
+  },
+
+  "_simulationPolicy": {
+    "_desc": "★ 메타 강화는 빌드 공간에 곱하지 않는다. D-46(배치 제외)과 같은 논리다.",
+    "fixedPoints": [
+      { "id": "meta0",   "label": "신규 플레이어", "allLevels": 0,        "stages": ["S1"] },
+      { "id": "meta50",  "label": "중간 진행",     "allLevelsRatio": 0.5, "stages": ["S1", "S2"] },
+      { "id": "metaMax", "label": "만렙",          "allLevelsRatio": 1.0, "stages": ["S1", "S2"] }
+    ],
+    "_why": "메타 강화를 탐색 축에 넣으면 조합이 6*5*5*4*3*4*3 규모로 폭발한다. 대신 세 지점에서 각각 4,320 빌드를 전수 탐색한다.",
+    "_stageNote": "★ D-68 — meta0 에서는 S2 를 측정하지 않는다. 스테이지 2는 1을 클리어해야 열리므로 '강화 0 상태로 S2를 도는' 조합은 실제로 존재하지 않는다. 측정점 6개 → 5개.",
+    "_cost": "4,320 x 5 측정점 = 21,600 빌드-세트. CI 예산은 D-13 기준 여유가 50배라 감당된다",
+    "_metric": "M1(클리어율)이 (메타 진행도 x 스테이지) 조합별 값이 된다 — 08 §6.2 참조"
+  }
+}

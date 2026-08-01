@@ -1,0 +1,297 @@
+{
+  "$schema": "./_schema/README.md",
+  "_note": "초기값. 시뮬레이터가 조정할 대상이지 확정값이 아니다.",
+  "_revision": "v0.8 — 역할 배분 재설계. 메인 12개에 역할(퓨어딜러/브루저/탱커/힐러/디버퍼)을 배분하고, 보조 18개를 P1 공격 / P2 생존 / P3 팀 기여 3자리 문법으로 통일했다.",
+  "_rules": [
+    "모든 스킬은 얻는 것(gain)과 버리는 것(cost)을 반드시 갖는다. 한쪽이 그냥 좋은 스킬은 M3b 위반이다.",
+    "tags는 손으로 쓰지 않고 effects에서 자동 생성한다. 아래 값은 검증용 기대치다.",
+    "★ 액티브/패시브를 구분하는 별도 필드를 두지 않는다. 주기 발동이 필요하면 conditional/every_n_tick 으로 쓴다.",
+    "★ 강화는 보조 스킬 하나로 통합된다. upgrades(3단계 누적)는 v0.6에서 폐기했다."
+  ],
+
+  "_roleDesign": [
+    "★ 역할은 캐릭터가 아니라 「메인 2택」에 붙는다.",
+    "캐릭터에 역할을 박으면 6개 역할이 생기지만, 2택에 붙이면 12개 역할 슬롯이 생긴다.",
+    "팀원 Q4 보충과 같은 의도다 — '탱커로 설계된 캐릭이 어나더 스킬 선택 시 딜러로 전환'.",
+    "분포: 퓨어딜러 4 / 브루저 3 / 탱커 1 / 힐러 2 / 디버퍼 2",
+    "★ 브루저를 3개 둔 게 핵심이다. 브루저는 딜과 탱을 겸하므로 늘려도 '딜이 안 나오는 조합'이 생기지 않는다.",
+    "순수 탱커를 늘리면 그 문제가 즉시 터진다 — D-44(어떤 3명 조합이든 성립)."
+  ],
+
+  "_supportSkillsDesc": [
+    "★ 캐릭터별 3종, 그중 최대 2개 선택. 선택한 메인(액티브) 스킬을 강화한다. 오버워치 특전 개념.",
+    "★ v0.8 — 전 캐릭터가 같은 3자리 문법을 쓴다:",
+    "   P1 = 공격 강화 (위력 / 속도 / 사거리)",
+    "   P2 = 생존 강화 (보호막 / 피해감소 / 체력)",
+    "   P3 = 팀 기여   (회복 / 버프 / 어그로)",
+    "→ 캐릭터당 최대 2개이므로 공+생 / 공+팀 / 생+팀 세 갈래가 된다.",
+    "→ 6명 전원이 탱 옵션과 힐 옵션을 하나씩 갖는다. 탱힐이 0인 3인 조합이 사라진다.",
+    "가상 스탯 skillPower 를 경유하므로 메인 A/B 어느 쪽을 골랐든 같은 3종이 등장한다.",
+    "⚠️ P1(공격)이 항상 정답이 될 위험이 있다 → M3c 로 감시하고 딜 수치·적 수치로 조정한다."
+  ],
+
+  "skills": [
+    {
+      "id": "C1-A", "character": "C1", "name": "일격", "role": "퓨어딜러",
+      "effects": [
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 1.5 },
+        { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 1.4 },
+        { "template": "conditional", "trigger": { "type": "on_kill" }, "effect": { "template": "extra_attack", "count": 1 } }
+      ],
+      "text": { "gain": "공격력 50% 증가, 적 처치 시 즉시 재공격", "cost": "공격 속도 40% 감소" },
+      "tags": ["#단일", "#처치시"]
+    },
+    {
+      "id": "C1-B", "character": "C1", "name": "연격", "role": "브루저",
+      "_v08": "광역 딜러 → 브루저. 여러 대상을 때리는 구조라 흡혈이 자연스럽게 붙는다.",
+      "effects": [
+        { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 0.6 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.65 },
+        { "template": "aoe", "scope": "adjacent", "value": 0.5 },
+        { "template": "conditional", "trigger": { "type": "on_hit" }, "effect": { "template": "heal", "target": "self", "fromDamagePermille": 150 } }
+      ],
+      "text": { "gain": "공속 40% 증가, 인접 대상에 50% 파급, 가한 피해의 15% 흡혈", "cost": "공격력 35% 감소" },
+      "tags": ["#광역", "#공속", "#흡혈"]
+    },
+
+    {
+      "id": "C2-A", "character": "C2", "name": "철벽", "role": "탱커",
+      "_v08": "★ 유일한 순수 탱커. 보호막 수급 + 어그로로 적을 끌어당긴다.",
+      "effects": [
+        { "template": "stat_mult", "target": "self", "stat": "damageTaken", "value": 0.6 },
+        { "template": "status", "target": "self", "kind": "taunt", "threatMult": 3.0 },
+        { "template": "conditional", "trigger": { "type": "on_damaged" }, "effect": { "template": "status", "target": "self", "kind": "shield", "gainPermille": 60, "maxPermille": 400 } },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.65 }
+      ],
+      "text": { "gain": "받는 피해 40% 감소, 적이 자신을 우선 노림, 피격할 때마다 보호막 획득", "cost": "공격력 35% 감소" },
+      "tags": ["#방어", "#어그로", "#보호막"]
+    },
+    {
+      "id": "C2-B", "character": "C2", "name": "파동", "role": "브루저",
+      "effects": [
+        { "template": "aoe", "scope": "all_enemies", "damageSource": "maxHp", "value": 0.12 },
+        { "template": "conditional", "trigger": { "type": "every_n_tick", "value": 60 }, "effect": { "template": "self_damage", "value": 0.08 } }
+      ],
+      "text": { "gain": "3초마다 최대 체력 12%의 전체 광역 공격", "cost": "발동마다 자신의 체력 8% 소모" },
+      "tags": ["#광역", "#주기", "#체력소모"]
+    },
+
+    {
+      "id": "C3-A", "character": "C3", "name": "그림자", "role": "브루저",
+      "_v08": "회피형 브루저. 보호막이 가득 차면 초과분이 체력으로 전환된다 — 체력 90으로 가장 약한 캐릭터에게 '안 맞으면 단단해진다'를 준다.",
+      "effects": [
+        { "template": "status", "target": "self", "kind": "invulnerable_first_hit" },
+        { "template": "conditional", "trigger": { "type": "on_dodge" }, "effect": { "template": "status", "target": "self", "kind": "shield", "gainPermille": 80, "maxPermille": 350, "overflowToHp": true } },
+        { "template": "stat_mult", "target": "self", "stat": "hp", "value": 0.8 }
+      ],
+      "text": { "gain": "첫 피격 무효, 회피할 때마다 보호막 획득 — 가득 차면 체력으로 전환", "cost": "최대 체력 20% 감소" },
+      "tags": ["#회피", "#보호막"]
+    },
+    {
+      "id": "C3-B", "character": "C3", "name": "표창", "role": "디버퍼",
+      "_v08": "원거리화 + 견제. 사거리를 얻는 대신 딜이 낮아지므로 둔화로 팀에 기여한다.",
+      "effects": [
+        { "template": "targeting", "setRange": 4 },
+        { "template": "conditional", "trigger": { "type": "on_hit" }, "effect": { "template": "status", "target": "enemy", "kind": "slow", "moveIntervalMult": 1.35, "duration": 60 } },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.7 }
+      ],
+      "text": { "gain": "사거리 1 → 4, 적중한 적을 둔화", "cost": "공격력 30% 감소" },
+      "tags": ["#사거리", "#디버프"]
+    },
+
+    {
+      "id": "C4-A", "character": "C4", "name": "저격", "role": "퓨어딜러",
+      "effects": [
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 1.8 },
+        { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 1.5 },
+        { "template": "targeting", "priority": "farthest", "setRange": 7 }
+      ],
+      "text": { "gain": "공격력 80% 증가, 사거리 7로 가장 먼 적을 노린다", "cost": "공격 속도 50% 감소" },
+      "tags": ["#단일", "#사거리"]
+    },
+    {
+      "id": "C4-B", "character": "C4", "name": "난사", "role": "퓨어딜러",
+      "effects": [
+        { "template": "aoe", "scope": "multi_target", "targetCount": 3 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.5 }
+      ],
+      "text": { "gain": "동시에 최대 3체를 공격", "cost": "표적당 위력 50% 감소" },
+      "tags": ["#광역", "#다중표적"]
+    },
+
+    {
+      "id": "C5-A", "character": "C5", "name": "각인", "role": "퓨어딜러",
+      "_watch": "★ A1(서든데스 아군 한정)으로 장기전 축이 불리하다. M3b 최우선 감시. 06 D-61.",
+      "effects": [
+        { "template": "status", "target": "enemy", "kind": "dot_ramping", "baseValue": 6, "rampPerTick": 0.4, "duration": 200 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.65 }
+      ],
+      "text": { "gain": "대상에 각인 부여 — 시간이 지날수록 피해가 증가", "cost": "즉발 공격력 35% 감소" },
+      "tags": ["#지속딜", "#장기전"]
+    },
+    {
+      "id": "C5-B", "character": "C5", "name": "연쇄", "role": "힐러",
+      "_v08": "★ 처치 연동 힐러. 축(장기전 ↔ 웨이브)의 웨이브 쪽에 회복이 붙어 '쓸어담으면 팀이 산다'가 된다.",
+      "effects": [
+        { "template": "conditional", "trigger": { "type": "on_kill" }, "effect": { "template": "recast", "maxChain": 3 } },
+        { "template": "conditional", "trigger": { "type": "on_kill" }, "effect": { "template": "heal", "target": "allies", "permille": 60 } },
+        { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 1.35 }
+      ],
+      "text": { "gain": "처치 시 다음 대상에 재발동(최대 3연쇄), 처치할 때마다 아군 전체 6% 회복", "cost": "공격 속도 35% 감소" },
+      "tags": ["#처치시", "#회복"]
+    },
+
+    {
+      "id": "C6-A", "character": "C6", "name": "주술", "role": "디버퍼",
+      "effects": [
+        { "template": "status", "target": "all_enemies", "kind": "weaken", "attackMult": 0.85, "damageTakenMult": 1.15 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.7 }
+      ],
+      "text": { "gain": "적 전체의 공격력 15% 감소, 받는 피해 15% 증가", "cost": "자신의 공격력 30% 감소" },
+      "tags": ["#디버프", "#전체"]
+    },
+    {
+      "id": "C6-B", "character": "C6", "name": "가호", "role": "힐러",
+      "effects": [
+        { "template": "status", "target": "allies_except_self", "kind": "regen", "healPermille": 30, "everyTicks": 20 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.7 }
+      ],
+      "text": { "gain": "자신을 제외한 아군이 매 초 최대 체력의 3% 회복", "cost": "자신의 공격력 30% 감소" },
+      "tags": ["#회복", "#전체"]
+    }
+  ],
+
+  "supportSkills": [
+    { "id": "C1-P1", "character": "C1", "name": "극", "slot": "공격",
+      "effects": [
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 1.5 },
+        { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 1.15 }
+      ],
+      "text": { "gain": "선택한 스킬의 위력 50% 증가", "cost": "공격 속도 15% 감소" },
+      "tags": ["#위력"] },
+    { "id": "C1-P2", "character": "C1", "name": "불굴", "slot": "생존",
+      "effects": [
+        { "template": "conditional", "trigger": { "type": "on_damaged" }, "effect": { "template": "status", "target": "self", "kind": "shield", "gainPermille": 40, "maxPermille": 250 } },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.9 }
+      ],
+      "text": { "gain": "피격할 때마다 보호막 획득 (최대 체력의 25%까지)", "cost": "공격력 10% 감소" },
+      "tags": ["#보호막"] },
+    { "id": "C1-P3", "character": "C1", "name": "호령", "slot": "팀",
+      "effects": [
+        { "template": "status", "target": "self", "kind": "taunt", "threatMult": 2.0 },
+        { "template": "stat_mult", "target": "allies_except_self", "stat": "damageTaken", "value": 0.88 }
+      ],
+      "text": { "gain": "적이 자신을 우선 노리고, 다른 아군이 받는 피해 12% 감소", "cost": "자신이 표적이 된다" },
+      "tags": ["#어그로", "#전체"] },
+
+    { "id": "C2-P1", "character": "C2", "name": "소신", "slot": "공격",
+      "effects": [
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 1.6 },
+        { "template": "conditional", "trigger": { "type": "every_n_tick", "value": 20 }, "effect": { "template": "self_damage", "value": 0.01 } }
+      ],
+      "text": { "gain": "선택한 스킬의 위력 60% 증가", "cost": "매 초 자신의 체력 1% 소모" },
+      "tags": ["#위력", "#체력소모"] },
+    { "id": "C2-P2", "character": "C2", "name": "금강", "slot": "생존",
+      "effects": [
+        { "template": "stat_mult", "target": "self", "stat": "damageTaken", "value": 0.78 },
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 0.9 }
+      ],
+      "text": { "gain": "받는 피해 22% 감소", "cost": "선택한 스킬의 위력 10% 감소" },
+      "tags": ["#방어"] },
+    { "id": "C2-P3", "character": "C2", "name": "자애", "slot": "팀",
+      "effects": [
+        { "template": "conditional", "trigger": { "type": "on_damaged" }, "effect": { "template": "heal", "target": "lowestHpAlly", "fromDamagePermille": 250 } },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.85 }
+      ],
+      "text": { "gain": "피격당한 피해의 25%만큼 체력이 가장 낮은 아군을 회복", "cost": "공격력 15% 감소" },
+      "tags": ["#회복", "#피격시"] },
+
+    { "id": "C3-P1", "character": "C3", "name": "비도", "slot": "공격",
+      "effects": [
+        { "template": "targeting", "rangeBonus": 2 },
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 0.85 }
+      ],
+      "text": { "gain": "사거리 +2", "cost": "선택한 스킬의 위력 15% 감소" },
+      "tags": ["#사거리"] },
+    { "id": "C3-P2", "character": "C3", "name": "잔영", "slot": "생존",
+      "effects": [
+        { "template": "status", "target": "self", "kind": "shield", "gainPermille": 300, "maxPermille": 300, "overflowToHp": true, "refreshEveryTicks": 200 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.88 }
+      ],
+      "text": { "gain": "10초마다 최대 체력 30%의 보호막 — 가득 차면 체력으로 전환", "cost": "공격력 12% 감소" },
+      "tags": ["#보호막", "#주기"] },
+    { "id": "C3-P3", "character": "C3", "name": "연막", "slot": "팀",
+      "effects": [
+        { "template": "status", "target": "allies", "kind": "invulnerable_first_hit" },
+        { "template": "stat_mult", "target": "self", "stat": "hp", "value": 0.85 }
+      ],
+      "text": { "gain": "아군 전체가 첫 피격을 무효화", "cost": "자신의 최대 체력 15% 감소" },
+      "tags": ["#회피", "#전체"] },
+
+    { "id": "C4-P1", "character": "C4", "name": "관통", "slot": "공격",
+      "effects": [
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 1.5 },
+        { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 1.15 }
+      ],
+      "text": { "gain": "선택한 스킬의 위력 50% 증가", "cost": "공격 속도 15% 감소" },
+      "tags": ["#위력"] },
+    { "id": "C4-P2", "character": "C4", "name": "참호", "slot": "생존",
+      "effects": [
+        { "template": "status", "target": "self", "kind": "shield", "gainPermille": 200, "maxPermille": 200, "whileStationary": true },
+        { "template": "stat_mult", "target": "self", "stat": "moveInterval", "value": 1.4 }
+      ],
+      "text": { "gain": "제자리에 있는 동안 최대 체력 20%의 보호막 유지", "cost": "이동 속도 40% 감소" },
+      "tags": ["#보호막"] },
+    { "id": "C4-P3", "character": "C4", "name": "표식", "slot": "팀",
+      "effects": [
+        { "template": "conditional", "trigger": { "type": "on_hit" }, "effect": { "template": "status", "target": "enemy", "kind": "weaken", "damageTakenMult": 1.2, "duration": 80 } },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.85 }
+      ],
+      "text": { "gain": "자신이 때린 적은 받는 피해 20% 증가 (아군 전체가 이득)", "cost": "공격력 15% 감소" },
+      "tags": ["#디버프", "#전체"] },
+
+    { "id": "C5-P1", "character": "C5", "name": "심화", "slot": "공격",
+      "effects": [
+        { "template": "status", "target": "enemy", "kind": "dot_ramping", "rampMult": 1.5 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.85 }
+      ],
+      "text": { "gain": "지속 효과의 증가 속도 50% 상승", "cost": "즉발 공격력 15% 감소" },
+      "tags": ["#지속딜", "#장기전"] },
+    { "id": "C5-P2", "character": "C5", "name": "결계", "slot": "생존",
+      "effects": [
+        { "template": "status", "target": "self", "kind": "shield", "gainPermille": 350, "maxPermille": 350, "overflowToHp": true, "refreshEveryTicks": 240 },
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 0.85 }
+      ],
+      "text": { "gain": "12초마다 최대 체력 35%의 보호막 — 가득 차면 체력으로 전환", "cost": "선택한 스킬의 위력 15% 감소" },
+      "tags": ["#보호막", "#주기"] },
+    { "id": "C5-P3", "character": "C5", "name": "흡정", "slot": "팀",
+      "effects": [
+        { "template": "conditional", "trigger": { "type": "on_hit" }, "effect": { "template": "heal", "target": "lowestHpAlly", "fromDamagePermille": 200 } },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.85 }
+      ],
+      "text": { "gain": "가한 피해의 20%만큼 체력이 가장 낮은 아군을 회복", "cost": "공격력 15% 감소" },
+      "tags": ["#회복"] },
+
+    { "id": "C6-P1", "character": "C6", "name": "공명", "slot": "공격",
+      "effects": [
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 1.5 },
+        { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.8 }
+      ],
+      "text": { "gain": "선택한 스킬의 효과 50% 증가", "cost": "자신의 공격력 20% 감소" },
+      "tags": ["#위력", "#전체"] },
+    { "id": "C6-P2", "character": "C6", "name": "정심", "slot": "생존",
+      "effects": [
+        { "template": "stat_mult", "target": "self", "stat": "damageTaken", "value": 0.75 },
+        { "template": "stat_mult", "target": "mainSkill", "stat": "skillPower", "value": 0.85 }
+      ],
+      "text": { "gain": "받는 피해 25% 감소", "cost": "선택한 스킬의 효과 15% 감소" },
+      "tags": ["#방어"] },
+    { "id": "C6-P3", "character": "C6", "name": "광명", "slot": "팀",
+      "effects": [
+        { "template": "status", "target": "allies", "kind": "shield", "gainPermille": 150, "maxPermille": 150, "refreshEveryTicks": 200 },
+        { "template": "stat_mult", "target": "self", "stat": "damageTaken", "value": 1.25 }
+      ],
+      "text": { "gain": "10초마다 아군 전체에게 최대 체력 15%의 보호막", "cost": "자신이 받는 피해 25% 증가" },
+      "tags": ["#보호막", "#전체"] }
+  ]
+}
