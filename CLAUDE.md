@@ -116,6 +116,8 @@ NHN 채용 연계형 해커톤 **NAN 2026 (Next AI Network 2026)** 의 사전과
 | `docs/19_구현계획.md` | **★ 구현 단계·파일 구조·asmdef 기준·분담·핸드오프·체크리스트(§6). 작업 시작 전 여기부터** |
 | `docs/20_기여기록.md` | **제출물 ⑤ 원자료. 누가 무엇을 했는지 그날 적는다** |
 | `docs/21_트러블슈팅.md` | 해결된 환경 문제 + **원인이 아니었던 것**. Unity MCP·Python·GitHub·gitignore |
+| `docs/22_팀원_세팅.md` | **팀원이 저장소 받아 AI 세팅하는 절차.** git config·Unity·MCP 승인·작업 규칙 |
+| `docs/commit-highlights.md` | **제출물 ④ 5.2 대표 커밋 후보. 인용 가치가 생기면 그 자리에서 적는다** |
 | `docs/submit/` | **PDF 3종의 원본 `.md` + 운영 규칙. D+7~9에 채운다** |
 | `docs/ai-log/README.md` | **AI 지시 원문 아카이브 규약(`D-05`). 작업할 때마다 여기 기록** |
 | `data/_schema/README.md` | core/sim/unity 공유 데이터 계약. 구현 착수 시 필독 |
