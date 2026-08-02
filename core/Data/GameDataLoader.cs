@@ -181,7 +181,8 @@ namespace DomoNinja.Core.Data
                     (string?)text?["gain"],
                     (string?)text?["cost"],
                     o["effects"] as JArray ?? new JArray(),
-                    tags));
+                    tags,
+                    (string?)o["icon"]));
             }
 
             return list;
@@ -526,6 +527,44 @@ namespace DomoNinja.Core.Data
             if (economy.BoardCols * 2 != Coord.BoardWidth || economy.BoardRows != Coord.BoardHeight)
                 e.Add(new ValidationError("R21", "economy.json",
                     $"보드 크기가 코드 상수와 다르다 — json {economy.BoardCols * 2}x{economy.BoardRows} / Coord {Coord.BoardWidth}x{Coord.BoardHeight}"));
+
+            ValidateIcons(e, characters, active, support);
+        }
+
+        /// <summary>
+        /// `R22`(추가) — <c>icon</c> 이 있으면 경로 규약과 일치해야 한다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>없는 것은 통과시킨다.</b> 아이콘은 아트 작업과 함께 들어오므로 아직 비어 있는 게 정상이다.
+        /// 여기서 필수로 걸면 아직 그림이 없는 스킬 때문에 로드 자체가 막히고,
+        /// 그러면 아이콘이 다 나올 때까지 시뮬을 못 돌린다.
+        ///
+        /// 형식이 아니라 <b>값 자체를 대조</b>하는 이유 — 경로가 <c>id</c> 와 <c>name</c> 을 중복해서 담기 때문에
+        /// 이름을 바꾸고 파일명을 안 바꾸면 <b>아이콘만 조용히 안 뜬다.</b>
+        /// 정규식으로 모양만 보면 그 어긋남을 못 잡는다. 기대 경로를 직접 만들어 비교한다.
+        /// </remarks>
+        private static void ValidateIcons(List<ValidationError> e, List<CharacterDef> characters,
+                                          List<SkillDef> active, List<SkillDef> support)
+        {
+            foreach (var skill in Concat(active, support))
+            {
+                if (skill.Icon == null) continue;
+
+                CharacterDef? owner = null;
+                foreach (var c in characters) if (c.Id == skill.CharacterId) { owner = c; break; }
+                if (owner == null) continue;   // R18 이 이미 잡는다
+
+                // characters.json 의 "Actor/Character/Samurai" 에서 마지막 조각만 쓴다.
+                string folder = owner.Sprite;
+                int slash = folder.LastIndexOf('/');
+                if (slash >= 0) folder = folder.Substring(slash + 1);
+
+                string expected = $"Skill/{folder}/{(skill.IsSupport ? "Support" : "Main")}/{skill.Id}_{skill.Name}";
+
+                if (skill.Icon != expected)
+                    e.Add(new ValidationError("R22", $"skills.json {skill.Id}",
+                        $"icon 이 규약과 다르다 — 기대 `{expected}` / 실제 `{skill.Icon}`"));
+            }
         }
 
         /// <summary>효과 하나를 검사한다. `conditional` 안에 중첩된 효과까지 재귀로 내려간다.</summary>

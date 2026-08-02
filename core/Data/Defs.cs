@@ -84,17 +84,37 @@ namespace DomoNinja.Core.Data
         public string? TextGain { get; }
         public string? TextCost { get; }
 
+        /// <summary>
+        /// 아이콘 경로. <c>Skill/{캐릭터폴더}/{Main|Support}/{id}_{이름}</c> — 접두사·확장자 없음.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="CharacterDef.Sprite"/> 와 같은 규칙이다. 아직 없을 수 있어서 nullable 이다.
+        ///
+        /// ★ 경로가 <see cref="Id"/> 와 <see cref="Name"/> 을 <b>중복해서 담는다.</b>
+        /// 그래서 이름을 바꾸면 파일도 같이 바꿔야 하고, 안 바꾸면 <b>아이콘만 조용히 안 뜬다</b> —
+        /// 컴파일도 로드도 안 걸린다. 검증 규칙 <c>R22</c> 가 그 어긋남을 로드 시점으로 당긴다.
+        ///
+        /// 파생 가능한데도 필드로 두는 이유 — 아이콘을 공유하거나 이름과 다른 파일명을 써야 하는
+        /// 예외가 아트 쪽에서 나올 수 있다. <b>명시하되 검증하는</b> 쪽이 계산해서 없애는 쪽보다 낫다.
+        /// </remarks>
+        public string? Icon { get; }
+
         public JArray Effects { get; }
 
         /// <summary>⚠️ <b>표시에 쓰지 않는다.</b> `_schema` §5 — 런타임 태그는 effects 에서 파생한다. 이 값은 검증용 기대치다.</summary>
         public IReadOnlyList<string> DeclaredTags { get; }
 
         public SkillDef(string id, string characterId, string name, string? role, string? slot,
-                        string? textGain, string? textCost, JArray effects, IReadOnlyList<string> declaredTags)
+                        string? textGain, string? textCost, JArray effects, IReadOnlyList<string> declaredTags,
+                        string? icon = null)
         {
             Id = id; CharacterId = characterId; Name = name; Role = role; Slot = slot;
             TextGain = textGain; TextCost = textCost; Effects = effects; DeclaredTags = declaredTags;
+            Icon = icon;
         }
+
+        /// <summary>보조 스킬인가. <see cref="Slot"/> 을 갖는 쪽이 보조다.</summary>
+        public bool IsSupport => Slot != null;
 
         public override string ToString() => $"{Id}({Name})";
     }
