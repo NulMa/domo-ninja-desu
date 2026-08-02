@@ -1,0 +1,138 @@
+{
+  "_note": "D-68 스테이지2 관문 저작. 스테이지1(rounds)과 별도 파일로 둠 — core 로더가 아직 다중 스테이지를 모르므로 로딩 연결은 T1과 별도 조율 필요",
+  "_statNote": "enemyTypes는 스테이지 공용 테이블이라 개별 스탯을 못 올림. 그래서 난이도는 전부 개체 조합·수량으로만 올렸음 (스펙 원칙과 일치)",
+  "_totemNote": "totem은 이번 커브에 넣지 않음 — R6가 완화 구간이라 신규 기믹 도입 타이밍이 아니라고 판단. 배치 여부는 별도 결정 필요",
+  "stage": 2,
+  "rounds": [
+    {
+      "round": 1,
+      "axisTested": "스테이지2 진입. 강화된 개체로 규칙 재확인",
+      "variants": [
+        { "id": "S2R1", "units": [
+          { "type": "kappa",    "x": 4, "y": 2 },
+          { "type": "mushroom", "x": 4, "y": 3 }
+        ]}
+      ]
+    },
+    {
+      "round": 2,
+      "axisTested": "거리 개념 재확인 (강화판)",
+      "variants": [
+        { "id": "S2R2", "units": [
+          { "type": "kappa",   "x": 4, "y": 2 },
+          { "type": "reptile", "x": 4, "y": 3 },
+          { "type": "lantern", "x": 6, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 3,
+      "axisTested": "배치수 증가. 범위 피해 유리 (강화판)",
+      "variants": [
+        { "id": "S2R3a", "units": [
+          { "type": "bat",    "x": 4, "y": 1 },
+          { "type": "bat",    "x": 4, "y": 2 },
+          { "type": "kappa",  "x": 4, "y": 4 },
+          { "type": "bat",    "x": 6, "y": 2 },
+          { "type": "kappa",  "x": 6, "y": 3 }
+        ]},
+        { "id": "S2R3b", "units": [
+          { "type": "kappa", "x": 4, "y": 1 },
+          { "type": "kappa", "x": 4, "y": 2 },
+          { "type": "kappa", "x": 4, "y": 4 },
+          { "type": "bat",   "x": 6, "y": 2 },
+          { "type": "bat",   "x": 6, "y": 3 }
+        ]}
+      ]
+    },
+    {
+      "round": 4,
+      "axisTested": "적은 배치수. 단일 피해 유리 (강화판, trex 활성화)",
+      "variants": [
+        { "id": "S2R4a", "units": [
+          { "type": "reptile", "x": 4, "y": 2 },
+          { "type": "lantern", "x": 6, "y": 1 },
+          { "type": "lantern", "x": 6, "y": 4 }
+        ]},
+        { "id": "S2R4b", "units": [
+          { "type": "trex",   "x": 4, "y": 3 },
+          { "type": "spirit", "x": 6, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 5,
+      "axisTested": "최후열 배치 유닛 등장. 성장 시험 (강화판)",
+      "variants": [
+        { "id": "S2R5a", "units": [
+          { "type": "mushroom", "x": 4, "y": 2 },
+          { "type": "mushroom", "x": 4, "y": 3 },
+          { "type": "lantern",  "x": 6, "y": 0 },
+          { "type": "lantern",  "x": 6, "y": 2 },
+          { "type": "spirit",   "x": 7, "y": 4 }
+        ]},
+        { "id": "S2R5b", "units": [
+          { "type": "reptile",  "x": 4, "y": 2 },
+          { "type": "mushroom", "x": 4, "y": 4 },
+          { "type": "lantern",  "x": 6, "y": 1 },
+          { "type": "lantern",  "x": 6, "y": 3 },
+          { "type": "spirit",   "x": 7, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 6,
+      "axisTested": "쉬어가는 난이도 (스테이지1보다 세지만, 스테이지2 안에선 완화 구간)",
+      "variants": [
+        { "id": "S2R6a", "units": [
+          { "type": "kappa",   "x": 4, "y": 2 },
+          { "type": "kappa",   "x": 4, "y": 3 },
+          { "type": "lantern", "x": 6, "y": 2 }
+        ]},
+        { "id": "S2R6b", "units": [
+          { "type": "reptile", "x": 4, "y": 2 },
+          { "type": "snake",   "x": 4, "y": 4 },
+          { "type": "eye",     "x": 6, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 7,
+      "axisTested": "보스전 직전 성장확인. 많은 물량 (강화판)",
+      "variants": [
+        { "id": "S2R7a", "units": [
+          { "type": "bat",    "x": 4, "y": 1 },
+          { "type": "bat",    "x": 4, "y": 2 },
+          { "type": "kappa",  "x": 4, "y": 4 },
+          { "type": "bat",    "x": 5, "y": 0 },
+          { "type": "bat",    "x": 5, "y": 3 },
+          { "type": "spirit", "x": 6, "y": 2 }
+        ]},
+        { "id": "S2R7b", "units": [
+          { "type": "snake", "x": 4, "y": 1 },
+          { "type": "snake", "x": 4, "y": 3 },
+          { "type": "bat",   "x": 4, "y": 5 },
+          { "type": "bat",   "x": 5, "y": 2 },
+          { "type": "bat",   "x": 5, "y": 4 },
+          { "type": "kappa", "x": 6, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 8,
+      "axisTested": "보스 — 잡몹 동반한 단일보스 / 잡몹 없는 더블보스 중 하나",
+      "variants": [
+        { "id": "S2R8a", "units": [
+          { "type": "tenguRed", "x": 4, "y": 2 },
+          { "type": "lantern",  "x": 6, "y": 1 },
+          { "type": "lantern",  "x": 6, "y": 4 },
+          { "type": "spirit",   "x": 6, "y": 2 }
+        ]},
+        { "id": "S2R8b", "units": [
+          { "type": "giantFrog", "x": 4, "y": 2 },
+          { "type": "tenguRed",  "x": 6, "y": 2 }
+        ]}
+      ]
+    }
+  ]
+}
