@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using DomoNinja.Core.Data;
 using NUnit.Framework;
 using Newtonsoft.Json.Linq;
@@ -57,14 +58,33 @@ namespace DomoNinja.Core.Tests
         }
 
         [Test]
-        public void 아직_없는_스테이지_파일은_조용히_건너뛴다()
+        public void 없는_스테이지_파일은_조용히_건너뛴다()
         {
             // 저작이 안 들어온 스테이지 때문에 시뮬 전체가 멈추면
             // 저작 진행이 밸런스 루프를 막는다.
-            var data = RepoData.LoadAll();
+            //
+            // ★ 두 번째로 같은 실수를 했다. 처음엔 "encountersStage2.json 은 아직 main 에 없다"로
+            //   저장소의 현재 상태를 단언했는데, 팀원이 파일을 올리자마자 깨졌다.
+            //   아이콘 테스트도 같은 형태였다(팀원이 icon 30개를 넣자 깨졌다).
+            //   → 공유 데이터에 대한 테스트는 "지금 이렇다"가 아니라 "이래야 한다"를 적는다.
+            //     상태를 박아 두면 상대가 일할 때마다 깨진다.
+            var data = GameDataFiles.Load(name => name == "encountersStage2.json" ? null : RepoData.TryRead(name));
 
             Assert.That(data.HasEncounterSetFor("S1"), Is.True);
-            Assert.That(data.HasEncounterSetFor("S2"), Is.False, "encountersStage2.json 은 아직 main 에 없다");
+            Assert.That(data.HasEncounterSetFor("S2"), Is.False);
+            Assert.That(data.RoundsFor("S2"), Is.SameAs(data.Rounds), "없으면 스테이지 1 로 떨어진다");
+        }
+
+        [Test]
+        public void 저장소에_들어온_스테이지2가_자동으로_붙는다()
+        {
+            // 팀원이 파일을 올리기만 했고 core 는 손대지 않았다.
+            // economy.stages.list 의 encounterFile 매핑만으로 연결된다.
+            var data = RepoData.LoadAll();
+
+            Assert.That(data.HasEncounterSetFor("S2"), Is.True);
+            Assert.That(data.RoundsFor("S2").Count, Is.EqualTo(8));
+            Assert.That(data.RoundsFor("S2").Sum(r => r.Variants.Count), Is.EqualTo(14));
         }
 
         [Test]
