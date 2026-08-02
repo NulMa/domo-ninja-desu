@@ -1,4 +1,8 @@
+using System.Linq;
+using DomoNinja.Core.Combat;
+using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
+using DomoNinja.Core.Economy;
 using DomoNinja.Core.Events;
 using DomoNinja.Core.Rng;
 using UnityEngine;
@@ -46,6 +50,43 @@ namespace DomoNinja.Unity
             {
                 VerifyBoundary(seed);
             }
+
+            StartCoroutine(StreamingGameData.LoadAsync(OnDataLoaded, OnDataError));
+        }
+
+        /// <summary>
+        /// 데이터가 들어오면 <b>전투를 한 판 돌려본다.</b>
+        /// </summary>
+        /// <remarks>
+        /// ★ 화면이 없는 동안 이게 유일한 확인이다.
+        /// 게이트 3 은 "core 가 컴파일된다"까지만 증명했고,
+        /// <b>브라우저에서 실제로 도는지는 아직 아무도 확인하지 않았다.</b>
+        /// 로드·검증·전투가 여기서 한 번 돌면 그 구간이 닫힌다.
+        /// </remarks>
+        private void OnDataLoaded(GameData data)
+        {
+            var config = CombatConfig.From(data.Economy, 20);
+            var meta = new MetaProgress(data.Meta);
+            var engine = new RunEngine(data, config);
+
+            var build = BuildSpace.Enumerate(data).First();
+            var run = engine.StartRun("S1", build.CharacterIds, meta);
+            var summary = engine.PlayRun(run, meta, _rng, NullEventSink.Instance, false, build);
+
+            Debug.Log(
+                $"[Bootstrap] 데이터 로드 OK — 캐릭터 {data.Characters.Count} · 스킬 {data.Skills.Count} · " +
+                $"보조 {data.SupportSkills.Count} · 스테이지2 {(data.HasEncounterSetFor("S2") ? "있음" : "없음")}");
+
+            Debug.Log(
+                $"[Bootstrap] 시험 전투 — 빌드 {build.Id} · " +
+                $"{(summary.Cleared ? "클리어" : "실패")} {summary.RoundsWon}/{summary.RoundsReached}승 · " +
+                $"{summary.TotalTicks / 20.0:F1}초");
+        }
+
+        private void OnDataError(string message)
+        {
+            // 조용히 넘어가면 데이터 없이 도는 빌드가 배포되고, 실행하고 나서야 안다.
+            Debug.LogError($"[Bootstrap] 데이터 로드 실패 — {message}");
         }
 
         /// <summary>

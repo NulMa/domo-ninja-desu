@@ -4,7 +4,8 @@
   "references": [
     "DomoNinja.Core",
     "DomoNinja.Unity",
-    "DomoNinja.Unity.UI"
+    "DomoNinja.Unity.UI",
+    "DomoNinja.Unity.View"
   ],
   "includePlatforms": [
     "Editor"
