@@ -88,3 +88,7 @@ tune/*.db-wal
 Thumbs.db
 .idea/
 .vs/
+
+# 시뮬 산출물 — 실행할 때마다 바뀐다. 밸런스 판정에 쓸 스냅샷만 따로 커밋한다.
+artifacts/metrics*.json
+artifacts/p.json

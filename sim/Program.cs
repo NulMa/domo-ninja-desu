@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Rng;
 
@@ -34,18 +36,105 @@ namespace DomoNinja.Sim
             {
                 "--selftest" => SelfTest(),
                 "--version" => Version(),
+                "--run" => RunSim(args),
                 _ => Unknown(args[0]),
             };
+        }
+
+        /// <summary>
+        /// `params.json` → `metrics.json`.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>이 인터페이스가 `/tune` 을 Python 으로 분리할 수 있게 한 근거다</b> (`D-49-a`).
+        /// 외부 최적화 루프는 이 바이너리를 호출만 하면 되므로 어떤 언어로 짜도 된다.
+        /// 파일로 주고받는 이유도 같다 — 프로세스 경계를 파일로 그으면
+        /// 최적화기가 죽어도 <b>마지막 결과가 디스크에 남는다.</b>
+        /// </remarks>
+        private static int RunSim(string[] args)
+        {
+            string? paramsPath = ArgAfter(args, "--run");
+            string outPath = ArgAfter(args, "--out") ?? "metrics.json";
+            string dataDir = ArgAfter(args, "--data") ?? FindDataDir();
+
+            var p = paramsPath == null || !File.Exists(paramsPath)
+                ? new SimParams()
+                : SimParams.FromJson(File.ReadAllText(paramsPath));
+
+            if (paramsPath != null && !File.Exists(paramsPath))
+                Console.Error.WriteLine($"경고: {paramsPath} 가 없어 기본값으로 돈다");
+
+            GameData data;
+            try
+            {
+                // core 는 파일을 직접 열지 않는다 — WebGL 에 파일 시스템이 없어서다.
+                // 읽는 방법은 실행 환경이 정하고, 여기서는 디스크다.
+                data = GameDataFiles.Load(name =>
+                {
+                    string path = Path.Combine(dataDir, name);
+                    return File.Exists(path) ? File.ReadAllText(path) : null;
+                });
+            }
+            catch (DataValidationException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                return 3;
+            }
+
+            Console.WriteLine($"데이터: {dataDir}");
+            Console.WriteLine($"빌드 {(p.BuildLimit > 0 ? p.BuildLimit.ToString() : "전부")} × 시드 {p.Seeds} · {p.Stage} · {p.Meta}");
+
+            var report = SimRunner.Run(data, p);
+            File.WriteAllText(outPath, SimRunner.ToJson(report, p, data).ToString());
+
+            Console.WriteLine();
+            Console.WriteLine($"  런 {report.Runs:N0}회 · {report.ElapsedMs:N0}ms");
+            Console.WriteLine($"  클리어율 {report.ClearRate:P1}");
+            Console.WriteLine($"  유닛-틱당 {report.MicrosPerUnitTick:F3}µs " +
+                              $"({(report.MicrosPerUnitTick <= 5.0 ? "예산 내" : "예산 초과")})");
+            Console.WriteLine($"  → {outPath}");
+
+            return 0;
+        }
+
+        /// <remarks>
+        /// 다음 토큰이 또 다른 플래그면 값이 없는 것으로 본다.
+        /// <c>--run --out x.json</c> 에서 <c>--out</c> 을 params 경로로 읽으면
+        /// "파일이 없다"는 경고만 뜨고 조용히 기본값으로 돈다 — 실제로 겪었다.
+        /// </remarks>
+        private static string? ArgAfter(string[] args, string flag)
+        {
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] != flag) continue;
+
+                string next = args[i + 1];
+                return next.StartsWith("--", StringComparison.Ordinal) ? null : next;
+            }
+            return null;
+        }
+
+        /// <summary>저장소의 `/data` 를 거슬러 올라가며 찾는다. 출력 경로가 재배치돼 깊이가 고정이 아니다.</summary>
+        private static string FindDataDir()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir != null)
+            {
+                string candidate = Path.Combine(dir.FullName, "data");
+                if (File.Exists(Path.Combine(candidate, "economy.json"))) return candidate;
+                dir = dir.Parent;
+            }
+            return "data";
         }
 
         private static void PrintUsage()
         {
             Console.WriteLine("DomoNinja.Sim — 헤드리스 시뮬레이터");
             Console.WriteLine();
+            Console.WriteLine("  --run [params.json] [--out metrics.json] [--data DIR]   시뮬 실행");
             Console.WriteLine("  --selftest    결정론 자체 점검 (게이트 2)");
             Console.WriteLine("  --version     버전 출력");
             Console.WriteLine();
-            Console.WriteLine("  params.json -> metrics.json 실행은 P3 에서 붙는다.");
+            Console.WriteLine("  기본값: 빌드 50 x 시드 5. 전수 탐색은 params 에 buildLimit: 0.");
         }
 
         private static int Version()

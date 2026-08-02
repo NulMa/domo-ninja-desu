@@ -19,16 +19,26 @@ namespace DomoNinja.Core.Economy
         public bool Won { get; }
         public int Ticks { get; }
 
+        /// <summary>
+        /// 틱 × 유닛 수. <b>처리량 실측의 분모다</b> (`17` §7.1 — 유닛-틱당 5µs 게이트).
+        /// </summary>
+        /// <remarks>
+        /// 틱만 세면 유닛 3체 전투와 9체 전투가 같은 비용으로 잡힌다.
+        /// 최적화 여부를 판단할 단위는 "한 유닛을 한 틱 처리하는 비용"이라 여기서 곱해 둔다.
+        /// </remarks>
+        public int UnitTicks { get; }
+
         /// <summary>이 라운드에서 얻은 <b>런 재화</b>. 영구 재화가 아니다.</summary>
         public int CurrencyGained { get; }
 
         /// <summary>재생용 로그. 켰을 때만 있다.</summary>
         public BattleLog? Log { get; }
 
-        public RoundOutcome(int round, string variantId, bool won, int ticks, int currencyGained, BattleLog? log)
+        public RoundOutcome(int round, string variantId, bool won, int ticks, int unitTicks,
+                            int currencyGained, BattleLog? log)
         {
             Round = round; VariantId = variantId; Won = won;
-            Ticks = ticks; CurrencyGained = currencyGained; Log = log;
+            Ticks = ticks; UnitTicks = unitTicks; CurrencyGained = currencyGained; Log = log;
         }
 
         public override string ToString() => $"R{Round}({VariantId}) {(Won ? "승" : "패")} {Ticks}틱";
@@ -51,13 +61,16 @@ namespace DomoNinja.Core.Economy
         /// <summary>전투에 쓴 총 틱. `M5`(1런 3~5분) 계산에 들어간다.</summary>
         public int TotalTicks { get; }
 
+        /// <summary>틱 x 유닛 수의 합. 처리량 실측(`17` §7.1)이 쓴다.</summary>
+        public int TotalUnitTicks { get; }
+
         public IReadOnlyList<RoundOutcome> Rounds { get; }
 
         public RunSummary(int roundsWon, int roundsReached, bool cleared, int livesLeft,
-                          int totalTicks, IReadOnlyList<RoundOutcome> rounds)
+                          int totalTicks, int totalUnitTicks, IReadOnlyList<RoundOutcome> rounds)
         {
             RoundsWon = roundsWon; RoundsReached = roundsReached; Cleared = cleared;
-            LivesLeft = livesLeft; TotalTicks = totalTicks; Rounds = rounds;
+            LivesLeft = livesLeft; TotalTicks = totalTicks; TotalUnitTicks = totalUnitTicks; Rounds = rounds;
         }
 
         public override string ToString() =>
@@ -147,7 +160,8 @@ namespace DomoNinja.Core.Economy
 
             run.Round++;
 
-            return new RoundOutcome(round.Round, variant.Id, won, result.Ticks, gained, result.Log);
+            return new RoundOutcome(round.Round, variant.Id, won, result.Ticks,
+                                    result.Ticks * units.Count, gained, result.Log);
         }
 
         /// <summary>런 하나를 끝까지 굴린다.</summary>
@@ -155,28 +169,42 @@ namespace DomoNinja.Core.Economy
         /// 생명이 0 이 되면 <b>즉시 끝낸다</b>. 남은 라운드를 마저 도는 건
         /// 결과에 영향을 주지 않으면서 시뮬 시간만 먹는다 — 4,320 빌드를 도는 설계에서 그건 그대로 비용이다.
         /// </remarks>
+        /// <param name="build">
+        /// 봇이 목표로 삼을 빌드. <c>null</c> 이면 상점에 들르지 않는다(스킬 없이 맨몸으로 돈다).
+        /// </param>
         public RunSummary PlayRun(RunState run, MetaProgress meta, DeterministicRandom rng,
-                                  IEventSink sink, bool collectLogs = false)
+                                  IEventSink sink, bool collectLogs = false, BuildTarget? build = null)
         {
             var outcomes = new List<RoundOutcome>();
             int totalTicks = 0;
+            int totalUnitTicks = 0;
             int won = 0;
 
+            // ★ 스트림을 라운드 루프 밖에서 한 번만 가른다.
+            //   안에서 매번 Fork 하면 같은 시드에서 같은 스트림이 반복돼
+            //   매 라운드 같은 변형·같은 재고가 나온다.
             var encounterRng = rng.Fork(RngStream.Encounter);
+            var shopRng = rng.Fork(RngStream.Shop);
+            var shop = build == null ? null : new Shop(_data);
 
             while (run.Round <= _data.Economy.TotalRounds && !run.IsOver)
             {
+                // 상점은 전투 "전"이다. 라운드 시작 전 배치·구매가 개입 지점이고(A-8),
+                // 이번 라운드에 산 스킬이 이번 전투부터 걸려야 한다.
+                if (shop != null) ShopBot.Visit(run, shop, build!, shopRng, run.Round);
+
                 var outcome = PlayRound(run, meta, encounterRng, sink, collectLogs);
                 outcomes.Add(outcome);
 
                 totalTicks += outcome.Ticks;
+                totalUnitTicks += outcome.UnitTicks;
                 if (outcome.Won) won++;
             }
 
             int reached = outcomes.Count;
             bool cleared = won == _data.Economy.TotalRounds;
 
-            return new RunSummary(won, reached, cleared, run.Lives, totalTicks, outcomes);
+            return new RunSummary(won, reached, cleared, run.Lives, totalTicks, totalUnitTicks, outcomes);
         }
 
         /// <summary>
