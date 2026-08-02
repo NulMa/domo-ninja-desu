@@ -152,6 +152,7 @@
 
     "statBoost": {
       "targetsSpecificCharacter": true,
+      "icon": "Item/statBoost_스탯강화",
       "_desc": "캐릭터를 지정해서 구매.",
       "options": [
         { "stat": "attack", "value": 0.15, "isMultiplier": true },
@@ -163,6 +164,7 @@
 
     "teamBoost": {
       "targetsSpecificCharacter": false,
+      "icon": "Item/teamBoost_팀강화",
       "_desc": "아군 전체. 가격을 2배로 둬서 기회비용을 만든다.",
       "_tension": "'사면 무조건 이득' 이라 선택의 무게가 없다는 우려가 있다. 가격으로 방어하되 M4 로 감시한다. 지배 빌드가 전부 이걸 사면 제거 대상.",
       "options": [
@@ -174,6 +176,7 @@
 
     "conditionalBoost": {
       "targetsSpecificCharacter": true,
+      "icon": "Item/conditionalBoost_조건부강화",
       "_desc": "조건이 붙는 대신 배율이 크다. 빌드 방향에 따라 가치가 갈린다.",
       "options": [
         { "condition": "hp_below", "value": 0.5, "stat": "attack", "mult": 0.4 },
@@ -185,6 +188,7 @@
 
     "healItem": {
       "targetsSpecificCharacter": true,
+      "icon": "Item/healItem_회복아이템",
       "_desc": "구매 즉시 발동. 소지·전투 중 사용은 없다 — A-8(개입 지점은 배치와 상점뿐)을 지키기 위함.",
       "healPermille": 500,
       "_note": "사망 유닛에는 쓸 수 없다. 부활 수단이 아니다."
