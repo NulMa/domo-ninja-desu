@@ -56,6 +56,19 @@ namespace DomoNinja.Core.Domain
         /// <summary>고정포대형. 이동 판정 자체를 건너뛴다. <b>적 전용</b>(A5).</summary>
         public bool Immobile { get; }
 
+        /// <summary>
+        /// 받는 피해 보정. <b>스킬·아이템이 합연산으로 누적한 증감분</b>(천분율)이다.
+        /// </summary>
+        /// <remarks>
+        /// 배율이 아니라 증감분인 이유 — 여러 출처를 곱하지 않고 더하기 위해서다 (`_schema` §8).
+        /// 전투 중 걸리는 <c>weaken</c> 은 여기 더하지 않고 <see cref="Status"/> 에서 따로 읽는다.
+        /// 스킬은 전투 내내 고정이고 상태이상은 붙었다 떨어지므로, 섞으면 해제할 때 뺄 값을 추적해야 한다.
+        /// </remarks>
+        public int DamageTakenDeltaPermille { get; set; }
+
+        /// <summary>이 유닛에 걸린 상태이상. <b>8종뿐이다</b> (`_schema` §3).</summary>
+        public Combat.StatusSet Status { get; } = new Combat.StatusSet();
+
         public Coord At { get; set; }
 
         /// <summary>
