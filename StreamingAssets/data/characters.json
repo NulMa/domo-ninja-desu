@@ -1,0 +1,99 @@
+{
+  "$schema": "./_schema/README.md",
+  "_note": "초기값. 시뮬레이터가 조정할 대상이지 확정값이 아니다. 코드에 상수를 박지 않는다.",
+  "_revision": "v0.5 — A트랙 확정 반영. 전열/후열 폐기(A-3), 이동 도입(A-1)에 따라 placementRule 삭제 및 frontlineAffinity → moveInterval 전환",
+  "_pending": [
+    "moveInterval 이 캐릭터별 스탯인지 전역 상수인지는 재질문 A2 대기. 전역으로 결정되면 전원 같은 값을 넣으면 되므로 값 교체로 흡수된다",
+    "range 값은 보드 8x6 기준으로 재산정한 초기값. 시뮬이 조정한다"
+  ],
+
+  "tickRate": 20,
+
+  "_designNote": [
+    "전열/후열 구분이 사라졌지만 배치의 의미는 죽지 않았다.",
+    "moveInterval(느림) + range(김) 조합이 자연스럽게 후열 성향을 만들고,",
+    "moveInterval(빠름) + range(짧음) 조합이 전열 성향을 만든다.",
+    "→ 하드 규칙이 아니라 스탯의 귀결로 진형이 생긴다. placementRule 이 하던 일을 대체한다."
+  ],
+
+  "characters": [
+    {
+      "id": "C1",
+      "sprite": "Actor/Character/Samurai",
+      "name": "사무라이",
+      "profile": "고공격 · 저공속 · 근접",
+      "dilemmaAxis": "공격 리듬",
+      "hp": 120,
+      "attack": 45,
+      "attackInterval": 24,
+      "range": 1,
+      "moveInterval": 5,
+      "skills": ["C1-A", "C1-B"]
+    },
+    {
+      "id": "C2",
+      "sprite": "Actor/Character/Monk",
+      "name": "수도승",
+      "profile": "저공격 · 고체력 · 근접",
+      "dilemmaAxis": "체력을 지킬 자원으로 볼 것인가, 태울 자원으로 볼 것인가",
+      "hp": 180,
+      "attack": 22,
+      "attackInterval": 18,
+      "range": 1,
+      "moveInterval": 6,
+      "skills": ["C2-A", "C2-B"]
+    },
+    {
+      "id": "C3",
+      "sprite": "Actor/Character/NinjaRed",
+      "name": "적영",
+      "profile": "고공속 · 저체력 · 고기동",
+      "dilemmaAxis": "생존 ↔ 사거리",
+      "hp": 90,
+      "attack": 18,
+      "attackInterval": 9,
+      "range": 1,
+      "moveInterval": 3,
+      "skills": ["C3-A", "C3-B"]
+    },
+    {
+      "id": "C4",
+      "sprite": "Actor/Character/Hunter",
+      "name": "사냥꾼",
+      "profile": "원거리 · 중간 · 저기동",
+      "dilemmaAxis": "표적 수",
+      "hp": 100,
+      "attack": 30,
+      "attackInterval": 20,
+      "range": 5,
+      "moveInterval": 8,
+      "skills": ["C4-A", "C4-B"]
+    },
+    {
+      "id": "C5",
+      "sprite": "Actor/Character/NinjaMageBlack",
+      "name": "주술사",
+      "profile": "원거리 · 저체력 · 최저기동",
+      "dilemmaAxis": "전투 길이 (장기전 ↔ 웨이브)",
+      "hp": 80,
+      "attack": 34,
+      "attackInterval": 26,
+      "range": 4,
+      "moveInterval": 9,
+      "skills": ["C5-A", "C5-B"]
+    },
+    {
+      "id": "C6",
+      "sprite": "Actor/Character/Shaman",
+      "name": "무녀",
+      "profile": "저공격 · 유틸 · 중간",
+      "dilemmaAxis": "팀 방향",
+      "hp": 110,
+      "attack": 20,
+      "attackInterval": 22,
+      "range": 3,
+      "moveInterval": 7,
+      "skills": ["C6-A", "C6-B"]
+    }
+  ]
+}

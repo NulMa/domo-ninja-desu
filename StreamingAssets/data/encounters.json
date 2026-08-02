@@ -1,0 +1,173 @@
+{
+  "$schema": "./_schema/README.md",
+  "_note": "초기값. 시뮬레이터가 조정할 대상이지 확정값이 아니다.",
+  "_revision": "v0.5 — A트랙 확정 반영. front/back 배열을 좌표로 전환, range 를 칸 단위로 재산정, moveInterval 신설",
+  "_design": [
+    "적은 스킬을 갖지 않는다(D-39). 관문의 성격은 '수 + 극단 스탯 + 배치'로만 만든다.",
+    "각 라운드는 스킬 딜레마 축 중 하나를 시험하도록 설계됐다 (axisTested).",
+    "라운드 1~2는 변형이 없다 — 첫 두 판이 매번 달라지면 학습이 안 된다. 3~8만 변형 2종.",
+    "→ 총 구성 수 = 2 + 6*2 = 14"
+  ],
+  "_coords": [
+    "보드 전체 8x6. 적 진영은 x=4..7, y=0..5 (economy.board 참조).",
+    "x 가 작을수록 아군에 가깝다. x=4 가 최전방, x=6~7 이 후방.",
+    "전열/후열은 더 이상 규칙이 아니라 좌표의 귀결이다 — 앞에 세우면 먼저 맞는다."
+  ],
+
+  "enemyTypes": {
+    "_note": "적은 스킬 없음. hp/attack/attackInterval/range/moveInterval 5개 축만으로 성격을 만든다.",
+    "_unusedNote": "D-57 확정 — `_unused: true` 는 현재 14개 관문에 등장하지 않는다는 뜻이다. 빠뜨린 게 아니라 밸런스 조정 중 관문 교체 카드로 남겨둔 것이다.",
+    "_movementNote": "★ A5 확정 (2026-08-01) — 모든 기물이 이동한다. 좌표는 시작 위치다. 예외 둘: ① 이동 제한 상태이상 ② immobile: true 인 고정포대형 유닛(적 전용).",
+    "_immobileNote": "고정포대는 적군에만 등장한다. moveInterval 을 무시하고 제자리에서만 공격한다. 사거리가 길어야 성립하므로 range 를 크게 준다.",
+    "slime":     { "sprite": "Actor/Monster/Slime",      "hp": 40,  "attack": 8,  "attackInterval": 26, "range": 1, "moveInterval": 8 },
+    "mouse":     { "sprite": "Actor/Monster/Mouse",      "hp": 28,  "attack": 6,  "attackInterval": 12, "range": 1, "moveInterval": 4 },
+    "larva":     { "sprite": "Actor/Monster/Larva",      "hp": 34,  "attack": 7,  "attackInterval": 22, "range": 1, "moveInterval": 9 },
+    "bat":       { "sprite": "Actor/Monster/BlueBat",    "hp": 26,  "attack": 9,  "attackInterval": 10, "range": 1, "moveInterval": 3 },
+    "mushroom":  { "sprite": "Actor/Monster/Mushroom",   "hp": 55,  "attack": 10, "attackInterval": 28, "range": 1, "moveInterval": 9 },
+    "kappa":     { "sprite": "Actor/Monster/KappaGreen", "hp": 75,  "attack": 14, "attackInterval": 22, "range": 1, "moveInterval": 7 },
+    "snake":     { "sprite": "Actor/Monster/Snake",      "hp": 60,  "attack": 16, "attackInterval": 16, "range": 1, "moveInterval": 5 },
+    "skull":     { "sprite": "Actor/Monster/Skull",      "hp": 70,  "attack": 15, "attackInterval": 20, "range": 1, "moveInterval": 6, "_unused": true },
+    "eye":       { "sprite": "Actor/Monster/Eye",        "hp": 45,  "attack": 13, "attackInterval": 24, "range": 4, "moveInterval": 10 },
+    "lantern":   { "sprite": "Actor/Monster/LanternRed", "hp": 50,  "attack": 15, "attackInterval": 26, "range": 5, "moveInterval": 10 },
+    "spirit":    { "sprite": "Actor/Monster/Spirit",     "hp": 42,  "attack": 12, "attackInterval": 20, "range": 4, "moveInterval": 9 },
+    "bear":      { "sprite": "Actor/Monster/Bear",       "hp": 210, "attack": 26, "attackInterval": 30, "range": 1, "moveInterval": 8 },
+    "reptile":   { "sprite": "Actor/Monster/Reptile",    "hp": 180, "attack": 22, "attackInterval": 26, "range": 1, "moveInterval": 7 },
+    "trex":      { "sprite": "Actor/Monster/TRex",       "hp": 260, "attack": 32, "attackInterval": 34, "range": 1, "moveInterval": 9, "_unused": true },
+    "totem":     { "sprite": "Actor/Character/Statue",   "hp": 90,  "attack": 18, "attackInterval": 30, "range": 6, "immobile": true, "_desc": "A5 고정포대. 움직이지 않고 긴 사거리로만 압박한다. 접근을 강제하는 관문 장치.", "_spriteNote": "Actor/Monster 에는 Statue 가 없다. Character 쪽 Statue 를 쓴다 — 석상이라 '움직이지 않는 적'과 컨셉이 맞는다.", "_unused": true },
+    "tenguRed":  { "sprite": "Actor/Boss/TenguRed",      "hp": 520, "attack": 34, "attackInterval": 22, "range": 1, "moveInterval": 6, "isBoss": true },
+    "giantFrog": { "sprite": "Actor/Boss/GiantFrog",     "hp": 620, "attack": 40, "attackInterval": 30, "range": 1, "moveInterval": 8, "isBoss": true }
+  },
+
+  "rounds": [
+    {
+      "round": 1,
+      "axisTested": "온보딩 — 규칙 학습",
+      "variants": [
+        { "id": "R1", "units": [
+          { "type": "slime", "x": 4, "y": 2 },
+          { "type": "slime", "x": 4, "y": 3 }
+        ]}
+      ]
+    },
+    {
+      "round": 2,
+      "axisTested": "온보딩 — 거리 개념 도입 (뒤에 선 적은 나중에 닿는다)",
+      "variants": [
+        { "id": "R2", "units": [
+          { "type": "slime", "x": 4, "y": 2 },
+          { "type": "kappa", "x": 4, "y": 3 },
+          { "type": "eye",   "x": 6, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 3,
+      "axisTested": "표적 수 — 광역 쪽 보상",
+      "variants": [
+        { "id": "R3a", "units": [
+          { "type": "mouse", "x": 4, "y": 1 },
+          { "type": "mouse", "x": 4, "y": 3 },
+          { "type": "larva", "x": 4, "y": 4 },
+          { "type": "mouse", "x": 6, "y": 2 },
+          { "type": "larva", "x": 6, "y": 3 }
+        ]},
+        { "id": "R3b", "units": [
+          { "type": "larva", "x": 4, "y": 1 },
+          { "type": "larva", "x": 4, "y": 2 },
+          { "type": "larva", "x": 4, "y": 4 },
+          { "type": "mouse", "x": 6, "y": 2 },
+          { "type": "mouse", "x": 6, "y": 3 }
+        ]}
+      ]
+    },
+    {
+      "round": 4,
+      "axisTested": "표적 수 — 단일 쪽 보상 (소수 고HP)",
+      "variants": [
+        { "id": "R4a", "units": [
+          { "type": "reptile", "x": 4, "y": 2 },
+          { "type": "eye",     "x": 6, "y": 1 },
+          { "type": "eye",     "x": 6, "y": 4 }
+        ]},
+        { "id": "R4b", "units": [
+          { "type": "bear",   "x": 4, "y": 3 },
+          { "type": "spirit", "x": 6, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 5,
+      "axisTested": "위치 — 후방 접근 수단 시험 (사거리·기동)",
+      "variants": [
+        { "id": "R5a", "units": [
+          { "type": "mushroom", "x": 4, "y": 2 },
+          { "type": "mushroom", "x": 4, "y": 3 },
+          { "type": "lantern",  "x": 6, "y": 0 },
+          { "type": "lantern",  "x": 6, "y": 2 },
+          { "type": "eye",      "x": 6, "y": 4 }
+        ]},
+        { "id": "R5b", "units": [
+          { "type": "kappa",    "x": 4, "y": 2 },
+          { "type": "mushroom", "x": 4, "y": 4 },
+          { "type": "eye",      "x": 6, "y": 1 },
+          { "type": "eye",      "x": 6, "y": 3 },
+          { "type": "spirit",   "x": 7, "y": 2 }
+        ]}
+      ]
+    },
+    {
+      "round": 6,
+      "axisTested": "혼합 고압 — 벽 + 후방 딜러",
+      "variants": [
+        { "id": "R6a", "units": [
+          { "type": "reptile", "x": 4, "y": 2 },
+          { "type": "kappa",   "x": 4, "y": 3 },
+          { "type": "lantern", "x": 6, "y": 1 },
+          { "type": "spirit",  "x": 6, "y": 4 }
+        ]},
+        { "id": "R6b", "units": [
+          { "type": "bear",    "x": 4, "y": 2 },
+          { "type": "snake",   "x": 4, "y": 4 },
+          { "type": "eye",     "x": 6, "y": 1 },
+          { "type": "lantern", "x": 6, "y": 3 }
+        ]}
+      ]
+    },
+    {
+      "round": 7,
+      "axisTested": "전투 길이 — 고공속 러시 (단기 폭발 vs 지속딜)",
+      "variants": [
+        { "id": "R7a", "units": [
+          { "type": "bat",    "x": 4, "y": 1 },
+          { "type": "bat",    "x": 4, "y": 2 },
+          { "type": "mouse",  "x": 4, "y": 4 },
+          { "type": "bat",    "x": 5, "y": 0 },
+          { "type": "bat",    "x": 5, "y": 3 },
+          { "type": "spirit", "x": 6, "y": 2 }
+        ]},
+        { "id": "R7b", "units": [
+          { "type": "snake", "x": 4, "y": 1 },
+          { "type": "snake", "x": 4, "y": 3 },
+          { "type": "bat",   "x": 4, "y": 5 },
+          { "type": "bat",   "x": 5, "y": 2 },
+          { "type": "bat",   "x": 5, "y": 4 }
+        ]}
+      ]
+    },
+    {
+      "round": 8,
+      "axisTested": "보스 — 단일 + 팀 방향(버프/디버프) 축의 최종 시험",
+      "variants": [
+        { "id": "R8a", "units": [
+          { "type": "tenguRed", "x": 4, "y": 2 },
+          { "type": "lantern",  "x": 6, "y": 1 },
+          { "type": "lantern",  "x": 6, "y": 4 }
+        ]},
+        { "id": "R8b", "units": [
+          { "type": "giantFrog", "x": 4, "y": 2 },
+          { "type": "spirit",    "x": 6, "y": 3 }
+        ]}
+      ]
+    }
+  ]
+}
