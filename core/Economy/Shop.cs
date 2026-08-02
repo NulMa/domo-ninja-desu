@@ -35,12 +35,23 @@ namespace DomoNinja.Core.Economy
 
         public readonly int Price;
 
-        public ShopOffer(OfferKind kind, string id, string? characterId, int price)
+        /// <summary>
+        /// 아이템의 <c>options</c> 중 몇 번째인가. 스킬이면 -1.
+        /// </summary>
+        /// <remarks>
+        /// ★ 아이템은 종류마다 선택지를 여럿 갖는다(`statBoost` 는 공격·체력·공속 3종).
+        /// 상점이 <c>"statBoost"</c> 라고만 내놓으면 <b>플레이어가 무엇을 사는지 모른다.</b>
+        /// 어느 선택지인지는 <b>추첨 시점에</b> 정해져야 화면에 적을 수 있다.
+        /// </remarks>
+        public readonly int OptionIndex;
+
+        public ShopOffer(OfferKind kind, string id, string? characterId, int price, int optionIndex = -1)
         {
-            Kind = kind; Id = id; CharacterId = characterId; Price = price;
+            Kind = kind; Id = id; CharacterId = characterId; Price = price; OptionIndex = optionIndex;
         }
 
-        public override string ToString() => $"{Kind}:{Id}({Price})";
+        public override string ToString() =>
+            OptionIndex >= 0 ? $"{Kind}:{Id}#{OptionIndex}({Price})" : $"{Kind}:{Id}({Price})";
     }
 
     /// <summary>
@@ -153,17 +164,25 @@ namespace DomoNinja.Core.Economy
 
                 case OfferKind.Item:
                 {
-                    string? owner = targetCharacterId;
-                    if (TargetsCharacter(offer.Id))
+                    if (!TargetsCharacter(offer.Id))
                     {
-                        var entry = FindEntry(run, owner);
-                        if (entry == null || !entry.IsAlive) return false;
-                        entry.Items.Add(offer.Id);
+                        run.TeamItems.Add(new OwnedItem(offer.Id, offer.OptionIndex));
+                        break;
                     }
-                    else
+
+                    var entry = FindEntry(run, targetCharacterId);
+                    if (entry == null || !entry.IsAlive) return false;
+
+                    // ★ 회복 아이템은 소지품이 아니다 — 구매 즉시 발동하고 사라진다.
+                    //   소지하게 두면 전투 중 사용이 생기고, 그건 A-8(개입 지점은 배치와 상점뿐)을 깬다.
+                    if (offer.Id == "healItem")
                     {
-                        run.TeamItems.Add(offer.Id);
+                        int healed = entry.Hp + Combat.Permille.Apply(entry.MaxHp, HealItemPermille());
+                        entry.Hp = healed > entry.MaxHp ? entry.MaxHp : healed;
+                        break;
                     }
+
+                    entry.Items.Add(new OwnedItem(offer.Id, offer.OptionIndex));
                     break;
                 }
             }
@@ -180,22 +199,42 @@ namespace DomoNinja.Core.Economy
         /// 스킬을 팔 수 있으면 배타 규칙이 무너지고 <b>빌드 공간 전수 탐색의 전제가 통째로 날아간다.</b>
         /// 환급은 50% 다 — 손해를 남겨야 *"일단 사고 되팔기"* 가 정답이 되지 않는다.
         /// </remarks>
-        public bool TrySellItem(RunState run, string characterId, string itemKey)
+        public bool TrySellItem(RunState run, string characterId, string itemKey, int optionIndex = -1)
         {
             var entry = FindEntry(run, characterId);
-            if (entry == null || !entry.Items.Remove(itemKey)) return false;
+            if (entry == null) return false;
 
-            run.Currency += Refund(PriceOf(itemKey));
-            return true;
+            return Remove(entry.Items, itemKey, optionIndex, run);
         }
 
         /// <inheritdoc cref="TrySellItem"/>
-        public bool TrySellTeamItem(RunState run, string itemKey)
+        public bool TrySellTeamItem(RunState run, string itemKey, int optionIndex = -1)
         {
-            if (!run.TeamItems.Remove(itemKey)) return false;
+            return Remove(run.TeamItems, itemKey, optionIndex, run);
+        }
 
-            run.Currency += Refund(PriceOf(itemKey));
-            return true;
+        /// <remarks>
+        /// <paramref name="optionIndex"/> 가 -1 이면 키만 맞으면 판다.
+        /// 같은 아이템의 다른 선택지를 여러 개 갖고 있을 수 있으므로 <b>먼저 찾은 하나만</b> 뺀다.
+        /// </remarks>
+        private bool Remove(List<OwnedItem> items, string itemKey, int optionIndex, RunState run)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Key != itemKey) continue;
+                if (optionIndex >= 0 && items[i].OptionIndex != optionIndex) continue;
+
+                items.RemoveAt(i);
+                run.Currency += Refund(PriceOf(itemKey));
+                return true;
+            }
+            return false;
+        }
+
+        private int HealItemPermille()
+        {
+            var item = (_data.Economy.Raw["items"] as JObject)?["healItem"] as JObject;
+            return (int?)item?["healPermille"] ?? 0;
         }
 
         private int Refund(int price)
@@ -245,11 +284,33 @@ namespace DomoNinja.Core.Economy
             }
         }
 
+        /// <remarks>
+        /// 선택지가 있는 아이템은 <b>선택지마다 따로 풀에 넣는다.</b>
+        /// 아이템 하나를 넣고 살 때 고르게 하면, 같은 라운드에 "공격 강화"와 "체력 강화"가
+        /// 동시에 나올 수 없다 — 실제로는 다른 품목인데 자리를 하나로 세는 셈이다.
+        /// </remarks>
         private void BuildItemPool()
         {
             _itemPool.Clear();
+
             foreach (string key in ItemKeys)
-                _itemPool.Add(new ShopOffer(OfferKind.Item, key, null, PriceOf(key)));
+            {
+                int count = OptionCount(key);
+                if (count == 0)
+                {
+                    _itemPool.Add(new ShopOffer(OfferKind.Item, key, null, PriceOf(key)));
+                    continue;
+                }
+
+                for (int i = 0; i < count; i++)
+                    _itemPool.Add(new ShopOffer(OfferKind.Item, key, null, PriceOf(key), i));
+            }
+        }
+
+        private int OptionCount(string itemKey)
+        {
+            var item = (_data.Economy.Raw["items"] as JObject)?[itemKey] as JObject;
+            return item?["options"] is JArray options ? options.Count : 0;
         }
 
         /// <summary>풀에서 <paramref name="count"/> 개를 <b>중복 없이</b> 뽑는다.</summary>

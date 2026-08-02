@@ -51,11 +51,14 @@ namespace DomoNinja.Core.Tests
             var run = NewRun();
             var shop = NewShop();
 
+            // ★ 같은 아이템의 다른 선택지는 중복이 아니다.
+            //   "공격 강화"와 "체력 강화"가 같이 나오는 건 실제로 다른 품목이고,
+            //   그게 아이템 2칸을 의미 있게 만든다. 품목의 정체는 (키, 선택지) 쌍이다.
             for (ulong seed = 1; seed <= 20; seed++)
             {
                 shop.Restock(run, Rng(seed), round: 1);
-                var ids = shop.Offers.Select(o => o.Id).ToList();
-                Assert.That(ids.Distinct().Count(), Is.EqualTo(ids.Count), $"seed {seed}");
+                var keys = shop.Offers.Select(o => $"{o.Id}#{o.OptionIndex}").ToList();
+                Assert.That(keys.Distinct().Count(), Is.EqualTo(keys.Count), $"seed {seed}");
             }
         }
 
@@ -260,7 +263,7 @@ namespace DomoNinja.Core.Tests
         {
             // 손해를 남겨야 "일단 사고 되팔기"가 정답이 되지 않는다 (D-70).
             var run = NewRun();
-            run.Deployed[0].Items.Add("statBoost");   // 가격 3
+            run.Deployed[0].Items.Add(new OwnedItem("statBoost", 0));   // 가격 3
             run.Currency = 0;
 
             Assert.That(NewShop().TrySellItem(run, "C1", "statBoost"), Is.True);

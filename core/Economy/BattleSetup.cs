@@ -60,7 +60,7 @@ namespace DomoNinja.Core.Economy
                 // 죽은 캐릭터는 런 종료까지 돌아오지 않는다 (A6 — 부활 없음).
                 if (!entry.IsAlive) continue;
 
-                units.Add(BuildAlly(data, entry, meta, slot, RowOrder[slot % RowOrder.Length]));
+                units.Add(BuildAlly(data, run, entry, meta, slot, RowOrder[slot % RowOrder.Length]));
                 slot++;
             }
 
@@ -73,7 +73,7 @@ namespace DomoNinja.Core.Economy
             return units;
         }
 
-        private static Unit BuildAlly(GameData data, RosterEntry entry, MetaProgress meta, int slot, int row)
+        private static Unit BuildAlly(GameData data, RunState run, RosterEntry entry, MetaProgress meta, int slot, int row)
         {
             var character = data.FindCharacter(entry.CharacterId)!;
             var active = entry.ActiveSkillId == null ? null : data.FindSkill(entry.ActiveSkillId);
@@ -87,17 +87,17 @@ namespace DomoNinja.Core.Economy
 
             var stats = SkillResolver.BuildStats(character, active, supports);
 
-            // 스킬이 만든 증감분에 메타를 더한 뒤 한 번만 적용한다.
-            int maxHp = ApplyMeta(stats.Hp, meta, StatKey.Hp);
+            // 스킬이 만든 증감분에 메타와 아이템을 더한 뒤 한 번만 적용한다.
+            int maxHp = ApplyExtras(stats.Hp, data, run, entry, meta, StatKey.Hp);
             int column = stats.Range <= 1 ? MeleeColumn : RangedColumn;
 
             var unit = new Unit(
                 slot, Team.Ally, character.Id,
                 maxHp,
-                ApplyMeta(stats.Attack, meta, StatKey.Attack),
-                ApplyMeta(stats.AttackInterval, meta, StatKey.AttackInterval),
+                ApplyExtras(stats.Attack, data, run, entry, meta, StatKey.Attack),
+                ApplyExtras(stats.AttackInterval, data, run, entry, meta, StatKey.AttackInterval),
                 stats.Range,
-                ApplyMeta(stats.MoveInterval, meta, StatKey.MoveInterval),
+                ApplyExtras(stats.MoveInterval, data, run, entry, meta, StatKey.MoveInterval),
                 new Coord(column, row))
             {
                 DamageTakenDeltaPermille = stats.DamageTakenDeltaPermille,
@@ -116,10 +116,21 @@ namespace DomoNinja.Core.Economy
             new Unit(slot, Team.Enemy, type.Type, type.Hp, type.Attack, type.AttackInterval,
                      type.Range, type.MoveInterval ?? 1, at, type.Immobile);
 
-        private static int ApplyMeta(int value, MetaProgress meta, StatKey stat)
+        /// <summary>
+        /// 메타 강화와 아이템을 <b>같은 통에 더한 뒤 한 번만</b> 적용한다.
+        /// </summary>
+        /// <remarks>
+        /// 축이 셋(스킬·메타·아이템)인데 절삭 지점은 하나여야 한다.
+        /// 축마다 따로 곱하면 절삭이 세 번 일어나고 <b>적용 순서에 따라 결과가 달라진다</b> —
+        /// 합연산 규칙(`_schema` §8)이 막으려던 바로 그것이다.
+        /// 스킬 몫은 <see cref="SkillResolver.BuildStats"/> 가 이미 접어 넣은 값으로 들어온다.
+        /// </remarks>
+        private static int ApplyExtras(int value, GameData data, RunState run, RosterEntry entry,
+                                       MetaProgress meta, StatKey stat)
         {
             var sum = new ModifierSum();
             sum.AddDeltaPermille(meta.DeltaPermilleFor(stat));
+            sum.AddDeltaPermille(ItemEffects.DeltaPermilleFor(data, run, entry, stat));
 
             int result = sum.ApplyTo(value);
 

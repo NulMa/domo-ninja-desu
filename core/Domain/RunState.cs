@@ -5,6 +5,24 @@ using System.Collections.Generic;
 
 namespace DomoNinja.Core.Domain
 {
+    /// <summary>구매한 아이템 1개. <b>런 전용</b>이다 — 런이 끝나면 같이 사라진다.</summary>
+    public readonly struct OwnedItem
+    {
+        /// <summary>`economy.items` 의 키 (`statBoost` 등).</summary>
+        public readonly string Key;
+
+        /// <summary>그 아이템의 <c>options</c> 중 몇 번째인가. 선택지가 없으면 -1.</summary>
+        public readonly int OptionIndex;
+
+        public OwnedItem(string key, int optionIndex)
+        {
+            Key = key;
+            OptionIndex = optionIndex;
+        }
+
+        public override string ToString() => OptionIndex >= 0 ? $"{Key}#{OptionIndex}" : Key;
+    }
+
     /// <summary>런에 출전한 캐릭터 1명의 진행 상태. <b>라운드를 넘어 살아남는다.</b></summary>
     /// <remarks>
     /// HP 가 여기 있는 이유 — 라운드가 끝나도 체력이 <b>누적</b>되고(A-6), 죽으면 런 종료까지 부활하지 않는다.
@@ -30,7 +48,7 @@ namespace DomoNinja.Core.Domain
         /// 아이템은 <b>런 전용</b>이다(`runOnly`). 런이 끝나면 같이 사라진다.
         /// 스킬과 달리 팔 수 있으므로(`D-70`) 목록에서 빠질 수도 있다.
         /// </remarks>
-        public List<string> Items { get; } = new List<string>();
+        public List<OwnedItem> Items { get; } = new List<OwnedItem>();
 
         public bool IsAlive => Hp > 0;
 
@@ -91,7 +109,7 @@ namespace DomoNinja.Core.Domain
         /// ⚠️ *"사면 무조건 이득"* 이라 선택의 무게가 없다는 우려가 있어 `M4` 로 감시한다
         /// (`economy.items.teamBoost._tension`).
         /// </remarks>
-        public List<string> TeamItems { get; } = new List<string>();
+        public List<OwnedItem> TeamItems { get; } = new List<OwnedItem>();
 
         public RunState(string stageId, int lives, int startingCurrency, IReadOnlyList<RosterEntry> deployed)
         {
