@@ -57,6 +57,51 @@ namespace DomoNinja.Core.Data
         }
 
         /// <summary>
+        /// 반드시 있어야 하는 파일 5개.
+        /// </summary>
+        public static readonly string[] Required = { Characters, Skills, Encounters, Economy, Meta };
+
+        /// <summary>
+        /// `economy.json` 이 가리키는 <b>추가</b> 관문 파일 이름 (세트 이름 → 파일 이름).
+        /// </summary>
+        /// <remarks>
+        /// ★ 파일을 <b>미리 다 받아둬야 하는 환경</b>을 위해 열어둔다.
+        /// WebGL 은 <c>StreamingAssets</c> 를 비동기로만 읽을 수 있어서
+        /// <see cref="Load"/> 처럼 그 자리에서 꺼내 쓸 수가 없다.
+        /// 이 함수가 없으면 Unity 가 "어떤 파일이 있는지"를 자기가 알아야 하고,
+        /// 그 순간 <c>economy.stages</c> 매핑이 <b>또 한 벌 복제된다</b> —
+        /// 매핑을 데이터로 옮긴 이유가 사라진다.
+        /// </remarks>
+        public static Dictionary<string, string> EncounterFileNames(string economyJson)
+        {
+            var result = new Dictionary<string, string>();
+
+            JObject economy;
+            try
+            {
+                economy = JObject.Parse(economyJson);
+            }
+            catch (Exception)
+            {
+                return result;
+            }
+
+            if (!((economy["stages"] as JObject)?["list"] is JArray list)) return result;
+
+            foreach (var entry in list)
+            {
+                string? setName = (string?)entry["encounterSet"];
+                string? fileName = (string?)entry["encounterFile"];
+
+                if (setName == null || fileName == null) continue;
+                if (fileName == Encounters) continue;
+                if (!result.ContainsKey(setName)) result[setName] = fileName;
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// `economy.stages.list` 를 훑어 추가 관문 세트를 모은다.
         /// </summary>
         /// <remarks>
