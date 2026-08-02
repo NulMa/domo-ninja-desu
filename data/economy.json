@@ -15,9 +15,10 @@
   "stages": {
     "_desc": "D-68 — 예선은 2스테이지. 스테이지 1 클리어 시 2가 열린다.",
     "unlockRule": "clearPrevious",
+    "_encounterFileNote": "★ 어느 파일이 어느 스테이지인지를 데이터에 적는다. 코드에 두면 sim·Unity·테스트 세 곳에 같은 매핑이 복제되고, 스테이지가 늘 때마다 세 곳을 고쳐야 한다. 여기 한 줄 늘리면 core 는 손대지 않는다.",
     "list": [
-      { "id": "S1", "rounds": 8, "encounterSet": "stage1", "unlockedByDefault": true },
-      { "id": "S2", "rounds": 8, "encounterSet": "stage2", "unlockedByDefault": false }
+      { "id": "S1", "rounds": 8, "encounterSet": "stage1", "encounterFile": "encounters.json", "unlockedByDefault": true },
+      { "id": "S2", "rounds": 8, "encounterSet": "stage2", "encounterFile": "encountersStage2.json", "unlockedByDefault": false }
     ],
     "_whySameRounds": "스테이지 2를 12라운드로 늘리면 M5(1런 3~5분)가 즉시 깨진다. 난이도는 라운드 수가 아니라 적 구성으로 올린다.",
     "_infinityMode": "⏸ 팀원 기획에 있으나 예선 범위 밖. 엔드컨텐츠로 보류."

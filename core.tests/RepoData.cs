@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using DomoNinja.Core.Data;
 using Newtonsoft.Json.Linq;
 
 namespace DomoNinja.Core.Tests
@@ -27,6 +28,22 @@ namespace DomoNinja.Core.Tests
 
         public static string Read(string fileName) =>
             File.ReadAllText(Path.Combine(DataDir.Value, fileName));
+
+        /// <summary>
+        /// <see cref="GameDataFiles.Load"/> 에 넘길 읽기 함수. <b>없는 파일은 <c>null</c> 이다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 스테이지 파일 이름을 여기 박지 않는다 — 그 매핑은 `economy.stages.list[].encounterFile` 에 있고,
+        /// 테스트가 따로 들고 있으면 데이터와 어긋나도 초록으로 남는다.
+        /// </remarks>
+        public static string? TryRead(string fileName)
+        {
+            string path = Path.Combine(DataDir.Value, fileName);
+            return File.Exists(path) ? File.ReadAllText(path) : null;
+        }
+
+        /// <summary>저장소의 `/data` 전체를 데이터가 정한 대로 읽어 로드한다.</summary>
+        public static GameData LoadAll() => GameDataFiles.Load(TryRead);
 
         public static JObject Json(string fileName) => JObject.Parse(Read(fileName));
 

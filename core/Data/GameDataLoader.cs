@@ -129,6 +129,7 @@ namespace DomoNinja.Core.Data
 
                     // 스테이지 1 과 같은 규칙을 건다. 한쪽만 검사하면 나중에 들어온 쪽이 무방비가 된다.
                     ValidateEncounters(errors, extraRounds, enemyTypes, economyDef, kv.Key);
+                    ValidateDeclaredStage(errors, extra, economy, kv.Key);
                     sets[kv.Key] = extraRounds;
                 }
             }
@@ -577,6 +578,39 @@ namespace DomoNinja.Core.Data
                 if (skill.Icon != expected)
                     e.Add(new ValidationError("R22", $"skills.json {skill.Id}",
                         $"icon 이 규약과 다르다 — 기대 `{expected}` / 실제 `{skill.Icon}`"));
+            }
+        }
+
+        /// <summary>
+        /// `R23`(추가) — 세트 파일이 <c>stage</c> 를 적어뒀으면 <b>실제로 마운트된 스테이지와 맞는지</b> 본다.
+        /// </summary>
+        /// <remarks>
+        /// 필드 자체는 없어도 된다. 있는데 어긋나면 잡는다 —
+        /// 파일을 잘못된 세트 이름에 연결하면 <b>스테이지 2 를 골랐는데 다른 관문이 나오고</b>,
+        /// 그건 로드도 전투도 정상으로 보인다. 자기 이름을 적어둔 파일에서만 가능한 검사다.
+        /// </remarks>
+        private static void ValidateDeclaredStage(List<ValidationError> e, JObject setRoot,
+                                                  JObject economy, string setName)
+        {
+            var declared = setRoot["stage"];
+            if (declared == null || declared.Type == JTokenType.Null) return;
+
+            if (!((economy["stages"] as JObject)?["list"] is JArray list)) return;
+
+            foreach (var entry in list)
+            {
+                if ((string?)entry["encounterSet"] != setName) continue;
+
+                string id = (string?)entry["id"] ?? "";
+                if (id.Length < 2 || id[0] != 'S' || id[1] < '1' || id[1] > '9') return;
+
+                int expected = id[1] - '0';
+                int actual = (int?)declared ?? 0;
+
+                if (actual != expected)
+                    e.Add(new ValidationError("R23", setName,
+                        $"파일이 `stage: {actual}` 이라고 적었는데 `{id}`({setName}) 자리에 연결됐다"));
+                return;
             }
         }
 
