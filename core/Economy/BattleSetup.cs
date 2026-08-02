@@ -27,15 +27,18 @@ namespace DomoNinja.Core.Economy
     public static class BattleSetup
     {
         /// <summary>
-        /// 표준 배치의 열. 근접은 앞, 원거리는 뒤.
+        /// 표준 배치의 앞열. 여기서부터 <b>사거리 짧은 순으로</b> 뒤로 물린다 (`08` §6.1).
         /// </summary>
         /// <remarks>
         /// ⚠️ <b>시뮬 전용 규칙이다</b> (`D-46`). 실제 게임에서는 플레이어가 매 라운드 배치한다.
         /// 그래서 시뮬이 내는 `M4` 는 <b>"표준 배치 하의" 값</b>이고, 그 사실을 지표에 표기한다.
-        /// 배치를 탐색 축에 넣으면 빌드 공간이 24칸 조합만큼 곱해져 전수 탐색이 불가능해진다.
+        /// 배치를 탐색 축에 넣으면 24칸에 3명 = 12,144 배치가 곱해져 전수 탐색이 붕괴한다.
+        ///
+        /// ★ 처음엔 근접/원거리 2단계로 갈랐는데 스펙은 <b>"사거리 짧은 순"</b> 이라고 적어뒀다.
+        /// 사거리 3·4·5 가 같은 열에 서면 그 셋의 차이가 배치에 반영되지 않는다.
+        /// `M4` 를 *"표준 배치 하의 정확값"* 이라고 말하려면 <b>그 표준이 스펙과 같아야 한다.</b>
         /// </remarks>
-        private const int MeleeColumn = 3;
-        private const int RangedColumn = 1;
+        private const int FrontColumn = 3;
 
         /// <summary>
         /// 배치 행 순서. <b>가운데부터 바깥으로</b>.
@@ -60,9 +63,14 @@ namespace DomoNinja.Core.Economy
                 // 죽은 캐릭터는 런 종료까지 돌아오지 않는다 (A6 — 부활 없음).
                 if (!entry.IsAlive) continue;
 
-                units.Add(BuildAlly(data, run, entry, meta, slot, RowOrder[slot % RowOrder.Length]));
+                units.Add(BuildAlly(data, run, entry, meta, slot));
                 slot++;
             }
+
+            // ★ 자리는 유닛을 다 만든 뒤에 정한다 — 사거리를 알아야 앞뒤가 갈리는데,
+            //   사거리는 스킬·보조를 다 반영한 뒤에야 확정된다(C4-A 저격은 5 → 7).
+            //   슬롯 인덱스는 건드리지 않는다. 위치만 바뀌지 순회 순서는 로스터 순서 그대로다.
+            PlaceAllies(units);
 
             foreach (var placement in variant.Units)
             {
@@ -73,7 +81,35 @@ namespace DomoNinja.Core.Economy
             return units;
         }
 
-        private static Unit BuildAlly(GameData data, RunState run, RosterEntry entry, MetaProgress meta, int slot, int row)
+        /// <summary>
+        /// 표준 배치 — <b>사거리 짧은 순으로 앞열부터</b>. 동률은 슬롯 인덱스로 끊는다.
+        /// </summary>
+        /// <remarks>
+        /// 동률 처리가 없으면 같은 사거리 둘의 앞뒤가 정렬 구현에 따라 갈린다.
+        /// <c>List.Sort</c> 는 불안정 정렬이라 <b>같은 입력에서도 순서가 뒤집힐 수 있다</b> —
+        /// 여기서 결정론이 깨지면 그 위의 밸런스 수치가 전부 의미를 잃는다.
+        /// 그래서 비교자가 사거리와 id 를 둘 다 본다.
+        /// </remarks>
+        private static void PlaceAllies(List<Unit> allies)
+        {
+            var order = new List<Unit>(allies);
+            order.Sort((a, b) =>
+            {
+                int byRange = a.Range.CompareTo(b.Range);
+                return byRange != 0 ? byRange : a.Id.CompareTo(b.Id);
+            });
+
+            for (int i = 0; i < order.Count; i++)
+            {
+                // 앞열(x=3)부터 뒤로 물린다. 진영이 4열이라 3명이면 3·2·1 을 쓴다.
+                int column = FrontColumn - i;
+                if (column < 0) column = 0;
+
+                order[i].At = new Coord(column, RowOrder[i % RowOrder.Length]);
+            }
+        }
+
+        private static Unit BuildAlly(GameData data, RunState run, RosterEntry entry, MetaProgress meta, int slot)
         {
             var character = data.FindCharacter(entry.CharacterId)!;
             var active = entry.ActiveSkillId == null ? null : data.FindSkill(entry.ActiveSkillId);
@@ -89,7 +125,7 @@ namespace DomoNinja.Core.Economy
 
             // 스킬이 만든 증감분에 메타와 아이템을 더한 뒤 한 번만 적용한다.
             int maxHp = ApplyExtras(stats.Hp, data, run, entry, meta, StatKey.Hp);
-            int column = stats.Range <= 1 ? MeleeColumn : RangedColumn;
+            // 자리는 PlaceAllies 가 나중에 정한다. 여기서는 유닛만 만든다.
 
             var unit = new Unit(
                 slot, Team.Ally, character.Id,
@@ -98,7 +134,7 @@ namespace DomoNinja.Core.Economy
                 ApplyExtras(stats.AttackInterval, data, run, entry, meta, StatKey.AttackInterval),
                 stats.Range,
                 ApplyExtras(stats.MoveInterval, data, run, entry, meta, StatKey.MoveInterval),
-                new Coord(column, row))
+                Coord.Origin)
             {
                 DamageTakenDeltaPermille = stats.DamageTakenDeltaPermille,
                 Loadout = Loadout.Build(active, supports),

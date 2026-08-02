@@ -28,6 +28,9 @@ namespace DomoNinja.Core.Domain
         /// <summary>아군이 배치 가능한 x 상한(포함). 팀원 확정 A-3 — 자기 진영 4x6 만 배치 가능</summary>
         public const int AllyMaxX = 3;
 
+        /// <summary>(0,0). 아직 자리가 안 정해진 유닛의 임시값으로 쓴다.</summary>
+        public static readonly Coord Origin = new Coord(0, 0);
+
         public readonly int X;
         public readonly int Y;
 
