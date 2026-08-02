@@ -1,0 +1,16 @@
+{
+  "_note": "4,320 빌드 전수 탐색. 실행: dotnet run --project sim -c Release -- --run sim/params.full.json --out artifacts/metrics.json",
+  "_why": "기본값(빌드 50)은 손이 미끄러진 사람을 위한 것이고, 실제 판정은 이 파일로 한다. buildLimit 0 이 전수다.",
+  "_cost": "21,600런 약 1.5초. 유닛-틱당 0.02µs 라 17 §7.1 예산(5µs)의 1/250 이다.",
+
+  "seeds": 5,
+  "seedStart": 1,
+  "stage": "S1",
+  "meta": "meta0",
+  "buildLimit": 0,
+  "parallel": true,
+  "includeBuilds": false,
+
+  "_metaPoints": "meta0 / meta50 / metaMax 셋을 각각 돌려야 M1 세 값이 나온다 (08 §6.2).",
+  "_stages": "S1 / S2. 스테이지 2 는 팀원 저작본이 들어와 있다."
+}
