@@ -115,6 +115,8 @@
       "scope": "character",
       "poolPerCharacter": 3,
       "maxSelectPerCharacter": 2,
+      "appearRounds": [2, 4, 6],
+      "_appearRoundsNote": "★ 08 §4.2 가 '등장 라운드 목록은 economy.json 파라미터이고 시뮬이 조정한다'고 명시했는데 필드가 빠져 있었다. 구현하며 채웠다. 값은 스펙에 적힌 2·4·6 그대로이고, 조정은 M6(첫 활성화 라운드)·M3c(보조 채택률)를 보고 한다.",
       "sharesShopSlots": true,
       "requiresMainSkillActive": true,
       "_requiresNote": "메인 액티브를 활성화한 뒤에야 그 캐릭터의 보조 3종이 풀에 진입한다. 강화할 대상이 없으면 살 수 없다.",

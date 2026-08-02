@@ -25,6 +25,13 @@ namespace DomoNinja.Core.Domain
         /// <summary>구매한 보조 스킬. <b>최대 2개</b> (`economy.shop.supportSkill.maxSelectPerCharacter`).</summary>
         public List<string> SupportSkillIds { get; } = new List<string>();
 
+        /// <summary>이 캐릭터에게 지정해 산 아이템. 같은 것을 여러 개 살 수 있어 <b>중복을 허용한다.</b></summary>
+        /// <remarks>
+        /// 아이템은 <b>런 전용</b>이다(`runOnly`). 런이 끝나면 같이 사라진다.
+        /// 스킬과 달리 팔 수 있으므로(`D-70`) 목록에서 빠질 수도 있다.
+        /// </remarks>
+        public List<string> Items { get; } = new List<string>();
+
         public bool IsAlive => Hp > 0;
 
         public RosterEntry(string characterId, int maxHp)
@@ -77,6 +84,14 @@ namespace DomoNinja.Core.Domain
         /// <b>List 인 이유는 순서를 보존하기 위해서다</b> — HashSet 순회는 결정론에 쓸 수 없다.
         /// </remarks>
         public List<string> RemovedSkillIds { get; } = new List<string>();
+
+        /// <summary>아군 전체에 걸리는 아이템(`teamBoost`). 캐릭터를 지정하지 않는다.</summary>
+        /// <remarks>
+        /// 가격이 2배인 이유가 여기 있다 — 전원에게 걸리므로 기회비용을 가격으로 만든다.
+        /// ⚠️ *"사면 무조건 이득"* 이라 선택의 무게가 없다는 우려가 있어 `M4` 로 감시한다
+        /// (`economy.items.teamBoost._tension`).
+        /// </remarks>
+        public List<string> TeamItems { get; } = new List<string>();
 
         public RunState(string stageId, int lives, int startingCurrency, IReadOnlyList<RosterEntry> deployed)
         {
