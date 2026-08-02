@@ -37,9 +37,43 @@ namespace DomoNinja.Sim
                 "--selftest" => SelfTest(),
                 "--version" => Version(),
                 "--run" => RunSim(args),
+                "--replay" => RunReplay(args),
                 _ => Unknown(args[0]),
             };
         }
+
+        /// <summary>런 하나를 사람이 읽게 풀어놓는다. <b>화면이 없는 동안의 유일한 창이다.</b></summary>
+        private static int RunReplay(string[] args)
+        {
+            GameData data;
+            try
+            {
+                data = LoadData(ArgAfter(args, "--data") ?? FindDataDir());
+            }
+            catch (DataValidationException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                return 3;
+            }
+
+            ulong seed = ulong.TryParse(ArgAfter(args, "--seed"), out ulong s) ? s : 1UL;
+            int build = int.TryParse(ArgAfter(args, "--build"), out int b) ? b : 0;
+            int? round = int.TryParse(ArgAfter(args, "--round"), out int r) ? r : (int?)null;
+            string stage = ArgAfter(args, "--stage") ?? "S1";
+
+            return Replay.Run(data, stage, seed, build, round);
+        }
+
+        /// <remarks>
+        /// core 는 파일을 직접 열지 않는다 — WebGL 에 파일 시스템이 없어서다.
+        /// 읽는 방법은 실행 환경이 정하고, 여기서는 디스크다.
+        /// </remarks>
+        private static GameData LoadData(string dataDir) =>
+            GameDataFiles.Load(name =>
+            {
+                string path = Path.Combine(dataDir, name);
+                return File.Exists(path) ? File.ReadAllText(path) : null;
+            });
 
         /// <summary>
         /// `params.json` → `metrics.json`.
@@ -66,13 +100,7 @@ namespace DomoNinja.Sim
             GameData data;
             try
             {
-                // core 는 파일을 직접 열지 않는다 — WebGL 에 파일 시스템이 없어서다.
-                // 읽는 방법은 실행 환경이 정하고, 여기서는 디스크다.
-                data = GameDataFiles.Load(name =>
-                {
-                    string path = Path.Combine(dataDir, name);
-                    return File.Exists(path) ? File.ReadAllText(path) : null;
-                });
+                data = LoadData(dataDir);
             }
             catch (DataValidationException ex)
             {
@@ -131,6 +159,7 @@ namespace DomoNinja.Sim
             Console.WriteLine("DomoNinja.Sim — 헤드리스 시뮬레이터");
             Console.WriteLine();
             Console.WriteLine("  --run [params.json] [--out metrics.json] [--data DIR]   시뮬 실행");
+            Console.WriteLine("  --replay [--seed N] [--build N] [--round N] [--stage S1]   런 1회를 읽기 좋게 출력");
             Console.WriteLine("  --selftest    결정론 자체 점검 (게이트 2)");
             Console.WriteLine("  --version     버전 출력");
             Console.WriteLine();
