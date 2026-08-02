@@ -55,15 +55,28 @@ namespace DomoNinja.Core.Skills
         /// <summary>보조가 만든 메인 스킬 위력 배율(천분율).</summary>
         public int SkillPowerPermille { get; }
 
-        /// <summary>전투 시작 시 한 번 거는 것들. 주로 팀·적 대상 <c>status</c> 다.</summary>
+        /// <summary>전투 시작 시 한 번 거는 것들. <c>self</c>·<c>allies</c>·<c>all_enemies</c> 대상이다.</summary>
         public IReadOnlyList<StartEffect> StartEffects { get; }
 
-        private Loadout(TriggerSet triggers, JObject? aoe, int skillPower, IReadOnlyList<StartEffect> start)
+        /// <summary>
+        /// 공격할 때마다 <b>맞은 표적에게</b> 거는 것들. <c>target: "enemy"</c> 인 <c>status</c> 다.
+        /// </summary>
+        /// <remarks>
+        /// ★ 시작 효과와 갈라놓은 이유 — <c>enemy</c> 는 <b>"지금 때리는 상대"</b>라
+        /// 전투 시작 시점에는 가리킬 대상이 없다. 같이 묶어 두면 대상을 못 찾아
+        /// <b>조용히 아무 일도 일어나지 않는다.</b>
+        /// <c>C5-A</c> 각인이 실제로 그 상태였고, 통합 테스트가 그걸 잡았다.
+        /// </remarks>
+        public IReadOnlyList<StartEffect> OnAttackEffects { get; }
+
+        private Loadout(TriggerSet triggers, JObject? aoe, int skillPower,
+                        IReadOnlyList<StartEffect> start, IReadOnlyList<StartEffect> onAttack)
         {
             Triggers = triggers;
             Aoe = aoe;
             SkillPowerPermille = skillPower;
             StartEffects = start;
+            OnAttackEffects = onAttack;
         }
 
         /// <summary>액티브 1개와 보조 최대 2개를 분류한다.</summary>
@@ -72,6 +85,7 @@ namespace DomoNinja.Core.Skills
             int skillPower = SkillResolver.ResolveSkillPower(supports);
             JObject? aoe = null;
             List<StartEffect>? start = null;
+            List<StartEffect>? onAttack = null;
 
             void Scan(SkillDef skill, int power)
             {
@@ -88,7 +102,11 @@ namespace DomoNinja.Core.Skills
                             break;
 
                         case "status":
-                            (start ??= new List<StartEffect>()).Add(new StartEffect(e, power));
+                            // "enemy" 는 지금 때리는 상대라 시작 시점에 가리킬 대상이 없다.
+                            if ((string?)e["target"] == "enemy")
+                                (onAttack ??= new List<StartEffect>()).Add(new StartEffect(e, power));
+                            else
+                                (start ??= new List<StartEffect>()).Add(new StartEffect(e, power));
                             break;
                     }
                 }
@@ -104,11 +122,12 @@ namespace DomoNinja.Core.Skills
                 TriggerSet.Compile(active, supports),
                 aoe,
                 skillPower,
-                (IReadOnlyList<StartEffect>?)start ?? NoStart);
+                (IReadOnlyList<StartEffect>?)start ?? NoStart,
+                (IReadOnlyList<StartEffect>?)onAttack ?? NoStart);
         }
 
         /// <summary>스킬이 하나도 없는 유닛(적 전부). <b>적은 스킬을 갖지 않는다</b> (`D-39`).</summary>
         public static readonly Loadout Empty =
-            new Loadout(TriggerSet.Compile(null), null, Permille.One, NoStart);
+            new Loadout(TriggerSet.Compile(null), null, Permille.One, NoStart, NoStart);
     }
 }

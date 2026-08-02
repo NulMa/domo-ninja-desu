@@ -58,16 +58,27 @@ namespace DomoNinja.Core.Combat
         /// <summary>건 쪽의 유닛 번호. 없으면 -1. <c>Taunt</c> 대상 판정과 로그에 쓴다.</summary>
         public readonly int SourceUnitId;
 
+        /// <summary>
+        /// 걸린 틱. <c>DotRamping</c> 이 경과 시간을 재는 데 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// 남은 시간(<see cref="ExpireTick"/>)에서 역산하지 않는 이유 — 무기한 상태는 만료 틱이 없고,
+        /// 같은 종류를 다시 걸면 지속시간이 새로 시작되므로 역산값이 조용히 튄다.
+        /// </remarks>
+        public readonly int AppliedTick;
+
         /// <summary>만료되지 않는다는 뜻. 전투가 끝날 때까지 유지된다.</summary>
         public const int Never = int.MaxValue;
 
-        public StatusEffect(StatusKind kind, int expireTick, int valueA = 0, int valueB = 0, int sourceUnitId = -1)
+        public StatusEffect(StatusKind kind, int expireTick, int valueA = 0, int valueB = 0,
+                            int sourceUnitId = -1, int appliedTick = 0)
         {
             Kind = kind;
             ExpireTick = expireTick;
             ValueA = valueA;
             ValueB = valueB;
             SourceUnitId = sourceUnitId;
+            AppliedTick = appliedTick;
         }
 
         public bool IsExpiredAt(int tick) => tick >= ExpireTick;

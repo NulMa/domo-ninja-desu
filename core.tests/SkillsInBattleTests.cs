@@ -228,6 +228,51 @@ namespace DomoNinja.Core.Tests
                         Is.True, "자해 이벤트가 있어야 한다");
         }
 
+        [Test]
+        public void 가호의_재생이_실제로_돈다()
+        {
+            // ★ regen 은 걸리는 것만으로는 아무 일도 안 한다. 매 초 돌려주지 않으면
+            //   C6-B 는 상태 아이콘만 뜨고 효과가 없는 스킬이 된다.
+            // 동료는 오래 버티는 쪽으로 고른다 — 금방 죽으면 재생이 한 번밖에 안 돌고,
+            // 그건 "재생이 도는가"가 아니라 "동료가 버티는가"를 재는 것이 된다.
+            var healer = Ally(0, "C6", "C6-B", new Coord(0, 0));
+            var mate = Ally(1, "C2", "C2-A", new Coord(0, 1));
+            mate.Hp = mate.MaxHp / 2;
+
+            var (_, sink) = Run(healer, mate, Enemy(2, "bear", new Coord(7, 5), hpOverride: 3000));
+
+            var heals = sink.Events.Where(e => e.Kind == EventKind.Heal && e.TargetId == 1).ToList();
+
+            // 최종 HP 로 재지 않는다 — 맞으면서 회복하는 상황이라 순증감은 적 화력에 좌우되고,
+            // 그건 재생이 도는지와 무관하다.
+            Assert.That(heals.Count, Is.GreaterThan(1), "재생이 매 초 회복을 넣어야 한다");
+            Assert.That(heals.All(h => h.Value > 0), Is.True, "회복량이 0 이면 도는 시늉만 하는 것이다");
+        }
+
+        [Test]
+        public void 각인의_지속피해가_시간이_갈수록_커진다()
+        {
+            // C5-A — dot_ramping. 걸어두고 돌리지 않으면 아무 일도 안 일어난다.
+            var mage = Ally(0, "C5", "C5-A", new Coord(3, 2));
+            var foe = Enemy(1, "bear", new Coord(4, 2), hpOverride: 2000);
+
+            var (_, sink) = Run(mage, foe);
+
+            // 평타와 지속 피해가 같은 모양(Damage, actor=시전자)으로 나오므로 틱으로 가른다 —
+            // 같은 틱에 Attack 이 없는 Damage 가 지속 피해다.
+            var attackTicks = sink.Events
+                .Where(e => e.Kind == EventKind.Attack && e.ActorId == 0)
+                .Select(e => e.Tick).ToHashSet();
+
+            var dots = sink.Events
+                .Where(e => e.Kind == EventKind.Damage && e.ActorId == 0 && e.TargetId == 1
+                            && !attackTicks.Contains(e.Tick))
+                .Select(e => e.Value).ToList();
+
+            Assert.That(dots.Count, Is.GreaterThan(2), "지속 피해가 여러 번 들어와야 한다");
+            Assert.That(dots.Max(), Is.GreaterThan(dots.Min()), "시간이 지날수록 커져야 한다");
+        }
+
         // ────────────────────────────── 안전장치
 
         [Test]

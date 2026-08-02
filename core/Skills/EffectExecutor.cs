@@ -192,7 +192,7 @@ namespace DomoNinja.Core.Skills
                 }
 
                 t.Status.Apply(new StatusEffect(kind, expire,
-                    ValueA(kind, e, skillPower), ValueB(kind, e), ctx.Self.Id));
+                    ValueA(kind, e, skillPower), ValueB(kind, e), ctx.Self.Id, ctx.Tick));
 
                 ctx.Sink.Emit(new GameEvent(EventKind.StatusApply, ctx.Tick, ctx.Self.Id, t.Id,
                     (int)kind, expire));

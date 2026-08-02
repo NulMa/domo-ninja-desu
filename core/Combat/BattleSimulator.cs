@@ -166,6 +166,7 @@ namespace DomoNinja.Core.Combat
                 foreach (var kind in _expiredScratch)
                     sink.Emit(new GameEvent(EventKind.StatusExpire, tick, -1, u.Id, (int)kind));
 
+                TickStatuses(u, tick, sink);
                 FirePeriodic(u, tick, sink);
                 if (!u.IsAlive) continue;   // 주기 효과가 자기 체력을 태워 죽을 수 있다 (C2-B 파동)
 
@@ -199,6 +200,44 @@ namespace DomoNinja.Core.Combat
                 var ctx = MakeContext(u, null, 0, 0, sink);
                 for (int k = 0; k < start.Count; k++)
                     EffectExecutor.Execute(start[k].Effect, ctx, start[k].SkillPowerPermille);
+            }
+        }
+
+        /// <summary>
+        /// 시간이 지나면서 스스로 일하는 상태이상 — <c>regen</c> 과 <c>dot_ramping</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 이 둘은 <b>걸리는 것만으로는 아무 일도 안 한다.</b> 걸어두고 여기서 돌리지 않으면
+        /// <c>C6-B</c> 가호와 <c>C5-A</c> 각인이 <b>상태 아이콘만 뜨고 효과가 없는</b> 스킬이 된다.
+        /// </para>
+        /// <para>
+        /// ⚠️ <c>dot_ramping</c> 의 수치 해석은 확정된 게 아니다.
+        /// <c>baseValue: 6, rampPerTick: 0.4, duration: 200</c> 에서 「매 초 적용, 피해 = base + ramp × 경과틱」
+        /// 으로 읽었는데, 그러면 10초 동안 누적 약 460 이라 적 체력(40~260)에 비해 크다.
+        /// 매 틱 적용으로 읽으면 20배가 되어 확실히 과하다. 둘 중 덜 나간 쪽을 택했고,
+        /// <b>수치는 밸런스 루프가 조정할 대상</b>이다 — 구조가 아니라 값의 문제다.
+        /// </para>
+        /// </remarks>
+        private void TickStatuses(Unit u, int tick, IEventSink sink)
+        {
+            if (u.Status.Count == 0) return;
+
+            if (u.Status.TryGet(StatusKind.Regen, out var regen) && regen.ValueB > 0
+                && tick > 0 && tick % regen.ValueB == 0)
+            {
+                // healPermille 은 대상 최대 체력의 천분율이다 (`_schema` §3).
+                int amount = Permille.Apply(u.MaxHp, regen.ValueA);
+                DamageResolver.ApplyHeal(u, amount, regen.SourceUnitId, tick, sink);
+            }
+
+            if (u.Status.TryGet(StatusKind.DotRamping, out var dot)
+                && tick > 0 && tick % _config.ApplyEveryTicks == 0)
+            {
+                int elapsed = tick - dot.AppliedTick;
+                int amount = dot.ValueA + Permille.Apply(elapsed, dot.ValueB);
+                if (amount > 0)
+                    DamageResolver.ApplyDamage(u, amount, dot.SourceUnitId, tick, sink);
             }
         }
 
@@ -342,6 +381,15 @@ namespace DomoNinja.Core.Combat
                     anyKill |= r.Killed;
                     anyHit |= r.Dealt > 0;
                 }
+            }
+
+            // target: "enemy" 인 상태이상 — 때린 상대에게 건다 (C5-A 각인).
+            var onAttack = u.Loadout.OnAttackEffects;
+            if (anyHit && onAttack.Count > 0)
+            {
+                var ctx = MakeContext(u, target, totalDealt, tick, sink);
+                for (int i = 0; i < onAttack.Count; i++)
+                    EffectExecutor.Execute(onAttack[i].Effect, ctx, onAttack[i].SkillPowerPermille);
             }
 
             // on_hit — 자신의 공격이 적중한 순간. 흡혈·표식·둔화가 여기 걸린다.
