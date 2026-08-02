@@ -75,7 +75,7 @@ namespace DomoNinja.Core.Economy
     /// CRN(`17` §6)으로 분산을 줄이려는 설계가 그 지점에서 무너진다.
     /// </para>
     /// <para>
-    /// ⚠️ 현재 `encounters.json` 에는 라운드 세트가 <b>하나뿐</b>이다.
+    /// 스테이지별 관문은 <see cref="GameData.RoundsFor"/> 가 고른다.
     /// `economy.stages` 는 `stage1`/`stage2` 를 가리키지만 스테이지 2 저작은 팀원 작업분(`19` §6.7)이라
     /// 아직 없다. 그래서 지금은 스테이지 id 가 결과에 영향을 주지 않는다 — 저작이 들어오면 여기서 갈라진다.
     /// </para>
@@ -126,7 +126,7 @@ namespace DomoNinja.Core.Economy
         public RoundOutcome PlayRound(RunState run, MetaProgress meta, DeterministicRandom rng,
                                       IEventSink sink, bool collectLog = false)
         {
-            var round = FindRound(run.Round);
+            var round = FindRound(run.StageId, run.Round);
             var variant = PickVariant(round, rng);
 
             var units = BattleSetup.Build(_data, run, variant, meta);
@@ -219,13 +219,16 @@ namespace DomoNinja.Core.Economy
             }
         }
 
-        private RoundDef FindRound(int number)
+        /// <summary>그 스테이지의 관문에서 라운드를 찾는다.</summary>
+        private RoundDef FindRound(string stageId, int number)
         {
-            foreach (var r in _data.Rounds)
+            var rounds = _data.RoundsFor(stageId);
+
+            foreach (var r in rounds)
                 if (r.Round == number) return r;
 
             // 검증 규칙 R12 가 1~8 을 빠짐없이 덮는지 이미 확인한다. 여기 도달하면 그건 코드 문제다.
-            return _data.Rounds[_data.Rounds.Count - 1];
+            return rounds[rounds.Count - 1];
         }
 
         /// <summary>변형 추첨. <b>관문 스트림에서만 뽑는다.</b></summary>

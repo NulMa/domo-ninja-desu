@@ -51,13 +51,49 @@ namespace DomoNinja.Core.Data
 
         private static readonly string[] SupportSlots = { "공격", "생존", "팀" };
 
+        /// <summary>
+        /// 추가 관문 세트까지 함께 읽는다 (`D-68` 스테이지 2).
+        /// </summary>
+        /// <param name="extraEncounterSets">
+        /// 세트 이름(`economy.stages.list[].encounterSet`) → JSON 문자열.
+        /// <b>적 타입 테이블은 `encounters.json` 것을 공유한다</b> — 세트 파일에는 <c>rounds</c> 만 있으면 된다.
+        /// </param>
+        /// <remarks>
+        /// 세트를 파일로 나눈 것은 팀원 저작 판단이다. core 는 그 구조를 받되
+        /// <b>검증은 스테이지 1 과 똑같이 건다</b> — 좌표 범위·중복·적 타입 존재 여부는
+        /// 스테이지가 늘어도 같은 계약이고, 한쪽만 검사하면 나중에 들어온 쪽이 무방비가 된다.
+        /// </remarks>
         /// <exception cref="DataValidationException">계약 위반이 하나라도 있으면.</exception>
         public static GameData Load(
             string charactersJson,
             string skillsJson,
             string encountersJson,
             string economyJson,
+            string metaJson,
+            IReadOnlyDictionary<string, string>? extraEncounterSets)
+        {
+            return LoadInternal(charactersJson, skillsJson, encountersJson, economyJson, metaJson,
+                                extraEncounterSets);
+        }
+
+        /// <inheritdoc cref="Load(string,string,string,string,string,IReadOnlyDictionary{string,string})"/>
+        public static GameData Load(
+            string charactersJson,
+            string skillsJson,
+            string encountersJson,
+            string economyJson,
             string metaJson)
+        {
+            return LoadInternal(charactersJson, skillsJson, encountersJson, economyJson, metaJson, null);
+        }
+
+        private static GameData LoadInternal(
+            string charactersJson,
+            string skillsJson,
+            string encountersJson,
+            string economyJson,
+            string metaJson,
+            IReadOnlyDictionary<string, string>? extraEncounterSets)
         {
             var errors = new List<ValidationError>();
 
@@ -79,9 +115,28 @@ namespace DomoNinja.Core.Data
 
             Validate(errors, characterList, activeSkills, supportSkills, enemyTypes, rounds, economyDef, characters);
 
+            var sets = new Dictionary<string, IReadOnlyList<RoundDef>>
+            {
+                [GameData.DefaultEncounterSet] = rounds,
+            };
+
+            if (extraEncounterSets != null)
+            {
+                foreach (var kv in extraEncounterSets)
+                {
+                    var extra = Parse(kv.Value, kv.Key, errors);
+                    var extraRounds = ReadRounds(extra, errors);
+
+                    // 스테이지 1 과 같은 규칙을 건다. 한쪽만 검사하면 나중에 들어온 쪽이 무방비가 된다.
+                    ValidateEncounters(errors, extraRounds, enemyTypes, economyDef, kv.Key);
+                    sets[kv.Key] = extraRounds;
+                }
+            }
+
             if (errors.Count > 0) throw new DataValidationException(errors);
 
-            return new GameData(characterList, activeSkills, supportSkills, enemyTypes, rounds, economyDef, metaDef);
+            return new GameData(characterList, activeSkills, supportSkills, enemyTypes, rounds,
+                                economyDef, metaDef, sets);
         }
 
         // ────────────────────────────── 읽기
@@ -431,49 +486,7 @@ namespace DomoNinja.Core.Data
                 foreach (var t in s.Effects)
                     ValidateEffect(t, s.Id, topLevel: true, e);
 
-            // R12 — rounds 가 1~totalRounds 를 빠짐없이 덮는다
-            var seen = new HashSet<int>();
-            foreach (var r in rounds) seen.Add(r.Round);
-            for (int i = 1; i <= economy.TotalRounds; i++)
-            {
-                if (!seen.Contains(i))
-                    e.Add(new ValidationError("R12", "encounters.json", $"라운드 {i} 구성이 없다"));
-            }
-
-            int minEnemyX = economy.BoardCols;
-            int maxEnemyX = economy.BoardCols * 2 - 1;
-            int maxY = economy.BoardRows - 1;
-            int sideCells = economy.BoardCols * economy.BoardRows;
-
-            foreach (var r in rounds)
-            {
-                foreach (var v in r.Variants)
-                {
-                    var used = new HashSet<int>();
-                    foreach (var u in v.Units)
-                    {
-                        // R13 — 모든 type 이 enemyTypes 에 존재한다
-                        if (!enemyTypes.ContainsKey(u.Type))
-                            e.Add(new ValidationError("R13", $"encounters.json {v.Id}",
-                                $"`{u.Type}` 이 enemyTypes 에 없다"));
-
-                        // R14 — 적 좌표가 적 진영 안이다
-                        if (u.At.X < minEnemyX || u.At.X > maxEnemyX || u.At.Y < 0 || u.At.Y > maxY)
-                            e.Add(new ValidationError("R14", $"encounters.json {v.Id}",
-                                $"{u.Type}{u.At} 가 적 진영(x {minEnemyX}~{maxEnemyX}, y 0~{maxY}) 밖이다"));
-
-                        // R15 — 한 variant 안에서 좌표가 중복되지 않는다
-                        if (!used.Add(u.At.OrderKey))
-                            e.Add(new ValidationError("R15", $"encounters.json {v.Id}",
-                                $"{u.At} 에 두 체 이상이 겹친다"));
-                    }
-
-                    // R16 — 유닛 수가 자기 진영 칸 수를 넘지 않는다
-                    if (v.Units.Count > sideCells)
-                        e.Add(new ValidationError("R16", $"encounters.json {v.Id}",
-                            $"{v.Units.Count}체 > 진영 칸 수 {sideCells}"));
-                }
-            }
+            ValidateEncounters(e, rounds, enemyTypes, economy, "encounters.json");
 
             // R17 — supportSkills 수 == 캐릭터 수 × poolPerCharacter
             int expected = characters.Count * economy.SupportPoolPerCharacter;
@@ -564,6 +577,63 @@ namespace DomoNinja.Core.Data
                 if (skill.Icon != expected)
                     e.Add(new ValidationError("R22", $"skills.json {skill.Id}",
                         $"icon 이 규약과 다르다 — 기대 `{expected}` / 실제 `{skill.Icon}`"));
+            }
+        }
+
+        /// <summary>
+        /// 관문 세트 하나에 대한 검사 (`R12`~`R16`). <b>스테이지가 늘어도 같은 계약이다.</b>
+        /// </summary>
+        /// <param name="where">오류 메시지에 찍을 출처. 세트마다 다르므로 받아 쓴다.</param>
+        private static void ValidateEncounters(
+            List<ValidationError> e,
+            List<RoundDef> rounds,
+            Dictionary<string, EnemyTypeDef> enemyTypes,
+            EconomyDef economy,
+            string where)
+        {
+            // R12 — rounds 가 1~totalRounds 를 빠짐없이 덮는다
+            var seen = new HashSet<int>();
+            foreach (var r in rounds) seen.Add(r.Round);
+            for (int i = 1; i <= economy.TotalRounds; i++)
+            {
+                if (!seen.Contains(i))
+                    e.Add(new ValidationError("R12", where, $"라운드 {i} 구성이 없다"));
+            }
+
+            int minEnemyX = economy.BoardCols;
+            int maxEnemyX = economy.BoardCols * 2 - 1;
+            int maxY = economy.BoardRows - 1;
+            int sideCells = economy.BoardCols * economy.BoardRows;
+
+            foreach (var r in rounds)
+            {
+                foreach (var v in r.Variants)
+                {
+                    var used = new HashSet<int>();
+                    foreach (var u in v.Units)
+                    {
+                        // R13 — 모든 type 이 enemyTypes 에 존재한다.
+                        //       적 타입 테이블은 스테이지가 공유하므로 세트가 늘어도 출처는 하나다.
+                        if (!enemyTypes.ContainsKey(u.Type))
+                            e.Add(new ValidationError("R13", $"{where} {v.Id}",
+                                $"`{u.Type}` 이 enemyTypes 에 없다"));
+
+                        // R14 — 적 좌표가 적 진영 안이다
+                        if (u.At.X < minEnemyX || u.At.X > maxEnemyX || u.At.Y < 0 || u.At.Y > maxY)
+                            e.Add(new ValidationError("R14", $"{where} {v.Id}",
+                                $"{u.Type}{u.At} 가 적 진영(x {minEnemyX}~{maxEnemyX}, y 0~{maxY}) 밖이다"));
+
+                        // R15 — 한 variant 안에서 좌표가 중복되지 않는다
+                        if (!used.Add(u.At.OrderKey))
+                            e.Add(new ValidationError("R15", $"{where} {v.Id}",
+                                $"{u.At} 에 두 체 이상이 겹친다"));
+                    }
+
+                    // R16 — 유닛 수가 자기 진영 칸 수를 넘지 않는다
+                    if (v.Units.Count > sideCells)
+                        e.Add(new ValidationError("R16", $"{where} {v.Id}",
+                            $"{v.Units.Count}체 > 진영 칸 수 {sideCells}"));
+                }
             }
         }
 
