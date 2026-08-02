@@ -27,11 +27,11 @@ namespace DomoNinja.Core.Tests
             var u = Make();
             u.Shield = 50;
 
-            int dealt = DamageResolver.ApplyDamage(u, 30, actorId: 9, tick: 10, _sink);
+            var dealt = DamageResolver.ApplyDamage(u, 30, actorId: 9, tick: 10, _sink);
 
             Assert.That(u.Shield, Is.EqualTo(20));
             Assert.That(u.Hp, Is.EqualTo(100), "보호막이 남아 있으면 HP 는 건드리지 않는다");
-            Assert.That(dealt, Is.EqualTo(30));
+            Assert.That(dealt.Dealt, Is.EqualTo(30));
         }
 
         [Test]
@@ -40,11 +40,11 @@ namespace DomoNinja.Core.Tests
             var u = Make();
             u.Shield = 20;
 
-            int dealt = DamageResolver.ApplyDamage(u, 50, 9, 10, _sink);
+            var dealt = DamageResolver.ApplyDamage(u, 50, 9, 10, _sink);
 
             Assert.That(u.Shield, Is.EqualTo(0));
             Assert.That(u.Hp, Is.EqualTo(70));
-            Assert.That(dealt, Is.EqualTo(50));
+            Assert.That(dealt.Dealt, Is.EqualTo(50));
         }
 
         [Test]
@@ -81,11 +81,13 @@ namespace DomoNinja.Core.Tests
             var u = Make();
             u.Status.Apply(new StatusEffect(StatusKind.Invulnerable, StatusEffect.Never));
 
-            int first = DamageResolver.ApplyDamage(u, 40, 9, 10, _sink);
-            int second = DamageResolver.ApplyDamage(u, 40, 9, 20, _sink);
+            var first = DamageResolver.ApplyDamage(u, 40, 9, 10, _sink);
+            var second = DamageResolver.ApplyDamage(u, 40, 9, 20, _sink);
 
-            Assert.That(first, Is.EqualTo(0));
-            Assert.That(second, Is.EqualTo(40));
+            Assert.That(first.Dealt, Is.EqualTo(0));
+            Assert.That(first.Dodged, Is.True, "회피한 0 과 그냥 0 피해는 구분돼야 한다 — on_dodge 가 여기 걸린다");
+            Assert.That(second.Dealt, Is.EqualTo(40));
+            Assert.That(second.Dodged, Is.False);
             Assert.That(u.Hp, Is.EqualTo(60));
             Assert.That(u.Status.Has(StatusKind.Invulnerable), Is.False);
         }
@@ -109,9 +111,9 @@ namespace DomoNinja.Core.Tests
             DamageResolver.ApplyDamage(u, 50, 9, 10, _sink);
             _sink.Clear();
 
-            int dealt = DamageResolver.ApplyDamage(u, 20, 9, 20, _sink);
+            var dealt = DamageResolver.ApplyDamage(u, 20, 9, 20, _sink);
 
-            Assert.That(dealt, Is.EqualTo(0));
+            Assert.That(dealt.Dealt, Is.EqualTo(0));
             Assert.That(_sink.Events, Is.Empty, "시체를 때리는 이벤트가 로그에 쌓이면 안 된다");
         }
 

@@ -28,6 +28,37 @@ namespace DomoNinja.Core.Combat
     /// 자기가 빼거나 더하지 않는다 — 그러지 않으면 피해 규칙이 View 에 복제된다(`23` §2.1).
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// 피해 1회의 결과. <b>트리거가 이 값을 보고 터진다.</b>
+    /// </summary>
+    /// <remarks>
+    /// 피해량(int) 하나만 돌려주던 것을 struct 로 바꿨다.
+    /// <c>on_dodge</c> 와 <c>on_kill</c> 을 걸려면 "0 이 나왔다"로는 부족하다 —
+    /// <b>회피한 0 과 그냥 0 피해가 구분되지 않는다.</b> 호출부가 <c>IsAlive</c> 를 다시 보는 방법도 있지만,
+    /// 그러면 "이 공격이 죽였는가"와 "지금 죽어 있는가"가 섞인다.
+    /// </remarks>
+    public readonly struct DamageResult
+    {
+        /// <summary>보호막과 HP 에서 실제로 깎인 총량. 흡혈(<c>fromDamagePermille</c>)이 이 값을 쓴다.</summary>
+        public readonly int Dealt;
+
+        /// <summary><c>invulnerable_first_hit</c> 가 먹었다. <c>on_dodge</c> 가 여기서 터진다.</summary>
+        public readonly bool Dodged;
+
+        /// <summary><b>이 공격이</b> 죽였다. 이미 죽어 있던 대상은 해당되지 않는다.</summary>
+        public readonly bool Killed;
+
+        public DamageResult(int dealt, bool dodged, bool killed)
+        {
+            Dealt = dealt; Dodged = dodged; Killed = killed;
+        }
+
+        public static readonly DamageResult None = new DamageResult(0, false, false);
+
+        public override string ToString() =>
+            $"{Dealt}{(Dodged ? " (회피)" : "")}{(Killed ? " (처치)" : "")}";
+    }
+
     public static class DamageResolver
     {
         /// <summary>
@@ -38,9 +69,9 @@ namespace DomoNinja.Core.Combat
         /// 계산이 끝난 실제 값을 알아야 한다. 요청한 피해량으로 계산하면
         /// 보호막에 막혔거나 절삭된 만큼 흡혈이 부풀려진다.
         /// </remarks>
-        public static int ApplyDamage(Unit target, int rawDamage, int actorId, int tick, IEventSink sink)
+        public static DamageResult ApplyDamage(Unit target, int rawDamage, int actorId, int tick, IEventSink sink)
         {
-            if (!target.IsAlive || rawDamage <= 0) return 0;
+            if (!target.IsAlive || rawDamage <= 0) return DamageResult.None;
 
             // 첫 피격 무효 (C3-A 그림자). 소모되고 사라진다.
             if (target.Status.Has(StatusKind.Invulnerable))
@@ -52,7 +83,7 @@ namespace DomoNinja.Core.Combat
                 //    View 는 Damage.Value == 0 을 보고 무효 연출을 낼 수 있다.
                 //    → D+4 포맷 리뷰(19 §4.2)에 올릴 후보다. 동결 전이라 지금은 포맷을 건드리지 않는다.
                 sink.Emit(new GameEvent(EventKind.Damage, tick, actorId, target.Id, 0, target.Hp));
-                return 0;
+                return new DamageResult(0, dodged: true, killed: false);
             }
 
             // 받는 피해 보정 — 스킬·아이템(고정)과 weaken(가변)을 전부 더한 뒤 한 번만 적용한다.
@@ -61,7 +92,7 @@ namespace DomoNinja.Core.Combat
             taken.AddDeltaPermille(target.Status.DamageTakenDeltaPermille);
 
             int damage = taken.ApplyTo(rawDamage);
-            if (damage <= 0) return 0;
+            if (damage <= 0) return DamageResult.None;
 
             int dealt = 0;
 
@@ -89,10 +120,11 @@ namespace DomoNinja.Core.Combat
 
             sink.Emit(new GameEvent(EventKind.Damage, tick, actorId, target.Id, dealt, target.Hp));
 
-            if (!target.IsAlive)
+            bool killed = !target.IsAlive;
+            if (killed)
                 sink.Emit(new GameEvent(EventKind.Death, tick, actorId, target.Id, 0));
 
-            return dealt;
+            return new DamageResult(dealt, dodged: false, killed: killed);
         }
 
         /// <summary>

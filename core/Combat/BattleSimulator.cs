@@ -4,6 +4,8 @@
 using System.Collections.Generic;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Events;
+using DomoNinja.Core.Skills;
+using Newtonsoft.Json.Linq;
 
 namespace DomoNinja.Core.Combat
 {
@@ -54,8 +56,21 @@ namespace DomoNinja.Core.Combat
     /// </remarks>
     public sealed class BattleSimulator
     {
+        /// <summary>
+        /// 한 번의 공격이 파생 공격을 일으킬 수 있는 최대 횟수.
+        /// </summary>
+        /// <remarks>
+        /// <c>recast</c>(처치 시 다음 대상 재발동)와 <c>extra_attack</c>(처치 시 즉시 재공격)이
+        /// 서로를 부르면 이론상 끝나지 않는다. 데이터의 <c>maxChain</c> 은 3 이지만
+        /// <b>상한을 데이터에만 맡기지 않는다</b> — 값 하나 잘못 넣으면 sim 수만 런 중 하나가 멈추고,
+        /// 그러면 CI 가 통째로 걸린다.
+        /// </remarks>
+        private const int MaxAttackChain = 8;
+
         private readonly CombatConfig _config;
         private readonly List<StatusKind> _expiredScratch = new List<StatusKind>();
+        private readonly List<CompiledTrigger> _triggerScratch = new List<CompiledTrigger>();
+        private readonly List<Unit> _aoeScratch = new List<Unit>();
         private readonly List<Unit> _allies = new List<Unit>();
         private readonly List<Unit> _enemies = new List<Unit>();
 
@@ -93,6 +108,8 @@ namespace DomoNinja.Core.Combat
                 board.TryPlace(u.Id, u.At);
                 header?.Add(new UnitSpec(u.Id, (int)u.Team, u.TypeId, u.MaxHp, u.At.OrderKey));
             }
+
+            ApplyStartEffects(units, target);
 
             int tick = 0;
             int suddenDeathAt = -1;
@@ -149,6 +166,9 @@ namespace DomoNinja.Core.Combat
                 foreach (var kind in _expiredScratch)
                     sink.Emit(new GameEvent(EventKind.StatusExpire, tick, -1, u.Id, (int)kind));
 
+                FirePeriodic(u, tick, sink);
+                if (!u.IsAlive) continue;   // 주기 효과가 자기 체력을 태워 죽을 수 있다 (C2-B 파동)
+
                 var foes = u.Team == Team.Ally ? _enemies : _allies;
                 var targetUnit = Targeting.SelectTarget(u, foes);
                 if (targetUnit == null) continue;
@@ -161,6 +181,71 @@ namespace DomoNinja.Core.Combat
                 if (u.InRangeOf(targetUnit)) TryAttack(u, targetUnit, tick, sink);
                 else if (u.AttackCooldown > 0) u.AttackCooldown--;
             }
+        }
+
+        /// <summary>전투 시작 시 한 번 거는 것들. 팀·적 대상 <c>status</c> 가 여기서 걸린다.</summary>
+        /// <remarks>
+        /// 유닛을 전부 배치한 <b>뒤에</b> 부른다. <c>allies</c>·<c>all_enemies</c> 가 대상을 찾으려면
+        /// 양쪽 목록이 이미 채워져 있어야 하기 때문이다.
+        /// </remarks>
+        private void ApplyStartEffects(IReadOnlyList<Unit> units, IEventSink sink)
+        {
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                var start = u.Loadout.StartEffects;
+                if (start.Count == 0) continue;
+
+                var ctx = MakeContext(u, null, 0, 0, sink);
+                for (int k = 0; k < start.Count; k++)
+                    EffectExecutor.Execute(start[k].Effect, ctx, start[k].SkillPowerPermille);
+            }
+        }
+
+        /// <summary>주기 트리거(<c>every_n_tick</c>).</summary>
+        private void FirePeriodic(Unit u, int tick, IEventSink sink)
+        {
+            if (u.Loadout.Triggers.Count == 0) return;
+
+            _triggerScratch.Clear();
+            u.Loadout.Triggers.CollectPeriodic(tick, _triggerScratch);
+            if (_triggerScratch.Count == 0) return;
+
+            var ctx = MakeContext(u, null, 0, tick, sink);
+            for (int i = 0; i < _triggerScratch.Count; i++)
+            {
+                var t = _triggerScratch[i];
+                EffectExecutor.Execute(t.Effect, ctx, t.SkillPowerPermille);
+            }
+        }
+
+        /// <summary>사건 트리거를 터뜨린다. 추가 행동 요청이 있으면 합쳐서 돌려준다.</summary>
+        private EffectOutcome FireEvent(Unit u, TriggerType type, Unit? target, int lastDamage,
+                                        int tick, IEventSink sink)
+        {
+            var triggers = u.Loadout.Triggers.Matching(type);
+            if (triggers.Count == 0) return EffectOutcome.None;
+
+            var ctx = MakeContext(u, target, lastDamage, tick, sink);
+            int extra = 0, chain = 0;
+
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                var outcome = EffectExecutor.Execute(triggers[i].Effect, ctx, triggers[i].SkillPowerPermille);
+                extra += outcome.ExtraAttacks;
+                if (outcome.RecastChain > chain) chain = outcome.RecastChain;
+            }
+
+            return new EffectOutcome(extra, chain);
+        }
+
+        private EffectContext MakeContext(Unit u, Unit? target, int lastDamage, int tick, IEventSink sink)
+        {
+            bool ally = u.Team == Team.Ally;
+            return new EffectContext(u, target, lastDamage, tick,
+                                     ally ? _allies : _enemies,
+                                     ally ? _enemies : _allies,
+                                     sink);
         }
 
         /// <summary>
@@ -204,13 +289,198 @@ namespace DomoNinja.Core.Combat
                 return;
             }
 
+            PerformAttack(u, target, tick, sink, depth: 0);
+
+            u.AttackCooldown = u.AttackInterval < 1 ? 1 : u.AttackInterval;
+        }
+
+        /// <summary>
+        /// 공격 1회. <b>파생 공격(<c>extra_attack</c>·<c>recast</c>)까지 여기서 끝난다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 재귀를 쓰되 <paramref name="depth"/> 로 상한을 건다.
+        /// <see cref="EffectExecutor"/> 가 실행 대신 요청만 돌려주게 만든 이유가 이것이다 —
+        /// <b>멈추는 지점이 이 함수 하나에만 있다.</b> 효과 쪽에서 직접 공격을 부르면
+        /// 상한이 데이터에 흩어지고, 값 하나 잘못 넣으면 sim 이 조용히 멈춘다.
+        /// </remarks>
+        private void PerformAttack(Unit u, Unit target, int tick, IEventSink sink, int depth)
+        {
+            if (depth >= MaxAttackChain || !u.IsAlive || !target.IsAlive) return;
+
             sink.Emit(new GameEvent(EventKind.Attack, tick, u.Id, target.Id, 0));
 
             var attack = new ModifierSum();
             attack.AddDeltaPermille(u.Status.AttackDeltaPermille);
-            DamageResolver.ApplyDamage(target, attack.ApplyTo(u.Attack), u.Id, tick, sink);
+            int baseDamage = attack.ApplyTo(u.Attack);
 
-            u.AttackCooldown = u.AttackInterval < 1 ? 1 : u.AttackInterval;
+            var aoe = u.Loadout.Aoe;
+            int totalDealt = 0;
+            bool anyKill = false;
+            bool anyHit = false;
+
+            if (aoe == null)
+            {
+                var r = Strike(u, target, baseDamage, tick, sink);
+                totalDealt += r.Dealt;
+                anyKill |= r.Killed;
+                anyHit |= r.Dealt > 0;
+            }
+            else
+            {
+                _aoeScratch.Clear();
+                int splashDamage = CollectAoeTargets(u, target, aoe, baseDamage, _aoeScratch);
+
+                for (int i = 0; i < _aoeScratch.Count; i++)
+                {
+                    var victim = _aoeScratch[i];
+
+                    // 주 표적은 온전히 맞고, 파급 대상만 배율이 걸린다.
+                    int amount = ReferenceEquals(victim, target) ? baseDamage : splashDamage;
+                    var r = Strike(u, victim, amount, tick, sink);
+
+                    totalDealt += r.Dealt;
+                    anyKill |= r.Killed;
+                    anyHit |= r.Dealt > 0;
+                }
+            }
+
+            // on_hit — 자신의 공격이 적중한 순간. 흡혈·표식·둔화가 여기 걸린다.
+            var outcome = anyHit
+                ? FireEvent(u, TriggerType.OnHit, target, totalDealt, tick, sink)
+                : EffectOutcome.None;
+
+            if (anyKill)
+            {
+                var onKill = FireEvent(u, TriggerType.OnKill, target, totalDealt, tick, sink);
+                outcome = new EffectOutcome(outcome.ExtraAttacks + onKill.ExtraAttacks,
+                                            outcome.RecastChain > onKill.RecastChain
+                                                ? outcome.RecastChain : onKill.RecastChain);
+            }
+
+            if (outcome.IsNone) return;
+
+            var foes = u.Team == Team.Ally ? _enemies : _allies;
+
+            // extra_attack — 즉시 한 번 더.
+            // ★ 표적이 죽었으면 새로 고른다. C1-A 일격의 트리거가 on_kill 이라
+            //   재공격 시점에는 그 표적이 이미 죽어 있다 — 시체를 다시 치게 두면
+            //   "처치 시 즉시 재공격"이 아무 일도 안 하는 스킬이 된다.
+            for (int i = 0; i < outcome.ExtraAttacks; i++)
+            {
+                var victim = target.IsAlive ? target : Targeting.SelectTarget(u, foes);
+                if (victim == null) break;
+                PerformAttack(u, victim, tick, sink, depth + 1);
+            }
+
+            // recast — 다음 표적으로 옮겨간다. 처치했을 때만 의미가 있다 (C5-B 연쇄).
+            if (outcome.RecastChain > 0 && anyKill)
+            {
+                var next = Targeting.SelectTarget(u, foes);
+                if (next != null && !ReferenceEquals(next, target))
+                    PerformAttack(u, next, tick, sink, depth + 1);
+            }
+        }
+
+        /// <summary>한 대상에게 피해를 넣고, 그쪽 트리거(<c>on_damaged</c>·<c>on_dodge</c>)를 터뜨린다.</summary>
+        private DamageResult Strike(Unit attacker, Unit victim, int amount, int tick, IEventSink sink)
+        {
+            var result = DamageResolver.ApplyDamage(victim, amount, attacker.Id, tick, sink);
+
+            if (result.Dodged)
+                FireEvent(victim, TriggerType.OnDodge, attacker, 0, tick, sink);
+            else if (result.Dealt > 0)
+                FireEvent(victim, TriggerType.OnDamaged, attacker, result.Dealt, tick, sink);
+
+            return result;
+        }
+
+        /// <summary>
+        /// 광역 대상을 모으고, <b>파급 대상에 쓸 피해량</b>을 돌려준다 (`_schema` §3 <c>aoe</c>).
+        /// </summary>
+        /// <remarks>
+        /// <c>damageSource: maxHp</c> 면 공격력이 아니라 <b>시전자 최대 체력</b>에서 나온다 (C2-B 파동).
+        /// 그 경우 주 표적도 같은 값을 맞으므로 파급 배율이 곧 전체 피해다.
+        /// </remarks>
+        private int CollectAoeTargets(Unit u, Unit primary, JObject aoe, int baseDamage, List<Unit> into)
+        {
+            var foes = u.Team == Team.Ally ? _enemies : _allies;
+            string? scope = (string?)aoe["scope"];
+            double value = (double?)aoe["value"] ?? 0d;
+
+            bool fromMaxHp = (string?)aoe["damageSource"] == "maxHp";
+            int splash = fromMaxHp
+                ? Permille.Apply(u.MaxHp, Permille.FromMultiplier(value))
+                : Permille.Apply(baseDamage, Permille.FromMultiplier(value));
+
+            switch (scope)
+            {
+                case "all_enemies":
+                    for (int i = 0; i < foes.Count; i++)
+                        if (foes[i].IsAlive) into.Add(foes[i]);
+
+                    // 전체 광역은 주 표적도 같은 값을 맞는다 — 혼자만 다른 피해를 받을 이유가 없다.
+                    return splash;
+
+                case "multi_target":
+                {
+                    // 가까운 순으로 targetCount 명. 동률은 슬롯 인덱스로 끊는다.
+                    int count = (int?)aoe["targetCount"] ?? 1;
+                    into.Add(primary);
+                    AddNearest(u, foes, primary, count - 1, into);
+
+                    // 표적당 위력 감소는 stat_mult 로 이미 걸려 있다 (C4-B 난사 -50%).
+                    return baseDamage;
+                }
+
+                case "radius":
+                {
+                    int sqr = (int)(value * value);
+                    into.Add(primary);
+                    for (int i = 0; i < foes.Count; i++)
+                    {
+                        var f = foes[i];
+                        if (!f.IsAlive || ReferenceEquals(f, primary)) continue;
+                        if (primary.At.SqrDistanceTo(f.At) <= sqr) into.Add(f);
+                    }
+                    return splash;
+                }
+
+                default:   // adjacent — 주 표적에 인접한 8칸
+                {
+                    into.Add(primary);
+                    for (int i = 0; i < foes.Count; i++)
+                    {
+                        var f = foes[i];
+                        if (!f.IsAlive || ReferenceEquals(f, primary)) continue;
+                        if (primary.At.SqrDistanceTo(f.At) <= 2) into.Add(f);
+                    }
+                    return splash;
+                }
+            }
+        }
+
+        /// <summary>주 표적을 뺀 나머지 중 가까운 순으로 <paramref name="count"/> 명.</summary>
+        private static void AddNearest(Unit u, IReadOnlyList<Unit> foes, Unit primary, int count, List<Unit> into)
+        {
+            for (int picked = 0; picked < count; picked++)
+            {
+                Unit? best = null;
+                for (int i = 0; i < foes.Count; i++)
+                {
+                    var f = foes[i];
+                    if (!f.IsAlive || ReferenceEquals(f, primary) || into.Contains(f)) continue;
+
+                    if (best == null
+                        || u.At.SqrDistanceTo(f.At) < u.At.SqrDistanceTo(best.At)
+                        || (u.At.SqrDistanceTo(f.At) == u.At.SqrDistanceTo(best.At) && f.Id < best.Id))
+                    {
+                        best = f;
+                    }
+                }
+
+                if (best == null) return;
+                into.Add(best);
+            }
         }
 
         /// <summary>

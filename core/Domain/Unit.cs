@@ -69,6 +69,15 @@ namespace DomoNinja.Core.Domain
         /// <summary>이 유닛에 걸린 상태이상. <b>8종뿐이다</b> (`_schema` §3).</summary>
         public Combat.StatusSet Status { get; } = new Combat.StatusSet();
 
+        /// <summary>
+        /// 들고 들어온 스킬을 실행 가능한 형태로 푼 것. 적은 <see cref="Skills.Loadout.Empty"/> 다.
+        /// </summary>
+        /// <remarks>
+        /// 유닛마다 따로 만들어야 한다 — 주기 트리거가 각자의 시계를 갖기 때문이다.
+        /// 같은 스킬을 든 두 유닛이 같은 틱에 동시에 터지면 그건 우연이지 규칙이 아니다.
+        /// </remarks>
+        public Skills.Loadout Loadout { get; set; } = Skills.Loadout.Empty;
+
         public Coord At { get; set; }
 
         /// <summary>
