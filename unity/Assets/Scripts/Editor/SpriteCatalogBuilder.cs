@@ -95,6 +95,31 @@ namespace DomoNinja.Unity.Editor
 
             var entries = new List<SpriteCatalog.Entry>();
 
+            // ★ 데이터가 스프라이트를 가리키는 방식이 두 가지다. 둘 다 색인한다.
+            //
+            //   폴더형 — characters.sprite = "Actor/Character/Samurai"
+            //            한 유닛의 프레임이 폴더에 여럿 들어 있어 대표를 하나 고른다.
+            //   파일형 — skills.icon = "Skill/Samurai/Main/C1-A_일격"
+            //            items.icon  = "Item/statBoost_스탯강화"
+            //            파일 하나가 아이콘 하나다.
+            //
+            // 한쪽만 색인하면 다른 쪽이 통째로 자리표시자가 되는데, 그게
+            // 아이콘 30개가 들어온 뒤에야 드러났다. 키가 겹칠 일은 없다 —
+            // 폴더 경로와 파일 경로는 같아질 수 없다.
+
+            foreach (string png in allPngs)
+            {
+                string normalized = png.Replace('\\', '/');
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(normalized);
+                if (sprite == null) continue;
+
+                // "Assets/Sprite/Item/statBoost_스탯강화.png" → "Item/statBoost_스탯강화"
+                string key = normalized.Substring(SpriteRoot.Length + 1);
+                key = key.Substring(0, key.Length - ".png".Length);
+
+                entries.Add(new SpriteCatalog.Entry { Key = key, Sprite = sprite });
+            }
+
             foreach (string folder in Directory.GetDirectories(SpriteRoot, "*", SearchOption.AllDirectories))
             {
                 string normalized = folder.Replace('\\', '/');

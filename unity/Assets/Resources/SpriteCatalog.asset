@@ -15,85 +15,389 @@ MonoBehaviour:
   _entries:
   - Key: Actor/Boss/GiantFrog
     Sprite: {fileID: 21300000, guid: 5284d6f69002a6448a274dceb4986c56, type: 3}
+  - Key: Actor/Boss/GiantFrog/Attack
+    Sprite: {fileID: 21300000, guid: a8c9d65292584c0459204d0c0f1953f8, type: 3}
+  - Key: Actor/Boss/GiantFrog/Charge
+    Sprite: {fileID: 21300000, guid: f2e412ef5f5708442a2309b4cea8e8d6, type: 3}
+  - Key: Actor/Boss/GiantFrog/Faceset
+    Sprite: {fileID: 21300000, guid: 5284d6f69002a6448a274dceb4986c56, type: 3}
+  - Key: Actor/Boss/GiantFrog/Hit
+    Sprite: {fileID: 21300000, guid: 140a08a58ce74004397cb78e346f7ad8, type: 3}
+  - Key: Actor/Boss/GiantFrog/Idle40x40
+    Sprite: {fileID: 21300000, guid: 25a20d77d96e5174297115699f387564, type: 3}
+  - Key: Actor/Boss/GiantFrog/Jump
+    Sprite: {fileID: 21300000, guid: b57a201f89af7034983c970a32c5c445, type: 3}
   - Key: Actor/Boss/TenguRed
     Sprite: {fileID: 21300000, guid: e2430729d1c4fef469b24f9cb229d978, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack
+    Sprite: {fileID: 21300000, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Faceset
+    Sprite: {fileID: 21300000, guid: e2430729d1c4fef469b24f9cb229d978, type: 3}
+  - Key: Actor/Boss/TenguRed/Hit
+    Sprite: {fileID: 21300000, guid: c424cf35cf12e7d4da5fb2cace44522b, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle
+    Sprite: {fileID: 21300000, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Trans
+    Sprite: {fileID: 21300000, guid: d2f511a376e1664418e964e6f5947cea, type: 3}
+  - Key: Actor/Boss/TenguRed/Walk
+    Sprite: {fileID: 21300000, guid: 9922454523f50fc4ea257ec10f918c21, type: 3}
   - Key: Actor/Character/Hunter
+    Sprite: {fileID: 21300000, guid: bfabaa7a14432bc489bf85dc341994f3, type: 3}
+  - Key: Actor/Character/Hunter/Faceset
     Sprite: {fileID: 21300000, guid: bfabaa7a14432bc489bf85dc341994f3, type: 3}
   - Key: Actor/Character/Hunter/SeparateAnim
     Sprite: {fileID: 21300000, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: 76f88022e2fa6634cb034a4c4b1219b0, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: 2f5ac6da8119759418c50cb315a0424f, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: 66651a760992976459f89da65f4f7f77, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: 1a437bd2c4563964c8151f45f1347cca, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: 1e49bb87a47cfd744b5796125f9dc91f, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: c37422470320f724db62b00139c10e62, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: 43d5ec6c61c8c6d4d993abfcac827bfc, type: 3}
+  - Key: Actor/Character/Hunter/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 4d3e899ceb7772a4399dc8c18f141f3e, type: 3}
   - Key: Actor/Character/Monk
+    Sprite: {fileID: 21300000, guid: 4ae9d789dfeb1e949bef8dd27dd72471, type: 3}
+  - Key: Actor/Character/Monk/Faceset
     Sprite: {fileID: 21300000, guid: 4ae9d789dfeb1e949bef8dd27dd72471, type: 3}
   - Key: Actor/Character/Monk/SeparateAnim
     Sprite: {fileID: 21300000, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: 200805173233b4c4dbc85135e45f59e6, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: 327ff30558dbc6a459ba03acc02f2ebe, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: dc641708a61ebf14eaa2d152fade5aea, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: b2013828c26d20145943ba406e858a04, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: bc4f0299dbc7b4a49ab40d311b07b6f2, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: c8aa12321c3f535488a1828b3b728392, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: 3d0e54d7cf305e947adb46ee43543c2d, type: 3}
+  - Key: Actor/Character/Monk/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 86b3e472f6b6a1d4bbb8a75da1db0775, type: 3}
   - Key: Actor/Character/NinjaMageBlack
+    Sprite: {fileID: 21300000, guid: accd923e2e99abe46a2429eda48ec8d0, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/Faceset
     Sprite: {fileID: 21300000, guid: accd923e2e99abe46a2429eda48ec8d0, type: 3}
   - Key: Actor/Character/NinjaMageBlack/SeparateAnim
     Sprite: {fileID: 21300000, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: 83a5f61d41384c248b89c5e46e332577, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: 10f57be6f8437b94385fd5899803772c, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: 7dca66cfd6c32784b8a821ebf392f593, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: 7e33cc4daf7d7e04bb9c92c7500ae750, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: e5121ff901d1fbc47a6040726bcbf796, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: d6d3ae548bc5cd641b0bf7b043436a54, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: 2e1f7577c00b0bf4da341ff71a11b2f6, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SpriteSheet
+    Sprite: {fileID: 21300000, guid: aac018b2afaae9b4194d74abf9b4fd2a, type: 3}
   - Key: Actor/Character/NinjaRed
+    Sprite: {fileID: 21300000, guid: ef7208a2ac7186f44b075aa6d332dc39, type: 3}
+  - Key: Actor/Character/NinjaRed/Faceset
     Sprite: {fileID: 21300000, guid: ef7208a2ac7186f44b075aa6d332dc39, type: 3}
   - Key: Actor/Character/NinjaRed/SeparateAnim
     Sprite: {fileID: 21300000, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: 27dca59cee353034e898af268e19b0ce, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: 9a3539e959521e747875d6b1aa7b97e2, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: 8d90ed1d0083e1846b54a30f323b1b4c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: 6575af0147744b14c8d544a5a6bd28d2, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: 44d10607da9536d46b3765148e86d449, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: 40bdbde17a2f01f4cbc82cd96edef5ea, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: c5de9ccfd386dc14e9ca1cf1a01fd1bd, type: 3}
+  - Key: Actor/Character/NinjaRed/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 0b65318c1a79b004fac3b0a314db410e, type: 3}
   - Key: Actor/Character/Samurai
+    Sprite: {fileID: 21300000, guid: 055c14b6ad4f5134dbad41b4c2a74ae2, type: 3}
+  - Key: Actor/Character/Samurai/Faceset
     Sprite: {fileID: 21300000, guid: 055c14b6ad4f5134dbad41b4c2a74ae2, type: 3}
   - Key: Actor/Character/Samurai/SeparateAnim
     Sprite: {fileID: 21300000, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: b5a4bfeba502d4a4c807b00818e41a82, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: 00d276e5f330e8241a8a78df8936407c, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: 364ff9874dadd534f9144c178ad582c4, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: fcdd25676adf29441a939f8b3be8051e, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: efcb3e413e75bd94ca39d705c6fa068d, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: 14cb177bccabe8d4d994a72de101fb9d, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: f12400ed21e279d4d91d32f31887c2ce, type: 3}
+  - Key: Actor/Character/Samurai/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 06856ff28f9c06e45a357b987f7bba40, type: 3}
   - Key: Actor/Character/Shaman
+    Sprite: {fileID: 21300000, guid: 96782da577131fa43a86e23131d7ea30, type: 3}
+  - Key: Actor/Character/Shaman/Faceset
     Sprite: {fileID: 21300000, guid: 96782da577131fa43a86e23131d7ea30, type: 3}
   - Key: Actor/Character/Shaman/SeparateAnim
     Sprite: {fileID: 21300000, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: 7fe4bd626a7812844b5bc3da77080253, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: 24a0faf9d7b1b294cad24beb1e00262d, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: c2f92b7f7169e694cab9667030181fa7, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: e0ce7320ef6883445b85e60ce269b93d, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: f7efe36d8cbd9ff46882e64fb2510528, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: 09d7f689f8777e749885838103c6f57d, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: 48c85dd156c71be48a3a1c30bcc8b3d0, type: 3}
+  - Key: Actor/Character/Shaman/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 299119966394efc41a04a3faf883132d, type: 3}
   - Key: Actor/Monster/Bear
     Sprite: {fileID: 21300000, guid: 400e925c6a2b20d47989084a82b8f4ad, type: 3}
+  - Key: Actor/Monster/Bear/Faceset
+    Sprite: {fileID: 21300000, guid: 400e925c6a2b20d47989084a82b8f4ad, type: 3}
+  - Key: Actor/Monster/Bear/SpriteSheet
+    Sprite: {fileID: 21300000, guid: dfa8e3867f34c44448d1fcb85c337c9e, type: 3}
   - Key: Actor/Monster/BlueBat
     Sprite: {fileID: 21300000, guid: 3947615e31a1d9b4ea5ef2477794e06a, type: 3}
+  - Key: Actor/Monster/BlueBat/Faceset
+    Sprite: {fileID: 21300000, guid: 3947615e31a1d9b4ea5ef2477794e06a, type: 3}
+  - Key: Actor/Monster/BlueBat/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 7e656a54ba85e49439860bdbdd0c75ba, type: 3}
   - Key: Actor/Monster/Eye
+    Sprite: {fileID: 21300000, guid: 141bd6e392556e84f886a467bde79d0a, type: 3}
+  - Key: Actor/Monster/Eye/Eye
+    Sprite: {fileID: 21300000, guid: f0d0937d62d6c8940b990beecead7473, type: 3}
+  - Key: Actor/Monster/Eye/Faceset
     Sprite: {fileID: 21300000, guid: 141bd6e392556e84f886a467bde79d0a, type: 3}
   - Key: Actor/Monster/KappaGreen
     Sprite: {fileID: 21300000, guid: 343abbbaca0845e4d87b15089a6f1312, type: 3}
+  - Key: Actor/Monster/KappaGreen/Faceset
+    Sprite: {fileID: 21300000, guid: 343abbbaca0845e4d87b15089a6f1312, type: 3}
+  - Key: Actor/Monster/KappaGreen/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 0d29e1cbfb9632b4d95bc1ecdf667c6d, type: 3}
   - Key: Actor/Monster/LanternRed
     Sprite: {fileID: 21300000, guid: e69b5308bc44b3b448be2228468535fc, type: 3}
+  - Key: Actor/Monster/LanternRed/Faceset
+    Sprite: {fileID: 21300000, guid: e69b5308bc44b3b448be2228468535fc, type: 3}
+  - Key: Actor/Monster/LanternRed/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 5f6d18fea27e2c142ac645613447273d, type: 3}
   - Key: Actor/Monster/Larva
     Sprite: {fileID: 21300000, guid: b8286270dd148ed469373e9f4f166f1f, type: 3}
+  - Key: Actor/Monster/Larva/Faceset
+    Sprite: {fileID: 21300000, guid: b8286270dd148ed469373e9f4f166f1f, type: 3}
+  - Key: Actor/Monster/Larva/Larva
+    Sprite: {fileID: 21300000, guid: ad46d8ed70cafc54ebea80ae2403781b, type: 3}
   - Key: Actor/Monster/Mouse
     Sprite: {fileID: 21300000, guid: e03727df0c846e3498ca006808bfdba7, type: 3}
+  - Key: Actor/Monster/Mouse/Faceset
+    Sprite: {fileID: 21300000, guid: e03727df0c846e3498ca006808bfdba7, type: 3}
+  - Key: Actor/Monster/Mouse/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 206f6cebed9eb7240b58e35390918939, type: 3}
   - Key: Actor/Monster/Mushroom
     Sprite: {fileID: 21300000, guid: 057c3fe81670396428e9fa6709bb4c77, type: 3}
+  - Key: Actor/Monster/Mushroom/Faceset
+    Sprite: {fileID: 21300000, guid: 057c3fe81670396428e9fa6709bb4c77, type: 3}
+  - Key: Actor/Monster/Mushroom/mushroom
+    Sprite: {fileID: 21300000, guid: 0f347b28df0df4947a1c62bbd3f8066a, type: 3}
   - Key: Actor/Monster/Reptile
     Sprite: {fileID: 21300000, guid: f35e8db28413c8f40a683847faf08d2b, type: 3}
+  - Key: Actor/Monster/Reptile/Faceset
+    Sprite: {fileID: 21300000, guid: f35e8db28413c8f40a683847faf08d2b, type: 3}
+  - Key: Actor/Monster/Reptile/Reptile
+    Sprite: {fileID: 21300000, guid: 05dfacedac52d1f44a7b0cedd7073046, type: 3}
   - Key: Actor/Monster/Skull
     Sprite: {fileID: 21300000, guid: d6b111a81fe0ab44f87c123141b1a9ea, type: 3}
+  - Key: Actor/Monster/Skull/Faceset
+    Sprite: {fileID: 21300000, guid: d6b111a81fe0ab44f87c123141b1a9ea, type: 3}
+  - Key: Actor/Monster/Skull/SpriteSheet
+    Sprite: {fileID: 21300000, guid: d93df4608a01f92448a9448b5502c04a, type: 3}
   - Key: Actor/Monster/Slime
     Sprite: {fileID: 21300000, guid: 7195e0a8781f7f8489daf3ab411a8e10, type: 3}
+  - Key: Actor/Monster/Slime/Faceset
+    Sprite: {fileID: 21300000, guid: 7195e0a8781f7f8489daf3ab411a8e10, type: 3}
+  - Key: Actor/Monster/Slime/Slime
+    Sprite: {fileID: 21300000, guid: ddce17d7cd97aa742af92c904a81a06b, type: 3}
   - Key: Actor/Monster/Snake
     Sprite: {fileID: 21300000, guid: ff45c54b4632c72488456c26f2383b1d, type: 3}
+  - Key: Actor/Monster/Snake/Faceset
+    Sprite: {fileID: 21300000, guid: ff45c54b4632c72488456c26f2383b1d, type: 3}
+  - Key: Actor/Monster/Snake/Snake
+    Sprite: {fileID: 21300000, guid: 4c20e97eb494d3843b7cf8137e042596, type: 3}
   - Key: Actor/Monster/Spirit
     Sprite: {fileID: 21300000, guid: e4a0d28d9951eeb4388f6bcbf6b5e8bb, type: 3}
+  - Key: Actor/Monster/Spirit/Faceset
+    Sprite: {fileID: 21300000, guid: e4a0d28d9951eeb4388f6bcbf6b5e8bb, type: 3}
+  - Key: Actor/Monster/Spirit/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 1f6163e7a82c62a40ab6e2c9b554fe3f, type: 3}
   - Key: Actor/Monster/Statue
+    Sprite: {fileID: 21300000, guid: 74ffb7f49bcdf214f9615d1ec915da85, type: 3}
+  - Key: Actor/Monster/Statue/Faceset
     Sprite: {fileID: 21300000, guid: 74ffb7f49bcdf214f9615d1ec915da85, type: 3}
   - Key: Actor/Monster/Statue/SeparateAnim
     Sprite: {fileID: 21300000, guid: 0aafd8767b281a044a29a1c23791ce7a, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Attack
+    Sprite: {fileID: 21300000, guid: c443868ec55dd0b44b03f80801cd24b5, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Dead
+    Sprite: {fileID: 21300000, guid: d8978e7c434e94a468f640341db84e78, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Idle
+    Sprite: {fileID: 21300000, guid: 0aafd8767b281a044a29a1c23791ce7a, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Item
+    Sprite: {fileID: 21300000, guid: e20fc13ab0eb7f14bba5e7739d254fa0, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Jump
+    Sprite: {fileID: 21300000, guid: 85ba06a201bcb7c43b0498c450e8a037, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Special1
+    Sprite: {fileID: 21300000, guid: 8d3ff64bcbed80245877233c6ae3a617, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Special2
+    Sprite: {fileID: 21300000, guid: a81fd47544e0dfa42ad4ea6a4a87cf40, type: 3}
+  - Key: Actor/Monster/Statue/SeparateAnim/Walk
+    Sprite: {fileID: 21300000, guid: eec0c2bc25e4c5d42b41bb085179715a, type: 3}
+  - Key: Actor/Monster/Statue/SpriteSheet
+    Sprite: {fileID: 21300000, guid: be9579561b4708c48a30b6b4eae3445a, type: 3}
   - Key: Actor/Monster/TRex
     Sprite: {fileID: 21300000, guid: edfbf18f4a83de14e9597b23b29a77cc, type: 3}
+  - Key: Actor/Monster/TRex/Faceset
+    Sprite: {fileID: 21300000, guid: edfbf18f4a83de14e9597b23b29a77cc, type: 3}
+  - Key: Actor/Monster/TRex/SpriteSheet
+    Sprite: {fileID: 21300000, guid: 1e980aab9e9b592449f430bc3d9d5385, type: 3}
+  - Key: Item
+    Sprite: {fileID: 21300000, guid: dc44540e4df2c2744a096ed7072924ec, type: 3}
+  - Key: "Item/conditionalBoost_\uC870\uAC74\uBD80\uAC15\uD654"
+    Sprite: {fileID: 21300000, guid: dc44540e4df2c2744a096ed7072924ec, type: 3}
+  - Key: "Item/healItem_\uD68C\uBCF5\uC544\uC774\uD15C"
+    Sprite: {fileID: 21300000, guid: 02bc5d9aebeec4e43b5f872e5e886ef1, type: 3}
+  - Key: "Item/statBoost_\uC2A4\uD0EF\uAC15\uD654"
+    Sprite: {fileID: 21300000, guid: eeb353e03d13bd04b9d22947f8ee878d, type: 3}
+  - Key: "Item/teamBoost_\uD300\uAC15\uD654"
+    Sprite: {fileID: 21300000, guid: c7e261ed7b360d44ca4601612cb9dd3c, type: 3}
+  - Key: Meta
+    Sprite: {fileID: 21300000, guid: 4dc9cae840e87184386af502c9dc714d, type: 3}
+  - Key: "Meta/M-ATK_\uACF5\uACA9"
+    Sprite: {fileID: 21300000, guid: 4dc9cae840e87184386af502c9dc714d, type: 3}
+  - Key: "Meta/M-GOLD_\uC7AC\uD654"
+    Sprite: {fileID: 21300000, guid: e6b29dc9d6f13cd4ea877a8f292dc088, type: 3}
+  - Key: "Meta/M-HASTE_\uACF5\uC18D"
+    Sprite: {fileID: 21300000, guid: 31f63598202bb2c4581db996e0fbbfae, type: 3}
+  - Key: "Meta/M-HEAL_\uD68C\uBCF5"
+    Sprite: {fileID: 21300000, guid: 48b4e37f6d5100441810a64111581a56, type: 3}
+  - Key: "Meta/M-HP_\uCCB4\uB825"
+    Sprite: {fileID: 21300000, guid: a64a52b9337bef84f8a5a5146ffefd62, type: 3}
+  - Key: "Meta/M-MOVE_\uAE30\uB3D9"
+    Sprite: {fileID: 21300000, guid: d12cf2262221d5949bdd413a00211359, type: 3}
   - Key: Skill/Hunter/Main
     Sprite: {fileID: 21300000, guid: db40ccc97bee5c140946394447655c03, type: 3}
+  - Key: "Skill/Hunter/Main/C4-A_\uC800\uACA9"
+    Sprite: {fileID: 21300000, guid: db40ccc97bee5c140946394447655c03, type: 3}
+  - Key: "Skill/Hunter/Main/C4-B_\uB09C\uC0AC"
+    Sprite: {fileID: 21300000, guid: abfce820e93d1e24291ccfd5af52699c, type: 3}
   - Key: Skill/Hunter/Support
     Sprite: {fileID: 21300000, guid: 57270489da767924481a9386d0e87f99, type: 3}
+  - Key: "Skill/Hunter/Support/C4-P1_\uAD00\uD1B5"
+    Sprite: {fileID: 21300000, guid: 57270489da767924481a9386d0e87f99, type: 3}
+  - Key: "Skill/Hunter/Support/C4-P2_\uCC38\uD638"
+    Sprite: {fileID: 21300000, guid: 7cb1a79faa85c34469c1e24b5207e1e5, type: 3}
+  - Key: "Skill/Hunter/Support/C4-P3_\uD45C\uC2DD"
+    Sprite: {fileID: 21300000, guid: 9091961c8927f1248bd0f2b9ecab7ab0, type: 3}
   - Key: Skill/Monk/Main
     Sprite: {fileID: 21300000, guid: db43d66e04e26084091dbed1fbabb8e3, type: 3}
+  - Key: "Skill/Monk/Main/C2-A_\uCCA0\uBCBD"
+    Sprite: {fileID: 21300000, guid: db43d66e04e26084091dbed1fbabb8e3, type: 3}
+  - Key: "Skill/Monk/Main/C2-B_\uD30C\uB3D9"
+    Sprite: {fileID: 21300000, guid: c886ed69a7e7d2249b9f1b07657333ba, type: 3}
   - Key: Skill/Monk/Support
     Sprite: {fileID: 21300000, guid: 469d6b6c54859be48bf0f4dd48657459, type: 3}
+  - Key: "Skill/Monk/Support/C2-P1_\uC18C\uC2E0"
+    Sprite: {fileID: 21300000, guid: 469d6b6c54859be48bf0f4dd48657459, type: 3}
+  - Key: "Skill/Monk/Support/C2-P2_\uAE08\uAC15"
+    Sprite: {fileID: 21300000, guid: 38d19d82e7140d34989e053f5863bfa2, type: 3}
+  - Key: "Skill/Monk/Support/C2-P3_\uC790\uC560"
+    Sprite: {fileID: 21300000, guid: 749ec0abedf7a0645b4b4e139582d1d5, type: 3}
   - Key: Skill/NinjaMageBlack/Main
     Sprite: {fileID: 21300000, guid: 87d359ec06084eb4eafb40aeb5f883c1, type: 3}
+  - Key: "Skill/NinjaMageBlack/Main/C5-A_\uAC01\uC778"
+    Sprite: {fileID: 21300000, guid: 87d359ec06084eb4eafb40aeb5f883c1, type: 3}
+  - Key: "Skill/NinjaMageBlack/Main/C5-B_\uC5F0\uC1C4"
+    Sprite: {fileID: 21300000, guid: 722af384e35b3fe46a57977b2672d57f, type: 3}
   - Key: Skill/NinjaMageBlack/Support
     Sprite: {fileID: 21300000, guid: 0bf6a33d7b891c246ae144d65fc8fc71, type: 3}
+  - Key: "Skill/NinjaMageBlack/Support/C5-P1_\uC2EC\uD654"
+    Sprite: {fileID: 21300000, guid: 0bf6a33d7b891c246ae144d65fc8fc71, type: 3}
+  - Key: "Skill/NinjaMageBlack/Support/C5-P2_\uACB0\uACC4"
+    Sprite: {fileID: 21300000, guid: dcfcdb7747f855841ac38edc8e953175, type: 3}
+  - Key: "Skill/NinjaMageBlack/Support/C5-P3_\uD761\uC815"
+    Sprite: {fileID: 21300000, guid: 6268b326bfbf80f42b3ff6084122c34f, type: 3}
   - Key: Skill/NinjaRed/Main
     Sprite: {fileID: 21300000, guid: aa0e8c9e9c687a745bbe1744a89f6973, type: 3}
+  - Key: "Skill/NinjaRed/Main/C3-A_\uADF8\uB9BC\uC790"
+    Sprite: {fileID: 21300000, guid: aa0e8c9e9c687a745bbe1744a89f6973, type: 3}
+  - Key: "Skill/NinjaRed/Main/C3-B_\uD45C\uCC3D"
+    Sprite: {fileID: 21300000, guid: d2d7a8edda13776439ef3303c3fa7a7d, type: 3}
   - Key: Skill/NinjaRed/Support
     Sprite: {fileID: 21300000, guid: 1943b407b566c28459481754e6401b33, type: 3}
+  - Key: "Skill/NinjaRed/Support/C3-P1_\uBE44\uB3C4"
+    Sprite: {fileID: 21300000, guid: 1943b407b566c28459481754e6401b33, type: 3}
+  - Key: "Skill/NinjaRed/Support/C3-P2_\uC794\uC601"
+    Sprite: {fileID: 21300000, guid: d38ca5964e72007408505291f9579e2d, type: 3}
+  - Key: "Skill/NinjaRed/Support/C3-P3_\uC5F0\uB9C9"
+    Sprite: {fileID: 21300000, guid: e4d8f79c603f6a947aa207b7aa1f3de4, type: 3}
   - Key: Skill/Samurai/Main
     Sprite: {fileID: 21300000, guid: 7fb817a267594d448bb98ec66f7cc8fc, type: 3}
+  - Key: "Skill/Samurai/Main/C1-A_\uC77C\uACA9"
+    Sprite: {fileID: 21300000, guid: 7fb817a267594d448bb98ec66f7cc8fc, type: 3}
+  - Key: "Skill/Samurai/Main/C1-B_\uC5F0\uACA9"
+    Sprite: {fileID: 21300000, guid: 110c59eeabaaf5f499366051a49d3848, type: 3}
   - Key: Skill/Samurai/Support
     Sprite: {fileID: 21300000, guid: 2f3887721cba1cc4db6582369085e3a5, type: 3}
+  - Key: "Skill/Samurai/Support/C1-P1_\uADF9"
+    Sprite: {fileID: 21300000, guid: 2f3887721cba1cc4db6582369085e3a5, type: 3}
+  - Key: "Skill/Samurai/Support/C1-P2_\uBD88\uAD74"
+    Sprite: {fileID: 21300000, guid: 050c5e3d4423e8241857211ab4566186, type: 3}
+  - Key: "Skill/Samurai/Support/C1-P3_\uD638\uB839"
+    Sprite: {fileID: 21300000, guid: 32d63b9868df2224c8843c051fca0515, type: 3}
   - Key: Skill/Shaman/Main
     Sprite: {fileID: 21300000, guid: ae2cb296b070e154db84f400c074b94f, type: 3}
+  - Key: "Skill/Shaman/Main/C6-A_\uC8FC\uC220"
+    Sprite: {fileID: 21300000, guid: ae2cb296b070e154db84f400c074b94f, type: 3}
+  - Key: "Skill/Shaman/Main/C6-B_\uAC00\uD638"
+    Sprite: {fileID: 21300000, guid: 4060f91dc3f5f27468e3bf6d2b6e38f4, type: 3}
   - Key: Skill/Shaman/Support
     Sprite: {fileID: 21300000, guid: 5f94673abc7b8164fbc0e662bc042284, type: 3}
+  - Key: "Skill/Shaman/Support/C6-P1_\uACF5\uBA85"
+    Sprite: {fileID: 21300000, guid: 5f94673abc7b8164fbc0e662bc042284, type: 3}
+  - Key: "Skill/Shaman/Support/C6-P2_\uC815\uC2EC"
+    Sprite: {fileID: 21300000, guid: 87a75182a9a85ab428c7b3e1e455b16b, type: 3}
+  - Key: "Skill/Shaman/Support/C6-P3_\uAD11\uBA85"
+    Sprite: {fileID: 21300000, guid: 5b76b3b047e868247baf222b2d871531, type: 3}
