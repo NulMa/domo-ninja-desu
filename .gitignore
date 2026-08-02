@@ -99,3 +99,6 @@ artifacts/p.json
 unity/Assets/StreamingAssets/data/
 unity/Assets/StreamingAssets/data.meta
 unity/Assets/StreamingAssets.meta
+
+# WebGL 빌드 산출물 — gh-pages 로만 올린다. main 에 두면 저장소가 매 빌드마다 15MB 씩 는다.
+unity/Build/
