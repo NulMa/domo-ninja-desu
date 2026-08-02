@@ -235,6 +235,7 @@ namespace DomoNinja.Sim
 
         public static JObject ToJson(Report report, SimParams p, GameData data)
         {
+            var metrics = Metrics.Compute(data, report.Samples, TickRate(data));
             var builds = new JArray();
             foreach (var b in report.Builds)
             {
@@ -273,7 +274,8 @@ namespace DomoNinja.Sim
                     ["cleared"] = report.Cleared,
                     ["ticksTotal"] = report.TicksTotal,
                 },
-                ["metrics"] = Metrics.Compute(data, report.Samples, TickRate(data)),
+                ["metrics"] = metrics,
+                ["objective"] = Objective.Compute(metrics, p.Meta),
                 ["builds"] = builds,
             };
         }
