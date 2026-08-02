@@ -31,14 +31,34 @@ namespace DomoNinja.Core.Economy
         /// <summary>이 라운드에서 얻은 <b>런 재화</b>. 영구 재화가 아니다.</summary>
         public int CurrencyGained { get; }
 
+        /// <summary>
+        /// 라운드 <b>진입 시점</b> 아군 HP 총합의 천분율. `M2`(진입 HP% 구간별 패배율)가 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// 종료 시점이 아니라 진입 시점이어야 한다 — `M2` 가 보려는 건
+        /// <b>"체력이 얼마 남았을 때 이 라운드가 위험해지는가"</b> 이고, 그건 들어갈 때 정해진다.
+        /// 끝나고 재면 진 라운드는 늘 0 에 가까워서 구간이 무너진다.
+        /// </remarks>
+        public int EntryHpPermille { get; }
+
+        /// <summary>
+        /// 서든데스까지 갔는가. `M7`(타임아웃 도달률, 5% 미만)이 센다.
+        /// </summary>
+        /// <remarks>
+        /// 서든데스는 <b>예외로 남아야</b> 하는 장치다. 흔해지면 그건 전투가 안 끝난다는 뜻이고,
+        /// `C5-A` 각인처럼 장기전을 노리는 빌드가 구조적으로 불리해진다(`D-61`).
+        /// </remarks>
+        public bool TimedOut { get; }
+
         /// <summary>재생용 로그. 켰을 때만 있다.</summary>
         public BattleLog? Log { get; }
 
         public RoundOutcome(int round, string variantId, bool won, int ticks, int unitTicks,
-                            int currencyGained, BattleLog? log)
+                            int currencyGained, int entryHpPermille, bool timedOut, BattleLog? log)
         {
             Round = round; VariantId = variantId; Won = won;
-            Ticks = ticks; UnitTicks = unitTicks; CurrencyGained = currencyGained; Log = log;
+            Ticks = ticks; UnitTicks = unitTicks; CurrencyGained = currencyGained;
+            EntryHpPermille = entryHpPermille; TimedOut = timedOut; Log = log;
         }
 
         public override string ToString() => $"R{Round}({VariantId}) {(Won ? "승" : "패")} {Ticks}틱";
@@ -64,13 +84,25 @@ namespace DomoNinja.Core.Economy
         /// <summary>틱 x 유닛 수의 합. 처리량 실측(`17` §7.1)이 쓴다.</summary>
         public int TotalUnitTicks { get; }
 
+        /// <summary>
+        /// 첫 액티브 스킬을 활성화한 라운드. 끝까지 하나도 못 샀으면 <b>0</b>. `M6` 이 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// `M6` 은 저축 전략(`08` §4.3)이 실제로 작동하는지를 본다 —
+        /// 전부 같은 라운드에 사면 <b>"지금 살까 아껴둘까"라는 긴장이 없다는 뜻</b>이고,
+        /// 그건 상점 랜덤성이 의사결정을 만들지 못하고 있다는 신호다.
+        /// </remarks>
+        public int FirstActivationRound { get; }
+
         public IReadOnlyList<RoundOutcome> Rounds { get; }
 
         public RunSummary(int roundsWon, int roundsReached, bool cleared, int livesLeft,
-                          int totalTicks, int totalUnitTicks, IReadOnlyList<RoundOutcome> rounds)
+                          int totalTicks, int totalUnitTicks, int firstActivationRound,
+                          IReadOnlyList<RoundOutcome> rounds)
         {
             RoundsWon = roundsWon; RoundsReached = roundsReached; Cleared = cleared;
-            LivesLeft = livesLeft; TotalTicks = totalTicks; TotalUnitTicks = totalUnitTicks; Rounds = rounds;
+            LivesLeft = livesLeft; TotalTicks = totalTicks; TotalUnitTicks = totalUnitTicks;
+            FirstActivationRound = firstActivationRound; Rounds = rounds;
         }
 
         public override string ToString() =>
@@ -142,6 +174,9 @@ namespace DomoNinja.Core.Economy
             var round = FindRound(run.StageId, run.Round);
             var variant = PickVariant(round, rng);
 
+            // 진입 시점에 재둔다. 전투가 끝난 뒤에는 이 값을 복원할 수 없다.
+            int entryHp = EntryHpPermille(run);
+
             var units = BattleSetup.Build(_data, run, variant, meta);
             var result = new BattleSimulator(_config).Run(
                 units, sink, StageNumber(run.StageId), run.Round, 0, collectLog);
@@ -160,8 +195,38 @@ namespace DomoNinja.Core.Economy
 
             run.Round++;
 
+            // 서든데스 진입 여부. 전투가 타임아웃을 넘겼다는 것과 같은 말이다 —
+            // BattleSimulator 가 그 시점에 SuddenDeath 를 내지만, 로그를 끈 sim 에서는
+            // 이벤트를 볼 수 없으므로 틱으로 판정한다.
+            bool timedOut = result.Ticks > _config.TimeoutTicks;
+
             return new RoundOutcome(round.Round, variant.Id, won, result.Ticks,
-                                    result.Ticks * units.Count, gained, result.Log);
+                                    result.Ticks * units.Count, gained, entryHp, timedOut, result.Log);
+        }
+
+        /// <summary>액티브를 하나라도 산 캐릭터가 있는가.</summary>
+        private static bool AnyActiveBought(RunState run)
+        {
+            foreach (var entry in run.Deployed)
+                if (entry.ActiveSkillId != null) return true;
+            return false;
+        }
+
+        /// <summary>살아 있는 아군의 HP 총합 / 최대 HP 총합, 천분율.</summary>
+        /// <remarks>
+        /// 죽은 유닛의 최대 체력도 분모에 넣는다. 빼면 <b>전멸 직전인데 비율이 100% 로 보이는</b>
+        /// 상황이 생긴다 — 한 명만 남아 만피면 그렇게 된다. `M2` 가 보려는 건 팀 전체의 여력이다.
+        /// </remarks>
+        private static int EntryHpPermille(RunState run)
+        {
+            int hp = 0, max = 0;
+            foreach (var entry in run.Deployed)
+            {
+                hp += entry.Hp;
+                max += entry.MaxHp;
+            }
+
+            return max <= 0 ? 0 : hp * 1000 / max;
         }
 
         /// <summary>런 하나를 끝까지 굴린다.</summary>
@@ -186,12 +251,15 @@ namespace DomoNinja.Core.Economy
             var encounterRng = rng.Fork(RngStream.Encounter);
             var shopRng = rng.Fork(RngStream.Shop);
             var shop = build == null ? null : new Shop(_data);
+            int firstActivation = 0;
 
             while (run.Round <= _data.Economy.TotalRounds && !run.IsOver)
             {
                 // 상점은 전투 "전"이다. 라운드 시작 전 배치·구매가 개입 지점이고(A-8),
                 // 이번 라운드에 산 스킬이 이번 전투부터 걸려야 한다.
                 if (shop != null) ShopBot.Visit(run, shop, build!, shopRng, run.Round);
+
+                if (firstActivation == 0 && AnyActiveBought(run)) firstActivation = run.Round;
 
                 var outcome = PlayRound(run, meta, encounterRng, sink, collectLogs);
                 outcomes.Add(outcome);
@@ -204,7 +272,8 @@ namespace DomoNinja.Core.Economy
             int reached = outcomes.Count;
             bool cleared = won == _data.Economy.TotalRounds;
 
-            return new RunSummary(won, reached, cleared, run.Lives, totalTicks, totalUnitTicks, outcomes);
+            return new RunSummary(won, reached, cleared, run.Lives, totalTicks, totalUnitTicks,
+                                  firstActivation, outcomes);
         }
 
         /// <summary>

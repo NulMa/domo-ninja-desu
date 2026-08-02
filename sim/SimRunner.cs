@@ -104,6 +104,9 @@ namespace DomoNinja.Sim
             public double ElapsedMs;
             public BuildResult[] Builds = Array.Empty<BuildResult>();
 
+            /// <summary>지표 계산의 원자료. 런 하나가 표본 하나다.</summary>
+            public List<Metrics.Sample> Samples = new List<Metrics.Sample>();
+
             public double ClearRate => Runs == 0 ? 0 : (double)Cleared / Runs;
 
             /// <summary>유닛-틱당 마이크로초. <b>5µs 를 넘으면 최적화 대상이다</b> (`17` §7.1).</summary>
@@ -120,12 +123,29 @@ namespace DomoNinja.Sim
             var buildList = builds.ToList();
 
             var results = new BuildResult[buildList.Count];
+
+            // ★ 표본을 빌드별 통에 따로 담았다가 나중에 순서대로 합친다.
+            //   공유 리스트에 병렬로 넣으면 순서가 실행마다 달라지고, 그러면
+            //   같은 입력에서 리포트가 미묘하게 달라진다 — 재현 가능한 리포트가 아니게 된다.
+            var buckets = new List<Metrics.Sample>[buildList.Count];
             var watch = Stopwatch.StartNew();
 
             if (p.Parallel)
-                Parallel.For(0, buildList.Count, i => results[i] = RunBuild(data, config, buildList[i], p));
+            {
+                Parallel.For(0, buildList.Count, i =>
+                {
+                    buckets[i] = new List<Metrics.Sample>(p.Seeds);
+                    results[i] = RunBuild(data, config, buildList[i], p, buckets[i]);
+                });
+            }
             else
-                for (int i = 0; i < buildList.Count; i++) results[i] = RunBuild(data, config, buildList[i], p);
+            {
+                for (int i = 0; i < buildList.Count; i++)
+                {
+                    buckets[i] = new List<Metrics.Sample>(p.Seeds);
+                    results[i] = RunBuild(data, config, buildList[i], p, buckets[i]);
+                }
+            }
 
             watch.Stop();
 
@@ -134,6 +154,11 @@ namespace DomoNinja.Sim
                 ElapsedMs = watch.Elapsed.TotalMilliseconds,
                 Builds = p.IncludeBuilds ? results : Array.Empty<BuildResult>(),
             };
+
+            foreach (var bucket in buckets)
+            {
+                if (bucket != null) report.Samples.AddRange(bucket);
+            }
 
             foreach (var r in results)
             {
@@ -146,7 +171,8 @@ namespace DomoNinja.Sim
             return report;
         }
 
-        private static BuildResult RunBuild(GameData data, CombatConfig config, BuildTarget build, SimParams p)
+        private static BuildResult RunBuild(GameData data, CombatConfig config, BuildTarget build, SimParams p,
+                                            List<Metrics.Sample> samples)
         {
             var result = new BuildResult { Id = build.Id };
             var engine = new RunEngine(data, config);
@@ -168,6 +194,8 @@ namespace DomoNinja.Sim
                 result.RoundsWonTotal += summary.RoundsWon;
                 result.TicksTotal += summary.TotalTicks;
                 result.UnitTicksTotal += summary.TotalUnitTicks;
+
+                samples.Add(new Metrics.Sample { Build = build, Summary = summary });
             }
 
             return result;
@@ -245,6 +273,7 @@ namespace DomoNinja.Sim
                     ["cleared"] = report.Cleared,
                     ["ticksTotal"] = report.TicksTotal,
                 },
+                ["metrics"] = Metrics.Compute(data, report.Samples, TickRate(data)),
                 ["builds"] = builds,
             };
         }
