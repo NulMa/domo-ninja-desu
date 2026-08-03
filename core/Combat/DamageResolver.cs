@@ -79,10 +79,10 @@ namespace DomoNinja.Core.Combat
                 target.Status.Remove(StatusKind.Invulnerable);
                 sink.Emit(new GameEvent(EventKind.StatusExpire, tick, -1, target.Id, (int)StatusKind.Invulnerable));
 
-                // ⚠️ 로그 포맷 v1 에 "회피" 이벤트가 없어서 피해 0 으로 표현한다.
-                //    View 는 Damage.Value == 0 을 보고 무효 연출을 낼 수 있다.
-                //    → D+4 포맷 리뷰(19 §4.2)에 올릴 후보다. 동결 전이라 지금은 포맷을 건드리지 않는다.
-                sink.Emit(new GameEvent(EventKind.Damage, tick, actorId, target.Id, 0, target.Hp));
+                // ★ D+4 포맷 리뷰에서 전용 이벤트를 얻었다 (`EventKind.Dodge` = 11).
+                //   전에는 Damage 에 0 을 실어 표현했는데, 그러면 View 가 회피를 그릴 수 없고
+                //   "피해 0" 과 구분하려면 앞뒤 이벤트를 조합해 읽는 묵시적 규칙이 생긴다.
+                sink.Emit(new GameEvent(EventKind.Dodge, tick, actorId, target.Id, 0, target.Hp));
                 return new DamageResult(0, dodged: true, killed: false);
             }
 

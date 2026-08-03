@@ -459,6 +459,48 @@ namespace DomoNinja.Core.Tests
             Assert.That(u.Shield, Is.EqualTo(20), "부여가 손해가 됐다");
         }
 
+        // ────────────────────────────── 회피 (v1.1 · D+4 포맷 리뷰)
+
+        [Test]
+        public void 첫_피격_무효가_전용_이벤트로_나간다()
+        {
+            // C3-A 그림자. 전에는 Damage(Value=0) 으로 표현해서 View 가 회피를 그릴 수 없었다.
+            var hero = Ally(0, "C3", "C3-A", new Coord(3, 2));
+            var (_, sink) = Run(hero, Enemy(1, "kappa", new Coord(4, 2), hpOverride: 9999));
+
+            var dodges = sink.Events.Where(e => e.Kind == EventKind.Dodge && e.TargetId == 0).ToList();
+
+            Assert.That(dodges, Is.Not.Empty, "첫 피격 무효가 Dodge 로 안 나간다");
+            Assert.That(dodges.Count, Is.EqualTo(1), "무효는 한 번 쓰고 사라진다");
+            Assert.That(dodges[0].Value, Is.EqualTo(0));
+            Assert.That(dodges[0].Aux, Is.EqualTo(hero.MaxHp), "회피했으므로 HP 가 안 깎여 있어야 한다");
+        }
+
+        [Test]
+        public void 피해_0_이벤트는_이제_나가지_않는다()
+        {
+            // ★ 이게 Dodge 를 만든 이유다. 피해 0 이 남아 있으면 View 가 "회피" 와
+            //   "0 피해" 를 구분하려고 앞뒤 이벤트를 조합해 읽어야 한다 — 묵시적 규칙이 생긴다.
+            //   ⚠️ SelfDamage 의 생존 검사가 빠지면 여기가 깨진다 (죽은 유닛에 자해가 0 으로 들어간다).
+            foreach (var ch in _data.Characters)
+            {
+                foreach (string skillId in ch.SkillIds)
+                {
+                    var sink = new ListEventSink();
+                    new BattleSimulator(Config()).Run(new[]
+                    {
+                        Ally(0, ch.Id, skillId, new Coord(3, 2)),
+                        Enemy(1, "kappa", new Coord(4, 2)),
+                        Enemy(2, "eye", new Coord(6, 3)),
+                    }, sink);
+
+                    var zero = sink.Events.FirstOrDefault(e => e.Kind == EventKind.Damage && e.Value == 0);
+                    Assert.That(zero.Kind, Is.Not.EqualTo(EventKind.Damage),
+                                $"{skillId} 에서 피해 0 이벤트가 나갔다 — 회피와 구분되지 않는다");
+                }
+            }
+        }
+
         // ────────────────────────────── C2-B 파동 (D-73)
 
         [Test]

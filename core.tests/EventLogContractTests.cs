@@ -34,6 +34,11 @@ namespace DomoNinja.Core.Tests
             Assert.That((int)EventKind.StatusApply, Is.EqualTo(8));
             Assert.That((int)EventKind.StatusExpire, Is.EqualTo(9));
             Assert.That((int)EventKind.SuddenDeath, Is.EqualTo(10));
+
+            // ★ v1 동결(2026-08-02) 이후 처음 늘어난 항목 (D+4 포맷 리뷰).
+            //   위 1~10 이 그대로라는 것이 이 테스트의 요점이다 — 동결이 지키려던 건
+            //   "항목을 늘리지 않는다" 가 아니라 "기존 번호를 안 민다" 다.
+            Assert.That((int)EventKind.Dodge, Is.EqualTo(11));
         }
 
         [Test]

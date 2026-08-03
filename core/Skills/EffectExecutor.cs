@@ -208,6 +208,12 @@ namespace DomoNinja.Core.Skills
             if (amount <= 0) return EffectOutcome.None;
 
             var u = ctx.Self;
+
+            // ★ 죽은 유닛을 또 때리지 않는다. 주기 트리거는 상태이상 처리(`dot_ramping`) 뒤에
+            //   같은 틱에 돌기 때문에, 그 사이에 죽은 유닛이 여기 들어올 수 있다.
+            //   그러면 applied 가 0 이 되어 **피해 0 이벤트**가 나가는데, 그건 회피와 구분되지 않는다.
+            if (!u.IsAlive) return EffectOutcome.None;
+
             int applied = amount < u.Hp ? amount : u.Hp;
             u.Hp -= applied;
 

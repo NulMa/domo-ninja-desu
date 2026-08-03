@@ -60,6 +60,13 @@ namespace DomoNinja.Core.Events
             e.Add(new GameEvent(EventKind.StatusExpire, 40, 3, 0, (int)StatusKind.Shield));
             e.Add(new GameEvent(EventKind.Damage, 40, 3, 0, 10, 310));
 
+            // 첫 피격 무효 (C3-A 그림자) — 상태가 소모되고 피해가 0 이다.
+            // ★ Damage 가 아니라 Dodge 로 나간다(v1.1). Aux 는 "안 깎인" 현재 HP 라
+            //   View 가 숫자를 띄우지 않고 회피 연출만 내면 된다.
+            e.Add(new GameEvent(EventKind.Attack, 44, 3, 1, 0));
+            e.Add(new GameEvent(EventKind.StatusExpire, 44, -1, 1, (int)StatusKind.Invulnerable));
+            e.Add(new GameEvent(EventKind.Dodge, 44, 3, 1, 0, 210));
+
             // 상태이상 두 종
             e.Add(new GameEvent(EventKind.Attack, 46, 4, 0, 1));
             e.Add(new GameEvent(EventKind.StatusApply, 46, 4, 0, (int)StatusKind.Slow, 46 + 60));

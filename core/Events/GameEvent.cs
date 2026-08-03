@@ -53,6 +53,24 @@ namespace DomoNinja.Core.Events
 
         /// <summary>서든데스 진입. 전투당 최대 1회. Actor/Target = -1, Value = 0, Aux = 0. (08 §5.3)</summary>
         SuddenDeath = 10,
+
+        /// <summary>
+        /// 피격 무효 (<c>C3-A</c> 그림자). Value = 0, Aux = <b>현재 HP</b>(안 깎였음을 그대로 확인 가능).
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>v1 동결(2026-08-02) 이후 처음 늘어난 항목이다</b> (D+4 포맷 리뷰).
+        /// <b>맨 뒤에 붙였으므로 1~10 번호는 하나도 안 밀린다</b> — 동결이 실제로 지키려던 것이 그것이다.
+        /// <para>
+        /// 전에는 <see cref="Damage"/> 에 Value 0 을 실어 표현했다. 그러면 <b>View 가 회피를 그릴 수 없고</b>,
+        /// *"피해 0"* 과 구분하려면 앞뒤 이벤트를 조합해 읽어야 하는 <b>묵시적 규칙</b>이 생긴다.
+        /// 회피는 실제 기믹이고 60초 영상에서 보여야 하므로 이름을 준다.
+        /// </para>
+        /// <para>
+        /// 모르는 항목을 만난 재생기는 <b>그냥 흘린다</b>(<c>BattleReplayer</c> 의 <c>switch</c> 에 해당 case 가 없으면 무시).
+        /// 그래서 View 대응은 이 커밋과 분리해도 화면이 깨지지 않는다.
+        /// </para>
+        /// </remarks>
+        Dodge = 11,
     }
 
     /// <summary>
