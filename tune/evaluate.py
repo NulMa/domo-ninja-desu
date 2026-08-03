@@ -168,7 +168,12 @@ def sim_commit() -> str:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, cwd=str(ROOT), timeout=10,
+            # ★ 인코딩을 반드시 지정한다. 이 저장소는 문서 파일 이름이 한글이라
+            #   `git status --porcelain` 출력에 한글이 섞이고, 기본값(Windows cp949)으로
+            #   읽으면 UnicodeDecodeError 가 난다. 예외를 잡고는 있었지만 그 경우
+            #   workingTreeDirty 가 항상 True 가 되어 **리포트가 조용히 거짓말을 한다.**
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(ROOT), timeout=10,
         )
         return out.stdout.strip() or "unknown"
     except Exception:
@@ -180,7 +185,12 @@ def dirty() -> bool:
     try:
         out = subprocess.run(
             ["git", "status", "--porcelain"],
-            capture_output=True, text=True, cwd=str(ROOT), timeout=10,
+            # ★ 인코딩을 반드시 지정한다. 이 저장소는 문서 파일 이름이 한글이라
+            #   `git status --porcelain` 출력에 한글이 섞이고, 기본값(Windows cp949)으로
+            #   읽으면 UnicodeDecodeError 가 난다. 예외를 잡고는 있었지만 그 경우
+            #   workingTreeDirty 가 항상 True 가 되어 **리포트가 조용히 거짓말을 한다.**
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            cwd=str(ROOT), timeout=10,
         )
         return bool(out.stdout.strip())
     except Exception:

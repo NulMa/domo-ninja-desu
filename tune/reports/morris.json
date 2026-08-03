@@ -1,0 +1,334 @@
+{
+  "provenance": {
+    "generatedAt": "2026-08-03T08:15:49.384964+00:00",
+    "simCommit": "352af77",
+    "workingTreeDirty": false,
+    "method": "Morris (SALib)",
+    "trajectories": 10,
+    "levels": 4,
+    "evaluations": 320,
+    "seedsPerEvaluation": 1,
+    "buildLimit": 0,
+    "_buildLimitNote": "빌드 공간을 자르면 M3a·M3b·M3c 가 무너져 D 가 0 이 된다(실측). 예산 축은 시드다 — 17 §3.",
+    "_integerNote": "스탯이 정수라 덮어쓰기 시점에 반올림된다. num_levels 를 격자 간격이 반올림보다 크도록 잡았지만, μ* 가 아주 작은 파라미터는 '영향이 없다' 와 '격자에 안 잡혔다' 가 구분되지 않는다.",
+    "_botPolicyNote": "★ 아이템 가격(statBoost·teamBoost·conditionalBoost·healItem)의 μ* 가 0 인 것은 게임의 성질이 아니라 봇 정책의 결과다 — 봇은 아이템을 사지 않는다(08 §6.1, 빌드 공간이 스킬만). 이 값들을 '영향이 없으니 빼도 된다' 로 읽으면 실제 플레이에서만 작동하는 축을 지우게 된다. M6 을 뺀 것(D-72)과 같은 계열이다."
+  },
+  "failures": [],
+  "outputs": {
+    "mean": 0.410619,
+    "max": 0.7366,
+    "zeroCount": 88
+  },
+  "ranked": [
+    {
+      "name": "C1.hp",
+      "mu_star": 0.476145,
+      "sigma": 0.601239,
+      "baseline": 120,
+      "bounds": [
+        84.0,
+        156.0
+      ]
+    },
+    {
+      "name": "C1.attack",
+      "mu_star": 0.37296,
+      "sigma": 0.506396,
+      "baseline": 45,
+      "bounds": [
+        31.5,
+        58.5
+      ]
+    },
+    {
+      "name": "C4.attack",
+      "mu_star": 0.34113,
+      "sigma": 0.508177,
+      "baseline": 30,
+      "bounds": [
+        21.0,
+        39.0
+      ]
+    },
+    {
+      "name": "C2.hp",
+      "mu_star": 0.30555,
+      "sigma": 0.47447,
+      "baseline": 180,
+      "bounds": [
+        126.0,
+        234.0
+      ]
+    },
+    {
+      "name": "C4.attackInterval",
+      "mu_star": 0.272385,
+      "sigma": 0.398649,
+      "baseline": 20,
+      "bounds": [
+        14.0,
+        26.0
+      ]
+    },
+    {
+      "name": "C5.attackInterval",
+      "mu_star": 0.244545,
+      "sigma": 0.319849,
+      "baseline": 26,
+      "bounds": [
+        18.2,
+        33.8
+      ]
+    },
+    {
+      "name": "price.supportSkill.lo",
+      "mu_star": 0.22956,
+      "sigma": 0.27767,
+      "baseline": 3,
+      "bounds": [
+        1.5,
+        4.5
+      ]
+    },
+    {
+      "name": "C6.hp",
+      "mu_star": 0.1938,
+      "sigma": 0.278538,
+      "baseline": 110,
+      "bounds": [
+        77.0,
+        143.0
+      ]
+    },
+    {
+      "name": "C1.attackInterval",
+      "mu_star": 0.167595,
+      "sigma": 0.283865,
+      "baseline": 24,
+      "bounds": [
+        16.8,
+        31.2
+      ]
+    },
+    {
+      "name": "price.skillActivate",
+      "mu_star": 0.16278,
+      "sigma": 0.256101,
+      "baseline": 5,
+      "bounds": [
+        2.5,
+        7.5
+      ]
+    },
+    {
+      "name": "C3.hp",
+      "mu_star": 0.110385,
+      "sigma": 0.198692,
+      "baseline": 90,
+      "bounds": [
+        63.0,
+        117.0
+      ]
+    },
+    {
+      "name": "C6.attackInterval",
+      "mu_star": 0.08256,
+      "sigma": 0.189897,
+      "baseline": 22,
+      "bounds": [
+        15.4,
+        28.6
+      ]
+    },
+    {
+      "name": "C4.hp",
+      "mu_star": 0.078915,
+      "sigma": 0.171912,
+      "baseline": 100,
+      "bounds": [
+        70.0,
+        130.0
+      ]
+    },
+    {
+      "name": "C5.attack",
+      "mu_star": 0.0759,
+      "sigma": 0.090557,
+      "baseline": 34,
+      "bounds": [
+        23.8,
+        44.2
+      ]
+    },
+    {
+      "name": "price.supportSkill.hi",
+      "mu_star": 0.06159,
+      "sigma": 0.185471,
+      "baseline": 5,
+      "bounds": [
+        2.5,
+        7.5
+      ]
+    },
+    {
+      "name": "C3.attackInterval",
+      "mu_star": 0.037935,
+      "sigma": 0.087804,
+      "baseline": 9,
+      "bounds": [
+        6.3,
+        11.7
+      ]
+    },
+    {
+      "name": "C5.hp",
+      "mu_star": 0.036795,
+      "sigma": 0.056921,
+      "baseline": 80,
+      "bounds": [
+        56.0,
+        104.0
+      ]
+    },
+    {
+      "name": "C3.attack",
+      "mu_star": 0.029595,
+      "sigma": 0.040556,
+      "baseline": 18,
+      "bounds": [
+        12.6,
+        23.4
+      ]
+    },
+    {
+      "name": "C6.attack",
+      "mu_star": 0.022035,
+      "sigma": 0.03196,
+      "baseline": 20,
+      "bounds": [
+        14.0,
+        26.0
+      ]
+    },
+    {
+      "name": "C2.attack",
+      "mu_star": 0.01584,
+      "sigma": 0.027667,
+      "baseline": 22,
+      "bounds": [
+        15.4,
+        28.6
+      ]
+    },
+    {
+      "name": "C2.attackInterval",
+      "mu_star": 0.011355,
+      "sigma": 0.020913,
+      "baseline": 18,
+      "bounds": [
+        12.6,
+        23.4
+      ]
+    },
+    {
+      "name": "C2.moveInterval",
+      "mu_star": 0.003765,
+      "sigma": 0.00515,
+      "baseline": 6,
+      "bounds": [
+        4.2,
+        7.8
+      ]
+    },
+    {
+      "name": "C3.moveInterval",
+      "mu_star": 0.003705,
+      "sigma": 0.004553,
+      "baseline": 3,
+      "bounds": [
+        2.1,
+        3.9
+      ]
+    },
+    {
+      "name": "C6.moveInterval",
+      "mu_star": 0.00237,
+      "sigma": 0.003032,
+      "baseline": 7,
+      "bounds": [
+        4.9,
+        9.1
+      ]
+    },
+    {
+      "name": "C4.moveInterval",
+      "mu_star": 0.00123,
+      "sigma": 0.002902,
+      "baseline": 8,
+      "bounds": [
+        5.6,
+        10.4
+      ]
+    },
+    {
+      "name": "C5.moveInterval",
+      "mu_star": 0.001215,
+      "sigma": 0.001977,
+      "baseline": 9,
+      "bounds": [
+        6.3,
+        11.7
+      ]
+    },
+    {
+      "name": "C1.moveInterval",
+      "mu_star": 0.0,
+      "sigma": 0.0,
+      "baseline": 5,
+      "bounds": [
+        3.5,
+        6.5
+      ]
+    },
+    {
+      "name": "price.statBoost",
+      "mu_star": 0.0,
+      "sigma": 0.0,
+      "baseline": 3,
+      "bounds": [
+        1.5,
+        4.5
+      ]
+    },
+    {
+      "name": "price.teamBoost",
+      "mu_star": 0.0,
+      "sigma": 0.0,
+      "baseline": 6,
+      "bounds": [
+        3.0,
+        9.0
+      ]
+    },
+    {
+      "name": "price.conditionalBoost",
+      "mu_star": 0.0,
+      "sigma": 0.0,
+      "baseline": 4,
+      "bounds": [
+        2.0,
+        6.0
+      ]
+    },
+    {
+      "name": "price.healItem",
+      "mu_star": 0.0,
+      "sigma": 0.0,
+      "baseline": 3,
+      "bounds": [
+        1.5,
+        4.5
+      ]
+    }
+  ]
+}
