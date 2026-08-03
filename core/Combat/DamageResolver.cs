@@ -161,10 +161,17 @@ namespace DomoNinja.Core.Combat
             int after = before + amount;
             int overflow = 0;
 
-            if (after > maxShield)
+            // ★ 상한은 출처별이 아니라 보호막 풀 전체에 걸린다. 그래서 상한이 낮은 효과가
+            //   나중에 걸리면 이미 쌓인 보호막이 그 상한까지 **깎여 내려간다** —
+            //   `C4-P2` 참호(상한 20%) 위에 `C6-P3` 광명(상한 15%)이 겹치면
+            //   **아군을 도우려는 스킬이 보호막을 줄인다.** 부여가 손해가 되는 건 규칙이 아니라 사고다.
+            //   이미 있는 것보다는 낮추지 않는다.
+            int cap = maxShield > before ? maxShield : before;
+
+            if (after > cap)
             {
-                overflow = after - maxShield;
-                after = maxShield;
+                overflow = after - cap;
+                after = cap;
             }
 
             if (after != before)
@@ -181,6 +188,32 @@ namespace DomoNinja.Core.Combat
             // 초과분을 체력으로 (C3-A 그림자 · C5-P2 결계). 최대 체력은 넘지 않는다.
             if (overflow > 0 && overflowToHp)
                 ApplyHeal(target, overflow, actorId, tick, sink);
+        }
+
+        /// <summary>
+        /// 보호막 일부를 <b>조건이 풀려서</b> 거둬들인다 (`C4-P2` 참호가 이동할 때).
+        /// </summary>
+        /// <remarks>
+        /// ★ <b><see cref="ClearShield"/> 처럼 0 으로 밀지 않는다.</b> 보호막은 출처가 여럿인 단일 풀이라
+        /// 전부 지우면 같은 유닛이 <c>C6-P3</c> 광명에게 받은 몫까지 같이 날아간다 —
+        /// <b>참호를 든 순간 광명이 그 유닛에게만 무효가 된다.</b>
+        /// 그래서 <b>자기가 책임지는 양만큼만</b> 뺀다.
+        /// <para>
+        /// ⚠️ 그렇다고 출처별 장부가 생기는 건 아니다. 상한이 풀 전체에 걸리므로
+        /// 겹쳤을 때 실제로 얼마가 남아 있었는지는 <b>어느 쪽이 나중에 걸렸는지</b>에 달려 있다.
+        /// 여기서 보장하는 건 <b>0 으로 밀지 않는다</b> 하나뿐이다.
+        /// </para>
+        /// </remarks>
+        public static void RevokeShield(Unit target, int amount, int tick, IEventSink sink)
+        {
+            if (amount <= 0 || target.Shield <= 0) return;
+
+            int removed = amount < target.Shield ? amount : target.Shield;
+            target.Shield -= removed;
+            sink.Emit(new GameEvent(EventKind.Shield, tick, -1, target.Id, -removed, target.Shield));
+
+            if (target.Shield == 0 && target.Status.Remove(StatusKind.Shield))
+                sink.Emit(new GameEvent(EventKind.StatusExpire, tick, -1, target.Id, (int)StatusKind.Shield));
         }
 
         /// <summary>

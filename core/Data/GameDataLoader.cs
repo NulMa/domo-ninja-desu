@@ -711,6 +711,30 @@ namespace DomoNinja.Core.Data
                 if (kind == "shield" && o["overflowToHp"] != null && o["maxPermille"] == null)
                     e.Add(new ValidationError("R07", where,
                         "shield 에 overflowToHp 가 있는데 maxPermille 이 없다 — 상한 없이 초과분을 정의할 수 없다"));
+
+                // R23 — 지속 보호막의 전제 조건.
+                //   whileStationary 는 이동할 때 "자기가 준 만큼"을 되돌리는데, 그 양이 maxPermille 이다.
+                //   없으면 되돌릴 양이 0 이라 한 번 켜지면 영영 안 꺼진다 — 조건부인데 상시가 된다.
+                //   대상이 self 가 아니면 더 나쁘다. 아군의 이동을 이 유닛이 알 방법이 없어
+                //   켜지기만 하고 꺼지지 않는다. 둘 다 조용히 세지는 형태라 여기서 막는다.
+                if (kind == "shield")
+                {
+                    bool stationary = (bool?)o["whileStationary"] ?? false;
+                    if (stationary && o["maxPermille"] == null)
+                        e.Add(new ValidationError("R23", where,
+                            "whileStationary 에 maxPermille 이 없다 — 이동 시 되돌릴 양이 정의되지 않아 상시 보호막이 된다"));
+                    if (stationary && (string?)o["target"] != "self")
+                        e.Add(new ValidationError("R23", where,
+                            $"whileStationary 의 target 이 `{(string?)o["target"]}` 이다 — 남의 이동은 관측할 수 없어 꺼지지 않는다"));
+
+                    int every = (int?)o["refreshEveryTicks"] ?? 0;
+                    if (every < 0 || (o["refreshEveryTicks"] != null && every == 0))
+                        e.Add(new ValidationError("R23", where,
+                            $"refreshEveryTicks={every} — 1 이상이어야 한다 (0 은 매 틱 재충전이 되어 무적이다)"));
+                    if (stationary && every > 0)
+                        e.Add(new ValidationError("R23", where,
+                            "whileStationary 와 refreshEveryTicks 를 같이 쓸 수 없다 — 켜고 끄는 것과 주기로 채우는 것은 다른 리듬이다"));
+                }
             }
 
             if (template == "targeting" && o["priority"] != null)

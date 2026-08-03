@@ -92,6 +92,35 @@ namespace DomoNinja.Core.Domain
         /// <inheritdoc cref="MoveCooldown"/>
         public int AttackCooldown { get; set; }
 
+        /// <summary>
+        /// 다음에 이동할 수 있게 되는 틱. <b>−1 은 "아직 한 번도 안 움직였다"</b> 다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>whileStationary</c> 가 "제자리인가"를 묻는 데 쓴다.
+        /// <see cref="MoveCooldown"/> 으로는 대신할 수 없다 — 사거리 안에 들어와 공격만 하는 유닛은
+        /// 이동 판정 자체를 안 거쳐서 쿨다운이 <b>멈춰 있는 채로 남는다.</b>
+        /// </para>
+        /// <para>
+        /// ★ <b>"마지막으로 움직인 틱" 이 아니라 "다음에 움직일 수 있는 틱" 이다.</b>
+        /// 쿨다운은 검사하는 틱에 1 씩 줄어서 실제 이동 주기가 <see cref="MoveInterval"/> + 1 이고,
+        /// <c>slow</c> 가 걸리면 그보다 더 늘어난다. 간격으로 역산하면 <b>매번 한 틱씩 어긋나</b>
+        /// 걸어가는 중에 보호막이 한 번 켜졌다 꺼진다. 이동할 때 값을 적어두면 어긋날 자리가 없다.
+        /// </para>
+        /// </remarks>
+        public int MoveReadyTick { get; set; } = -1;
+
+        /// <summary>
+        /// <c>whileStationary</c> 보호막이 지금 켜져 있는가 (`C4-P2` 참호).
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>보호막 총량(<see cref="Shield"/>)만으로는 알 수 없다.</b> 보호막은 출처가 여럿인
+        /// 단일 풀이라(`C6-P3` 광명이 아군에게 주는 것과 같은 통에 들어간다) 값만 봐서는
+        /// <b>이 중 얼마가 제자리 보호막인지 구분되지 않는다.</b> 켜고 끈 사실을 따로 들고 있어야
+        /// 이동할 때 <b>자기 몫만</b> 되돌릴 수 있다.
+        /// </remarks>
+        public bool StationaryShieldOn { get; set; }
+
         public bool IsAlive => Hp > 0;
 
         /// <summary>

@@ -317,6 +317,148 @@ namespace DomoNinja.Core.Tests
                 Assert.That(b[i].ToString(), Is.EqualTo(a[i].ToString()), $"{i} 번째 이벤트가 갈렸다");
         }
 
+        // ────────────────────────────── 지속 보호막 (refreshEveryTicks · whileStationary)
+
+        /// <summary>한 유닛에게 실제로 들어온 보호막 변화만 시간순으로 뽑는다.</summary>
+        private static List<GameEvent> ShieldEvents(ListEventSink sink, int unitId) =>
+            sink.Events.Where(e => e.Kind == EventKind.Shield && e.TargetId == unitId).ToList();
+
+        /// <summary>
+        /// 오래 버티면서 아군을 조금씩만 깎는 샌드백.
+        /// </summary>
+        /// <remarks>
+        /// 재충전은 <b>보호막이 비어 있어야 눈에 보인다</b> — 가득 차 있으면 <c>GrantShield</c> 가
+        /// 아무 일도 안 하고 이벤트도 안 남긴다. 그래서 "맞긴 맞되 200틱은 버티는" 상대가 필요하다.
+        /// <c>larva</c> 는 초당 0.32 피해라 최대 체력 90 짜리도 280틱을 산다.
+        /// </remarks>
+        private static Unit Sandbag(int id, Coord at) => Enemy(id, "larva", at, hpOverride: 5000);
+
+        [Test]
+        public void 잔영은_한_번_주고_끝나지_않는다()
+        {
+            // C3-P2 — "10초마다 최대 체력 30%의 보호막". refreshEveryTicks = 200틱 = 10초.
+            // ★ 재충전이 배선 안 돼 있어도 전투는 정상으로 보인다. 시작 1회는 걸리기 때문이다 —
+            //   화면에도 로그에도 "보호막이 걸렸다" 가 뜨고, 텍스트를 읽어보기 전에는 안 드러난다.
+            //   액티브는 C3-B 를 쓴다. C3-A 그림자도 보호막을 줘서 출처가 섞이면 잰 값이 흐려진다.
+            var hero = Ally(0, "C3", "C3-B", new Coord(3, 2), "C3-P2");
+
+            var (_, sink) = Run(hero, Sandbag(1, new Coord(4, 2)));
+
+            var grants = ShieldEvents(sink, 0).Where(e => e.Value > 0).Select(e => e.Tick).ToList();
+
+            Assert.That(grants, Does.Contain(0), "전투 시작 1회가 없다");
+            Assert.That(grants, Does.Contain(200), "10초 뒤 재충전이 없다 — refreshEveryTicks 가 죽어 있다");
+        }
+
+        [Test]
+        public void 잔영의_상한은_최대_체력의_30퍼센트다()
+        {
+            // 재충전이 상한을 무시하면 보호막이 전투 내내 쌓여 사실상 무적이 된다.
+            var hero = Ally(0, "C3", "C3-B", new Coord(3, 2), "C3-P2");
+            var (_, sink) = Run(hero, Sandbag(1, new Coord(4, 2)));
+
+            int cap = hero.MaxHp * 300 / 1000;
+            foreach (var e in ShieldEvents(sink, 0))
+                Assert.That(e.Aux, Is.LessThanOrEqualTo(cap), $"[{e.Tick}] 보호막이 상한 {cap} 을 넘었다");
+        }
+
+        [Test]
+        public void 광명은_아군_전체에게_주기적으로_건다()
+        {
+            // C6-P3 — target 이 allies 다. 시전자만 받으면 "전체" 가 아니다.
+            // 둘 다 맞아야 재충전이 이벤트로 드러나므로 샌드백을 각자 앞에 하나씩 세운다.
+            var shaman = Ally(0, "C6", "C6-A", new Coord(3, 2), "C6-P3");
+            var mate = Ally(1, "C1", "C1-A", new Coord(3, 3));
+
+            var (_, sink) = Run(shaman, mate,
+                                Sandbag(2, new Coord(4, 2)), Sandbag(3, new Coord(4, 3)));
+
+            foreach (int id in new[] { 0, 1 })
+            {
+                var grants = ShieldEvents(sink, id).Where(e => e.Value > 0).Select(e => e.Tick).ToList();
+                Assert.That(grants, Does.Contain(0), $"#{id} 가 시작 보호막을 못 받았다");
+                Assert.That(grants, Does.Contain(200), $"#{id} 가 재충전을 못 받았다");
+            }
+        }
+
+        [Test]
+        public void 참호는_제자리에서_걸리고_움직이면_풀리고_다시_멈추면_돌아온다()
+        {
+            // C4-P2 — "제자리에 있는 동안 유지". 세 국면을 한 전투에서 다 지나가게 만든다:
+            //   ① 사거리 안의 적을 쏘는 동안(제자리) → ② 그 적이 죽어 먼 적으로 걸어가는 동안 → ③ 다시 자리 잡은 뒤
+            // 적은 둘 다 immobile 이다. 움직이는 적은 제가 다가와버려서 사냥꾼이 걸을 일이 없다.
+            var hunter = Ally(0, "C4", "C4-A", new Coord(0, 2), "C4-P2");
+            var near = Enemy(1, "totem", new Coord(4, 2), hpOverride: 60);
+            var far = Enemy(2, "totem", new Coord(7, 5), hpOverride: 5000);
+
+            var (_, sink) = Run(hunter, near, far);
+            var events = ShieldEvents(sink, 0);
+
+            Assert.That(events, Is.Not.Empty, "참호가 아예 안 걸렸다");
+            Assert.That(events[0].Tick, Is.EqualTo(0), "사거리 안에서 시작했으므로 첫 틱부터 제자리다");
+            Assert.That(events[0].Value, Is.GreaterThan(0));
+
+            var revoke = events.FirstOrDefault(e => e.Value < 0);
+            Assert.That(revoke.Kind, Is.EqualTo(EventKind.Shield), "걸어갔는데 보호막이 안 풀렸다");
+
+            var regain = events.Where(e => e.Tick > revoke.Tick && e.Value > 0).ToList();
+            Assert.That(regain, Is.Not.Empty, "다시 자리 잡아도 안 돌아온다 — 한 번 풀리면 끝이 된다");
+        }
+
+        [Test]
+        public void 참호는_걸어가는_내내_켜져_있지_않는다()
+        {
+            // ★ "직전 틱에 안 움직였다" 로 판정하면 안 된다. 이동 간격이 11틱이라
+            //   전진 중인 유닛도 10/11 틱은 정지 상태여서 걸어가는 내내 보호막이 켜진다.
+            //   그러면 대가(이동 속도 −40%)만 내고 조건은 사실상 없는 스킬이 된다.
+            //   ⚠️ C4-A 저격은 사거리를 7 로 올린다. 대각선 반대편 끝이라야 세 번 걷는다.
+            var hunter = Ally(0, "C4", "C4-A", new Coord(0, 0), "C4-P2");
+            var (_, sink) = Run(hunter, Enemy(1, "totem", new Coord(7, 5), hpOverride: 5000));
+
+            var moves = sink.Events.Where(e => e.Kind == EventKind.Move && e.ActorId == 0)
+                                   .Select(e => e.Tick).ToList();
+            Assert.That(moves.Count, Is.GreaterThan(1), "이 배치는 두 번 이상 걸어야 한다");
+
+            var grants = ShieldEvents(sink, 0).Where(e => e.Value > 0).ToList();
+            for (int i = 0; i + 1 < moves.Count; i++)
+            {
+                var between = grants.Where(e => e.Tick > moves[i] && e.Tick <= moves[i + 1]);
+                Assert.That(between, Is.Empty,
+                    $"{moves[i]}틱과 {moves[i + 1]}틱 이동 사이에 보호막이 켜졌다 — 걸어가는 중이다");
+            }
+        }
+
+        [Test]
+        public void 제자리_보호막을_거둘_때_풀_전체를_밀지_않는다()
+        {
+            // 보호막은 출처가 여럿인 단일 풀이다. 이동할 때 0 으로 밀면 같은 유닛이
+            // C6-P3 광명에게 받은 몫까지 날아가, 참호를 든 순간 광명이 그 유닛에게만 무효가 된다.
+            var u = new Unit(0, Team.Ally, "C4", 100, attack: 10, attackInterval: 20,
+                             range: 1, moveInterval: 8, at: new Coord(0, 0));
+            var sink = new ListEventSink();
+
+            DamageResolver.GrantShield(u, 35, maxShield: 35, overflowToHp: false, 0, 0, sink);
+            DamageResolver.RevokeShield(u, 20, tick: 1, sink);
+
+            Assert.That(u.Shield, Is.EqualTo(15), "자기 몫(20)만 거둬야 한다");
+        }
+
+        [Test]
+        public void 상한이_낮은_보호막이_이미_쌓인_것을_깎지_않는다()
+        {
+            // ★ 상한은 출처별이 아니라 풀 전체에 걸린다. 그래서 상한이 낮은 효과가 나중에 걸리면
+            //   이미 있던 보호막이 그 상한까지 내려간다 — 아군을 돕는 스킬이 보호막을 줄인다.
+            var u = new Unit(0, Team.Ally, "C4", 100, attack: 10, attackInterval: 20,
+                             range: 1, moveInterval: 8, at: new Coord(0, 0));
+            var sink = new ListEventSink();
+
+            DamageResolver.GrantShield(u, 20, maxShield: 20, overflowToHp: false, 0, 0, sink);
+            Assert.That(u.Shield, Is.EqualTo(20));
+
+            DamageResolver.GrantShield(u, 15, maxShield: 15, overflowToHp: false, 1, 1, sink);
+            Assert.That(u.Shield, Is.EqualTo(20), "부여가 손해가 됐다");
+        }
+
         [Test]
         public void 실제_로스터_6명의_모든_액티브가_전투를_완주한다()
         {

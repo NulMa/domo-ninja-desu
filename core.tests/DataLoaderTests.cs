@@ -297,6 +297,41 @@ namespace DomoNinja.Core.Tests
         }
 
         [Test]
+        public void R23_제자리_보호막이_되돌릴_양을_안_가지면_잡는다()
+        {
+            // whileStationary 는 이동할 때 자기가 준 만큼을 거둔다. 그 양이 maxPermille 이라
+            // 없으면 0 을 거두게 되고, 한 번 켜지면 영영 안 꺼진다 — 조건부인데 상시가 된다.
+            var errors = ErrorsAfter(f => FindStationaryShield(f.Skills).Remove("maxPermille"));
+            AssertCaught(errors, "R23");
+        }
+
+        [Test]
+        public void R23_제자리_보호막을_남에게_걸면_잡는다()
+        {
+            // 남의 이동은 이 유닛이 관측할 수 없다. 켜지기만 하고 꺼지지 않는다.
+            var errors = ErrorsAfter(f => FindStationaryShield(f.Skills)["target"] = "allies");
+            AssertCaught(errors, "R23");
+        }
+
+        [Test]
+        public void R23_두_지속_방식을_같이_쓰면_잡는다()
+        {
+            // 켜고 끄는 것과 주기로 채우는 것은 리듬이 다르다. 섞으면 어느 쪽이 이겼는지가
+            // 코드 순서에 달리고, 그건 데이터를 읽어서는 알 수 없는 규칙이 된다.
+            var errors = ErrorsAfter(f => FindStationaryShield(f.Skills)["refreshEveryTicks"] = 200);
+            AssertCaught(errors, "R23");
+        }
+
+        [Test]
+        public void R23_재충전_주기가_0_이면_잡는다()
+        {
+            // 0 은 "주기 없음"이 아니라 매 틱 상한까지 재충전이라 사실상 무적이다.
+            var errors = ErrorsAfter(f =>
+                FindEffect(f.Skills, o => o["refreshEveryTicks"] != null)["refreshEveryTicks"] = 0);
+            AssertCaught(errors, "R23");
+        }
+
+        [Test]
         public void 위반이_여러_건이면_한_번에_전부_보고한다()
         {
             // 최적화기가 값을 써넣는 파일들이라, 한 번에 하나씩 알려주면 CI 를 그만큼 반복하게 된다.
@@ -357,6 +392,9 @@ namespace DomoNinja.Core.Tests
 
         private static JObject FindEffectWithShield(JObject skills) =>
             FindEffect(skills, o => (string?)o["kind"] == "shield" && o["overflowToHp"] != null);
+
+        private static JObject FindStationaryShield(JObject skills) =>
+            FindEffect(skills, o => (bool?)o["whileStationary"] == true);
 
         private static JObject FindHealEffect(JObject skills) =>
             FindEffect(skills, o => (string?)o["template"] == "heal");

@@ -178,6 +178,11 @@ namespace DomoNinja.Core.Combat
 
                 if (!inRange) TryStep(u, targetUnit, board, tick, sink);
 
+                // ★ 이동 판정 **뒤**다. "제자리인가" 는 이번 틱에 움직였는지까지 포함한 질문이라,
+                //   앞에 두면 걸어갈 유닛에게 보호막을 줬다가 같은 틱에 도로 걷어가게 된다.
+                //   공격보다는 앞이므로 이번 틱에 맞을 피해는 그대로 막는다.
+                SustainShields(u, tick, sink);
+
                 // 이동한 뒤 사거리에 들어왔을 수 있다. 같은 틱에 이동과 공격이 모두 일어난다.
                 if (u.InRangeOf(targetUnit)) TryAttack(u, targetUnit, tick, sink);
                 else if (u.AttackCooldown > 0) u.AttackCooldown--;
@@ -240,6 +245,58 @@ namespace DomoNinja.Core.Combat
                     DamageResolver.ApplyDamage(u, amount, dot.SourceUnitId, tick, sink);
             }
         }
+
+        /// <summary>
+        /// 한 번 걸고 끝나지 않는 보호막 — <c>refreshEveryTicks</c> 와 <c>whileStationary</c>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>regen</c>·<c>dot_ramping</c> 과 같은 계열의 함정이다. <b>걸리기는 하는데 그 뒤가 없었다</b> —
+        /// 전투 시작에 한 번 주고 끝나서 <c>C3-P2</c> 잔영(*"10초마다"*)이 <b>1회용 보호막</b>이었다.
+        /// 화면에도 로그에도 "보호막이 걸렸다"고 나오기 때문에 <b>텍스트를 읽어보기 전에는 안 드러난다.</b>
+        /// </para>
+        /// <para>
+        /// ★ <b>둘의 리듬이 다르다.</b> 주기형은 <i>얼마마다 채우는가</i>이고 제자리형은 <i>켜져 있는가</i>다.
+        /// 제자리형을 주기형처럼 매 틱 채우면 <b>0.05초마다 상한까지 회복</b>이라
+        /// 사실상 무적이 된다 — 같은 코드로 접으면 안 되는 이유가 이것이다.
+        /// </para>
+        /// </remarks>
+        private void SustainShields(Unit u, int tick, IEventSink sink)
+        {
+            var lo = u.Loadout;
+            var refreshing = lo.RefreshingShields;
+            if (refreshing.Count == 0 && lo.StationaryShield == null) return;
+
+            var ctx = MakeContext(u, null, 0, tick, sink);
+
+            // ① 주기 재충전. 시작 1회는 ApplyStartEffects 가 이미 걸었으므로 tick > 0 이다.
+            for (int i = 0; i < refreshing.Count; i++)
+            {
+                var s = refreshing[i];
+                if (tick > 0 && tick % s.EveryTicks == 0)
+                    EffectExecutor.Execute(s.Effect, ctx, s.SkillPowerPermille);
+            }
+
+            // ② 제자리 유지. 켜는 것만 여기서 하고, 끄는 건 실제로 움직인 자리(TryStep)에서 한다.
+            if (lo.StationaryShield is SustainedShield st && !u.StationaryShieldOn && IsStationary(u, tick))
+            {
+                EffectExecutor.Execute(st.Effect, ctx, st.SkillPowerPermille);
+                u.StationaryShieldOn = true;
+            }
+        }
+
+        /// <summary>
+        /// 제자리에 있는가 — <b>움직일 수 있게 된 뒤에도 안 갔는가</b>로 본다.
+        /// </summary>
+        /// <remarks>
+        /// ★ *"직전 틱에 안 움직였다"* 로 읽으면 안 된다. 이동 간격이 12틱이라
+        /// <b>전진 중인 유닛도 11/12 틱은 정지 상태</b>여서 걸어가는 내내 보호막이 켜져 있게 된다.
+        /// 그러면 <c>C4-P2</c> 참호의 대가(이동 속도 −40%)만 내고 조건은 사실상 없는 스킬이 된다.
+        /// <b>움직일 차례가 왔는데 안 갔다</b>는 것이 제자리다 — 그 시점이
+        /// <see cref="Unit.MoveReadyTick"/> 에 적혀 있다.
+        /// </remarks>
+        private static bool IsStationary(Unit u, int tick)
+            => u.MoveReadyTick < 0 || tick > u.MoveReadyTick;
 
         /// <summary>주기 트리거(<c>every_n_tick</c>).</summary>
         private void FirePeriodic(Unit u, int tick, IEventSink sink)
@@ -311,11 +368,21 @@ namespace DomoNinja.Core.Combat
             var from = u.At;
             u.At = next;
 
+            // 제자리 조건이 여기서 깨진다. 자기가 준 양만큼만 거둔다 — 아군에게 받은 몫은 남는다.
+            if (u.StationaryShieldOn && u.Loadout.StationaryShield is SustainedShield st)
+            {
+                u.StationaryShieldOn = false;
+                DamageResolver.RevokeShield(u, Permille.Apply(u.MaxHp, st.MaxPermille), tick, sink);
+            }
+
             // slow 는 간격을 늘린다. 합연산으로 더한 뒤 한 번만 적용한다.
             var interval = new ModifierSum();
             interval.AddDeltaPermille(u.Status.MoveIntervalDeltaPermille);
             int cooldown = interval.ApplyTo(u.MoveInterval);
             u.MoveCooldown = cooldown < 1 ? 1 : cooldown;
+
+            // 쿨다운은 검사하는 틱마다 1 씩 줄어드므로 실제로 다시 걸을 수 있는 건 그 다음 틱이다.
+            u.MoveReadyTick = tick + u.MoveCooldown + 1;
 
             sink.Emit(new GameEvent(EventKind.Move, tick, u.Id, -1, next.OrderKey, from.OrderKey));
         }

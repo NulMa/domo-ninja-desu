@@ -22,6 +22,34 @@ namespace DomoNinja.Core.Skills
     }
 
     /// <summary>
+    /// 한 번 걸고 끝나지 않는 보호막. <b>주기 재충전</b> 또는 <b>제자리 유지</b> 둘 중 하나다.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="EveryTicks"/> 와 <see cref="MaxPermille"/> 을 <see cref="Effect"/> 에서 다시 읽지 않고
+    /// 여기 꺼내 둔다 — 전투 루프가 <b>매 틱 유닛마다</b> 보는 값이라 JSON 순회 비용이
+    /// 유닛 × 틱 × 런 만큼 곱해진다. <see cref="Loadout"/> 전체가 존재하는 이유와 같다.
+    /// </remarks>
+    public readonly struct SustainedShield
+    {
+        public readonly JObject Effect;
+        public readonly int SkillPowerPermille;
+
+        /// <summary>재충전 주기(틱). <b>0 이면 주기가 없다</b> — 제자리 유지형이다.</summary>
+        public readonly int EveryTicks;
+
+        /// <summary>이 효과가 책임지는 보호막 상한(대상 최대 체력의 천분율).</summary>
+        public readonly int MaxPermille;
+
+        public SustainedShield(JObject effect, int skillPowerPermille, int everyTicks, int maxPermille)
+        {
+            Effect = effect;
+            SkillPowerPermille = skillPowerPermille;
+            EveryTicks = everyTicks;
+            MaxPermille = maxPermille;
+        }
+    }
+
+    /// <summary>
     /// 유닛 하나가 전투에 들고 들어가는 스킬 전부를 <b>실행 가능한 형태로</b> 미리 풀어둔 것.
     /// </summary>
     /// <remarks>
@@ -40,6 +68,7 @@ namespace DomoNinja.Core.Skills
     public sealed class Loadout
     {
         private static readonly StartEffect[] NoStart = new StartEffect[0];
+        private static readonly SustainedShield[] NoSustained = new SustainedShield[0];
 
         /// <summary>사건·주기 트리거.</summary>
         public TriggerSet Triggers { get; }
@@ -69,14 +98,45 @@ namespace DomoNinja.Core.Skills
         /// </remarks>
         public IReadOnlyList<StartEffect> OnAttackEffects { get; }
 
+        /// <summary>
+        /// <c>refreshEveryTicks</c> 가 붙은 보호막. <b>시작 1회는 <see cref="StartEffects"/> 가 이미 걸었고,</b>
+        /// 여기 있는 건 그 <b>다음부터</b>다.
+        /// </summary>
+        /// <remarks>
+        /// 이게 없으면 <c>C3-P2</c> 잔영 · <c>C5-P2</c> 결계 · <c>C6-P3</c> 광명이
+        /// <b>"10초마다" 라고 적힌 채 한 번만 주는 스킬</b>이 된다. 컴파일도 되고 테스트도 통과한다 —
+        /// 텍스트를 읽어보기 전까지 아무도 모른다.
+        /// </remarks>
+        public IReadOnlyList<SustainedShield> RefreshingShields { get; }
+
+        /// <summary>
+        /// <c>whileStationary</c> 보호막 (<c>C4-P2</c> 참호). <b>없으면 <c>null</c>.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>이건 <see cref="StartEffects"/> 에 들어가지 않는다.</b> 시작 시점에 거는 게 아니라
+        /// <b>"제자리인가"를 매 틱 물어 켜고 끄는</b> 것이라, 시작 효과로도 걸어두면
+        /// 켠 사실이 기록되지 않은 보호막이 생겨 <b>이동해도 안 풀린다.</b>
+        /// 전투 시작 시점은 <see cref="Domain.Unit.LastMoveTick"/> 이 −1 이라 첫 틱에 자연히 켜진다.
+        /// </para>
+        /// <para>
+        /// 하나만 든다. 데이터상 <c>생존</c> 슬롯 보조는 캐릭터당 하나뿐이라 겹칠 수 없고,
+        /// 겹치는 순간 "이동 시 되돌릴 양"이 출처별로 갈라져 단일 보호막 풀로는 표현되지 않는다.
+        /// </para>
+        /// </remarks>
+        public SustainedShield? StationaryShield { get; }
+
         private Loadout(TriggerSet triggers, JObject? aoe, int skillPower,
-                        IReadOnlyList<StartEffect> start, IReadOnlyList<StartEffect> onAttack)
+                        IReadOnlyList<StartEffect> start, IReadOnlyList<StartEffect> onAttack,
+                        IReadOnlyList<SustainedShield> refreshing, SustainedShield? stationary)
         {
             Triggers = triggers;
             Aoe = aoe;
             SkillPowerPermille = skillPower;
             StartEffects = start;
             OnAttackEffects = onAttack;
+            RefreshingShields = refreshing;
+            StationaryShield = stationary;
         }
 
         /// <summary>액티브 1개와 보조 최대 2개를 분류한다.</summary>
@@ -86,6 +146,8 @@ namespace DomoNinja.Core.Skills
             JObject? aoe = null;
             List<StartEffect>? start = null;
             List<StartEffect>? onAttack = null;
+            List<SustainedShield>? refreshing = null;
+            SustainedShield? stationary = null;
 
             void Scan(SkillDef skill, int power)
             {
@@ -102,11 +164,26 @@ namespace DomoNinja.Core.Skills
                             break;
 
                         case "status":
+                            bool isShield = (string?)e["kind"] == "shield";
+                            int maxPermille = (int?)e["maxPermille"] ?? 0;
+
+                            // 제자리 유지형은 시작 효과로 걸지 않는다 — 이유는 StationaryShield 주석.
+                            if (isShield && ((bool?)e["whileStationary"] ?? false))
+                            {
+                                stationary ??= new SustainedShield(e, power, 0, maxPermille);
+                                break;
+                            }
+
                             // "enemy" 는 지금 때리는 상대라 시작 시점에 가리킬 대상이 없다.
                             if ((string?)e["target"] == "enemy")
                                 (onAttack ??= new List<StartEffect>()).Add(new StartEffect(e, power));
                             else
                                 (start ??= new List<StartEffect>()).Add(new StartEffect(e, power));
+
+                            int every = isShield ? ((int?)e["refreshEveryTicks"] ?? 0) : 0;
+                            if (every > 0)
+                                (refreshing ??= new List<SustainedShield>())
+                                    .Add(new SustainedShield(e, power, every, maxPermille));
                             break;
                     }
                 }
@@ -123,11 +200,13 @@ namespace DomoNinja.Core.Skills
                 aoe,
                 skillPower,
                 (IReadOnlyList<StartEffect>?)start ?? NoStart,
-                (IReadOnlyList<StartEffect>?)onAttack ?? NoStart);
+                (IReadOnlyList<StartEffect>?)onAttack ?? NoStart,
+                (IReadOnlyList<SustainedShield>?)refreshing ?? NoSustained,
+                stationary);
         }
 
         /// <summary>스킬이 하나도 없는 유닛(적 전부). <b>적은 스킬을 갖지 않는다</b> (`D-39`).</summary>
         public static readonly Loadout Empty =
-            new Loadout(TriggerSet.Compile(null), null, Permille.One, NoStart, NoStart);
+            new Loadout(TriggerSet.Compile(null), null, Permille.One, NoStart, NoStart, NoSustained, null);
     }
 }
