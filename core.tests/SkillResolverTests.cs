@@ -35,11 +35,13 @@ namespace DomoNinja.Core.Tests
         public void 액티브의_이득과_대가가_둘_다_반영된다()
         {
             // C1-A 일격 — 공격력 +50% / 공격 간격 +40%(느려진다).
-            var c1 = Ch("C1");   // attack 45, attackInterval 24
+            // ★ 기대값을 박지 않고 캐릭터 기본값에서 유도한다 — [BAL] 커밋이
+            //   C1 스탯을 바꾸면 박아둔 숫자가 그때마다 깨진다.
+            var c1 = Ch("C1");
             var stats = SkillResolver.BuildStats(c1, Sk("C1-A"));
 
-            Assert.That(stats.Attack, Is.EqualTo(67));           // 45 * 1.5 = 67.5 → 67
-            Assert.That(stats.AttackInterval, Is.EqualTo(33));   // 24 * 1.4 = 33.6 → 33
+            Assert.That(stats.Attack, Is.EqualTo(c1.Attack * 150 / 100), "이득 +50%");
+            Assert.That(stats.AttackInterval, Is.EqualTo(c1.AttackInterval * 140 / 100), "대가 +40%");
         }
 
         [Test]
@@ -88,15 +90,18 @@ namespace DomoNinja.Core.Tests
             //   C1-A 일격 = 공격력 +50%(이득) / 공격 간격 +40%(대가).
             //   C1-P1 극 = skillPower 1.5.
             //   이득만 1.5배 → 공격력 +75%, 간격은 +40% 그대로.
-            var c1 = Ch("C1");   // attack 45, attackInterval 24
+            //   ★ 기대값을 박지 않고 캐릭터 기본값에서 유도한다 ([BAL] 이 스탯을 바꾼다).
+            var c1 = Ch("C1");
             var stats = SkillResolver.BuildStats(c1, Sk("C1-A"), Supports("C1-P1"));
 
-            // 45 * (1 + 0.75) = 78.75 → 78
-            Assert.That(stats.Attack, Is.EqualTo(78));
+            // 이득 +50% × 1.5 = +75%
+            Assert.That(stats.Attack, Is.EqualTo(c1.Attack * 175 / 100));
 
-            // 간격은 메인의 대가(+40%)에 보조 자신의 대가(+15%)만 더해진다 → +55%
-            // 24 * 1.55 = 37.2 → 37. 대가까지 1.5배였다면 24 * (1+0.6+0.15) = 42 가 나온다.
-            Assert.That(stats.AttackInterval, Is.EqualTo(37));
+            // 간격은 메인의 대가(+40%)에 보조 자신의 대가(+15%)만 더해진다 → +55%.
+            // 대가까지 1.5배였다면 +60% + 15% = +75% 가 나온다 — 그 차이가 이 테스트의 요점이다.
+            Assert.That(stats.AttackInterval, Is.EqualTo(c1.AttackInterval * 155 / 100));
+            Assert.That(stats.AttackInterval, Is.Not.EqualTo(c1.AttackInterval * 175 / 100),
+                        "대가까지 skillPower 를 탔다");
         }
 
         [Test]

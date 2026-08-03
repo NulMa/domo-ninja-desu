@@ -54,8 +54,10 @@ namespace DomoNinja.Core.Tests
             var plain = Engine().StartRun("S1", new[] { "C1" }, Meta());
             var buffed = Engine().StartRun("S1", new[] { "C1" }, meta);
 
-            Assert.That(buffed.Deployed[0].MaxHp, Is.EqualTo(150));   // 120 * 1.25
-            Assert.That(plain.Deployed[0].MaxHp, Is.EqualTo(120));
+            // ★ 기대값을 박지 않고 강화 없는 쪽에서 유도한다 — [BAL] 커밋이 C1 체력을
+            //   바꾸면 박아둔 숫자가 그때마다 깨진다. 재는 것은 "메타가 +25% 를 한 번만 곱하는가" 다.
+            int baseHp = plain.Deployed[0].MaxHp;
+            Assert.That(buffed.Deployed[0].MaxHp, Is.EqualTo(baseHp * 125 / 100), "M-HP 5레벨 = +25%");
         }
 
         [Test]

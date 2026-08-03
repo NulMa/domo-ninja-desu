@@ -171,9 +171,15 @@ namespace DomoNinja.Core.Tests
             int before = run.Currency;
             ShopBot.Visit(run, new Shop(_data), build, new DeterministicRandom(1).Fork(RngStream.Shop), 1);
 
-            // 산 것 말고 리롤 비용(2)이 추가로 빠지지 않았는지 본다.
+            // 산 것 말고 리롤 비용이 추가로 빠지지 않았는지 본다.
+            // ★ 가격을 박지 않고 데이터에서 읽는다 — [BAL] 커밋이 가격을 바꾸면
+            //   박아둔 숫자는 그때마다 깨지고, 사람이 갱신하는 순간 이 테스트는
+            //   아무것도 안 지킨다. 실제로 첫 [BAL](5 → 6)이 이 줄을 깨뜨렸다.
+            int activatePrice = (int)_data.Economy.Raw["prices"]!["skillActivate"]!;
             int spent = before - run.Currency;
-            Assert.That(spent % 5, Is.Zero.Or.EqualTo(spent), "1라운드에는 액티브(5)만 살 수 있다");
+
+            Assert.That(spent % activatePrice, Is.Zero,
+                        $"1라운드에는 액티브({activatePrice})만 살 수 있다 — 쓴 돈이 그 배수가 아니다");
         }
     }
 }

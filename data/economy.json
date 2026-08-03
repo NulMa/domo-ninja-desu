@@ -137,7 +137,7 @@
   },
 
   "prices": {
-    "skillActivate": 5,
+    "skillActivate": 6,
     "supportSkill": [3, 5],
     "_supportSkillNote": "★ v0.7 조정 — [4,6]에서 낮췄다. A3로 보조가 캐릭터별이 되면서 비용이 3배(3명 x 10 = 30)가 됐는데 _budgetCheck 가 v0.5 값(8)로 남아 있었다. 그대로 두면 핵심 빌드만 45라 아이템을 한 개도 못 산다.",
     "statBoost": 3,

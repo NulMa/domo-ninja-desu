@@ -111,7 +111,13 @@ namespace DomoNinja.Core.Tests
                 .First(u => u.TypeId == "C1").Attack;
 
             Assert.That(after, Is.GreaterThan(before));
-            Assert.That(after, Is.EqualTo(51), "45 * 1.15 = 51.75 → 51");
+
+            // ★ 기대값을 박지 않는다. `before` 에서 유도한다 —
+            //   [BAL] 커밋이 C1 의 공격력을 바꾸면 박아둔 숫자는 그때마다 깨지고,
+            //   사람이 숫자를 갱신하는 순간 이 테스트는 아무것도 안 지킨다.
+            //   실제로 첫 [BAL](45 → 44)이 이 줄을 깨뜨렸다.
+            Assert.That(after, Is.EqualTo(before * 115 / 100),
+                        "합연산 증감분 +15% 를 한 번만 곱하고 절삭한다 (`_schema` §8)");
         }
 
         [Test]
