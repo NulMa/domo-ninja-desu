@@ -1,0 +1,213 @@
+# 느린 티어 — 밸런스 루프. 매 푸시가 아니라 밤에 한 번 돈다. (19 §3 · 17 §7.1)
+#
+# ⚠️ fast.yml 과 나누는 이유는 시간이다. 20분짜리를 커밋마다 돌리면 개발이 멈춘다.
+#    fast 는 "깨졌는가", balance 는 "좋아졌는가" 를 묻는다 — 질문이 다르면 주기도 다르다.
+#
+# ★ 이 워크플로가 자동으로 데이터를 고치지 않는다.
+#   최적화기가 제안을 내고, 사람이 리포트를 보고 [BAL] 커밋으로 넣는다(09 §7).
+#   기계가 자기 결과를 자기가 커밋하면 "무엇을 사람이 판단했는가" 가 로그에서 사라지고,
+#   그건 이 대회에서 잃으면 안 되는 것이다.
+
+name: balance
+
+on:
+  schedule:
+    # 매일 18:00 UTC = 03:00 KST. 작업 시간대를 피한다.
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+    inputs:
+      trials:
+        description: 'Optuna 시도 수'
+        required: false
+        default: '60'
+      trajectories:
+        description: 'Morris 궤적 수 (0 이면 스크리닝을 건너뛰고 직전 결과를 쓴다)'
+        required: false
+        default: '10'
+
+concurrency:
+  group: balance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ─────────────────────────────────────────────────────────────
+  # ① 경계 가드 — 게임은 Python 없이 빌드·실행돼야 한다 (D-49-a)
+  #
+  # /tune 을 Python 으로 분리한 대가로 생긴 위험이다. core·sim 이 Python 에
+  # 의존하기 시작하면 웹 빌드가 조용히 깨지고, 그건 Unity 를 켜기 전까지 안 드러난다.
+  # ─────────────────────────────────────────────────────────────
+  guard:
+    name: core·sim 이 Python 에 안 기대는지
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # ⚠️ 단어를 세지 않는다. 이 저장소의 주석은 경계를 설명하느라 'Python' 을 자주 쓰고,
+      #    단어로 잡으면 가드가 오탐으로 무력해진다 — fast.yml 이 같은 이유로 주석을 걸러낸다.
+      #    실제 위험은 둘뿐이다: ① 외부 프로세스를 띄운다 ② 패키지 의존이 늘어난다.
+      - name: Python 의존 흔적 검사
+        run: |
+          set -u
+          FAIL=0
+
+          # ① core·sim 은 프로세스를 띄우지 않는다.
+          #    Python 이든 무엇이든, 게임이 외부 실행 파일을 부르는 순간 WebGL 에서 깨진다.
+          SPAWN=$(grep -rnE '\bProcess\s*\.\s*Start|ProcessStartInfo' \
+                    core/ sim/ --include='*.cs' || true)
+          if [ -n "$SPAWN" ]; then
+            echo "$SPAWN"
+            echo "::error::core/ 또는 sim/ 이 외부 프로세스를 띄운다 (D-49-a)."
+            echo "게임은 Python 없이 빌드·실행돼야 하고, WebGL 에는 프로세스가 없다."
+            FAIL=1
+          fi
+
+          # ② 패키지 의존은 Newtonsoft.Json 하나뿐이다. 늘어나면 여기서 멈춘다.
+          PKGS=$(grep -rhoE 'PackageReference Include="[^"]+"' core/*.csproj sim/*.csproj \
+                 | sed -E 's/.*Include="([^"]+)"/\1/' | sort -u)
+          UNEXPECTED=$(echo "$PKGS" | grep -vxE 'Newtonsoft\.Json' || true)
+          if [ -n "$UNEXPECTED" ]; then
+            echo "$UNEXPECTED"
+            echo "::error::core/sim 에 예상 밖 패키지 의존이 생겼다."
+            echo "허용: Newtonsoft.Json. 늘려야 한다면 이 워크플로도 같이 고친다."
+            FAIL=1
+          fi
+
+          [ "$FAIL" = "0" ] && echo "경계 OK — core·sim 은 자기 힘으로 돈다" || exit 1
+
+      - name: /tune 에 게임 로직이 없는지
+        run: |
+          set -u
+
+          # /tune 은 sim 을 호출만 한다. 전투 규칙이 이쪽에 복제되면
+          # 최적화기가 "게임과 다른 것" 을 최적화하고, 그 차이는 지표로 안 드러난다.
+          #
+          # 실제 위험은 "전투를 계산하는 코드" 다. 주석·문자열에서 개념을 언급하는 건 괜찮다 —
+          # 그래서 산술 연산과 붙어 있는 경우만 본다.
+          HITS=$(grep -rnE '^[^#]*\b(hp|damage|shield|tick)\b[a-z_]*\s*[-+*/]=?' \
+                   --include='*.py' tune/ \
+                   --exclude-dir=.venv --exclude-dir=__pycache__ --exclude-dir=reports || true)
+
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "::error::/tune 이 전투 값을 계산한다. 이 층은 sim 을 호출만 한다 (D-49-a)."
+            exit 1
+          fi
+          echo "경계 OK — /tune 에 게임 계산 없음"
+
+  # ─────────────────────────────────────────────────────────────
+  # ② 밸런스 루프
+  # ─────────────────────────────────────────────────────────────
+  tune:
+    name: Morris 스크리닝 · Optuna 탐색
+    needs: guard
+    runs-on: ubuntu-latest
+    # 17 §7.1 — 하드 캡은 360분. 여기서 그 근처에 가면 설계가 틀린 것이다.
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: NuGet 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: pip 캐시
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('tune/requirements.lock') }}
+
+      # ★ Release 로 빌드한다. 밸런스 수치를 Debug 로 재면 처리량이 달라져
+      #   "예산 안에 들어가는가" 판정이 배포본과 어긋난다.
+      - run: dotnet build sim/DomoNinja.Sim.csproj -c Release
+
+      # 전이 의존성까지 고정된 lock 을 쓴다. 매일 도는 작업이라
+      # 어느 날 갑자기 다른 결과가 나오면 원인을 찾는 데 하루가 간다.
+      - run: python -m pip install -r tune/requirements.lock
+
+      - name: 기준선 확인
+        run: |
+          set -eu
+          dotnet run --project sim -c Release --no-build -- \
+            --run sim/params.full.json --out artifacts/metrics-baseline.json
+          python - <<'PY'
+          import json
+          r = json.load(open("artifacts/metrics-baseline.json", encoding="utf-8"))
+          o = r["objective"]
+          print(f"기준선 D = {o['D']}  위반 {o.get('violations')}")
+          PY
+
+      - name: Morris 스크리닝
+        if: ${{ github.event.inputs.trajectories != '0' }}
+        run: |
+          python tune/screen.py \
+            --trajectories ${{ github.event.inputs.trajectories || 10 }} \
+            --seeds 1 \
+            --out tune/reports/morris.json
+
+      - name: Optuna 탐색
+        run: |
+          python tune/optimize.py \
+            --trials ${{ github.event.inputs.trials || 60 }} \
+            --top-k 12 \
+            --out tune/reports/optuna-ci.json
+
+      # ★ 커밋하지 않고 아티팩트로 올린다.
+      #   사람이 받아서 보고, 채택할 값만 [BAL] 커밋으로 넣는다.
+      - name: 리포트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-reports-${{ github.run_number }}
+          path: |
+            tune/reports/*.json
+            artifacts/metrics-baseline.json
+          retention-days: 30
+
+      - name: 요약
+        if: always()
+        run: |
+          set -u
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, pathlib
+
+          p = pathlib.Path("tune/reports/optuna-ci.json")
+          if not p.exists():
+              print("## 밸런스 루프\n\n리포트가 없다 — 앞 단계에서 멈췄다.")
+              raise SystemExit(0)
+
+          r = json.loads(p.read_text(encoding="utf-8"))
+          base, best = r["baseline"], r["best"]
+
+          print("## 밸런스 루프\n")
+          print(f"| | D | 위반 |")
+          print(f"|---|---|---|")
+          print(f"| 기준선 | {base['d']} | {', '.join(base.get('violations') or []) or '없음'} |")
+          print(f"| 최고 | {best['d']} | {', '.join(best.get('violations') or []) or '없음'} |")
+          print()
+          print(f"시도 {r['provenance']['trials']} · 가지치기 {r['counts']['pruned']} "
+                f"· sim 호출 {r['provenance']['simCalls']}")
+          print()
+          if best["d"] > base["d"]:
+              print("**개선안이 나왔다.** 아티팩트의 `optuna-ci.json` → `best.overrides` 를 "
+                    "사람이 검토해 `[BAL]` 커밋으로 넣는다 (`09` §7).")
+          else:
+              print("기준선을 못 넘었다. 탐색 축이나 시도 수를 다시 본다.")
+          PY
