@@ -41,6 +41,14 @@ namespace DomoNinja.Unity
         public bool IsDataLoaded { get; private set; }
         public bool IsRunActive => CurrentRun != null;
 
+        /// <summary>직전 런의 결과. <see cref="EndRun"/> 이 <see cref="CurrentRun"/> 을 비우기 전에 남긴다 — 결과 화면이 읽는다.</summary>
+        public bool LastRunCleared { get; private set; }
+        public int LastRunRoundsWon { get; private set; }
+        public int LastRunCurrencyEarned { get; private set; }
+
+        /// <summary>스테이지 선택 화면에서 고른 스테이지. 용병 선택 화면이 <see cref="StartNewRun"/> 때 이걸 읽는다.</summary>
+        public string SelectedStageId { get; set; } = "S1";
+
         /// <summary>데이터 로드가 끝나면(성공/실패 여부와 무관하게) 한 번 호출된다.</summary>
         public event Action? DataLoaded;
 
@@ -118,6 +126,14 @@ namespace DomoNinja.Unity
             CurrentRun != null && CurrentShop != null && _shopRng != null &&
             CurrentShop.TryReroll(CurrentRun, _shopRng, CurrentRun.Round);
 
+        public bool TrySellItem(string characterId, string itemKey, int optionIndex = -1) =>
+            CurrentRun != null && CurrentShop != null &&
+            CurrentShop.TrySellItem(CurrentRun, characterId, itemKey, optionIndex);
+
+        public bool TrySellTeamItem(string itemKey, int optionIndex = -1) =>
+            CurrentRun != null && CurrentShop != null &&
+            CurrentShop.TrySellTeamItem(CurrentRun, itemKey, optionIndex);
+
         /// <summary>라운드 하나를 치른다. 상점은 이 호출 전에 이미 끝나 있어야 한다(A-8).</summary>
         public RoundOutcome? PlayRound(IEventSink sink, bool collectLog = true)
         {
@@ -136,7 +152,12 @@ namespace DomoNinja.Unity
             if (CurrentRun == null || Meta == null || Data == null) return;
 
             bool cleared = _roundsWon == Data.Economy.TotalRounds;
-            Meta.Currency += Meta.EarnedFrom(_roundsWon, cleared);
+            int earned = Meta.EarnedFrom(_roundsWon, cleared);
+            Meta.Currency += earned;
+
+            LastRunCleared = cleared;
+            LastRunRoundsWon = _roundsWon;
+            LastRunCurrencyEarned = earned;
 
             // ★ D-68 — 스테이지는 지금 S1/S2 둘뿐이라 다음 스테이지를 이렇게 정한다.
             //   스테이지가 늘어나면 economy.json 쪽에 순서 정보를 두고 거기서 읽어야 한다.
