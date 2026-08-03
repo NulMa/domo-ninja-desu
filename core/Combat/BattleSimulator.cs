@@ -102,11 +102,17 @@ namespace DomoNinja.Core.Combat
             _enemies.Clear();
             var board = new Board();
 
+            bool anyConditional = false;
+
             foreach (var u in units)
             {
                 (u.Team == Team.Ally ? _allies : _enemies).Add(u);
                 board.TryPlace(u.Id, u.At);
                 header?.Add(new UnitSpec(u.Id, (int)u.Team, u.TypeId, u.MaxHp, u.At.OrderKey));
+
+                // 조건부 강화를 아무도 안 들었으면 매 틱 도는 패스를 통째로 건너뛴다.
+                // 4,320 빌드 × 5시드를 도는 sim 에서 유닛 순회 한 겹은 그대로 처리량이다.
+                anyConditional |= u.ConditionalBoosts.Count > 0;
             }
 
             ApplyStartEffects(units, target);
@@ -128,6 +134,10 @@ namespace DomoNinja.Core.Combat
 
                 // 서든데스가 전멸을 만들 수 있으므로 여기서 한 번 본다.
                 if (TryDecide(out outcome)) break;
+
+                // 유닛이 움직이기 전에 전부 갱신한다. StepUnits 안에서 유닛마다 재면
+                // 슬롯 0 번이 적을 죽인 순간 슬롯 1 번의 조건이 같은 틱에 이미 바뀐다.
+                if (anyConditional) RefreshConditionalBoosts(units);
 
                 StepUnits(units, board, tick, target);
 
@@ -243,6 +253,51 @@ namespace DomoNinja.Core.Combat
                 int amount = dot.ValueA + Permille.Apply(elapsed, dot.ValueB);
                 if (amount > 0)
                     DamageResolver.ApplyDamage(u, amount, dot.SourceUnitId, tick, sink);
+            }
+        }
+
+        /// <summary>
+        /// 조건부 강화(아이템 <c>conditionalBoost</c>)를 <b>틱 시작에 한 번</b> 다시 잰다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 세 조건이 전부 전투 중에 뒤집힌다 — 체력은 깎이고, 적은 죽고, 아군도 죽는다.
+        /// 그래서 다른 아이템처럼 시작 스탯에 접을 수 없다.
+        /// </para>
+        /// <para>
+        /// ★ <b>쓰는 자리가 아니라 여기서 잰다.</b> 공격 계산·피해 계산 시점에 그때그때 평가하면
+        /// 같은 틱 안에서도 <b>행동 순서에 따라 값이 갈린다</b> — 슬롯 0 번이 마지막 적을 죽이면
+        /// 슬롯 1 번의 <c>enemies_above</c> 가 그 틱에 이미 꺼져 있다.
+        /// 데이터에 안 적혀 있고 로그로도 안 보이는 규칙이 생기는 자리다.
+        /// </para>
+        /// </remarks>
+        private void RefreshConditionalBoosts(IReadOnlyList<Unit> units)
+        {
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                var boosts = u.ConditionalBoosts;
+                if (boosts.Count == 0) continue;
+
+                bool ally = u.Team == Team.Ally;
+                var mine = ally ? _allies : _enemies;
+                var theirs = ally ? _enemies : _allies;
+
+                int attack = 0, taken = 0;
+
+                for (int k = 0; k < boosts.Count; k++)
+                {
+                    var b = boosts[k];
+                    if (!b.IsActive(u, mine, theirs)) continue;
+
+                    // 합연산 통에 들어간다 (`_schema` §8). 조건부만 따로 곱하면
+                    // 조건이 겹칠수록 폭발해 M4 지배 빌드가 생긴다.
+                    if (b.Stat == Skills.StatKey.Attack) attack += b.DeltaPermille;
+                    else if (b.Stat == Skills.StatKey.DamageTaken) taken += b.DeltaPermille;
+                }
+
+                u.ConditionalAttackDeltaPermille = attack;
+                u.ConditionalDamageTakenDeltaPermille = taken;
             }
         }
 
@@ -417,6 +472,7 @@ namespace DomoNinja.Core.Combat
 
             var attack = new ModifierSum();
             attack.AddDeltaPermille(u.Status.AttackDeltaPermille);
+            attack.AddDeltaPermille(u.ConditionalAttackDeltaPermille);
             int baseDamage = attack.ApplyTo(u.Attack);
 
             var aoe = u.Loadout.Aoe;

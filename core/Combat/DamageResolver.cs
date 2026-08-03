@@ -86,10 +86,11 @@ namespace DomoNinja.Core.Combat
                 return new DamageResult(0, dodged: true, killed: false);
             }
 
-            // 받는 피해 보정 — 스킬·아이템(고정)과 weaken(가변)을 전부 더한 뒤 한 번만 적용한다.
+            // 받는 피해 보정 — 스킬·아이템(고정), weaken(가변), 조건부 강화를 전부 더한 뒤 한 번만 적용한다.
             var taken = new ModifierSum();
             taken.AddDeltaPermille(target.DamageTakenDeltaPermille);
             taken.AddDeltaPermille(target.Status.DamageTakenDeltaPermille);
+            taken.AddDeltaPermille(target.ConditionalDamageTakenDeltaPermille);
 
             int damage = taken.ApplyTo(rawDamage);
             if (damage <= 0) return DamageResult.None;

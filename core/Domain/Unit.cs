@@ -1,6 +1,8 @@
 // Unity 는 Directory.Build.props 를 읽지 않는다 — 파일마다 nullable 문맥을 명시한다.
 #nullable enable
 
+using System.Collections.Generic;
+
 namespace DomoNinja.Core.Domain
 {
     /// <summary>아군 0 / 적 1. <see cref="Events.UnitSpec.Team"/> 과 같은 값이다.</summary>
@@ -120,6 +122,27 @@ namespace DomoNinja.Core.Domain
         /// 이동할 때 <b>자기 몫만</b> 되돌릴 수 있다.
         /// </remarks>
         public bool StationaryShieldOn { get; set; }
+
+        /// <summary>
+        /// 이 유닛이 들고 있는 조건부 강화(아이템 <c>conditionalBoost</c>). 없으면 빈 목록이다.
+        /// </summary>
+        public IReadOnlyList<Combat.ConditionalBoost> ConditionalBoosts { get; set; } = NoBoosts;
+
+        private static readonly Combat.ConditionalBoost[] NoBoosts = new Combat.ConditionalBoost[0];
+
+        /// <summary>
+        /// 이번 틱에 켜져 있는 조건부 <c>attack</c> 증감분(천분율).
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>매 틱 시작에 한 번만 갱신한다.</b> 쓰는 자리에서 그때그때 평가하면
+        /// 같은 틱 안에서도 <b>누가 먼저 행동했느냐에 따라 값이 갈린다</b> —
+        /// 슬롯 0 번이 때려서 적이 죽으면 슬롯 1 번의 <c>enemies_above</c> 가 그 틱에 이미 꺼진다.
+        /// 그런 규칙은 데이터 어디에도 안 적혀 있고 로그로도 안 보인다.
+        /// </remarks>
+        public int ConditionalAttackDeltaPermille { get; set; }
+
+        /// <inheritdoc cref="ConditionalAttackDeltaPermille"/>
+        public int ConditionalDamageTakenDeltaPermille { get; set; }
 
         public bool IsAlive => Hp > 0;
 

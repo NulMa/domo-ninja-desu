@@ -459,6 +459,98 @@ namespace DomoNinja.Core.Tests
             Assert.That(u.Shield, Is.EqualTo(20), "부여가 손해가 됐다");
         }
 
+        // ────────────────────────────── 조건부 강화 (아이템 conditionalBoost)
+
+        [Test]
+        public void 조건부_강화는_조건이_맞을_때만_피해가_커진다()
+        {
+            // ★ 단위 테스트로는 "조건 판정이 맞다" 까지만 증명된다. 전투 루프가 그 값을
+            //   공격 계산에 안 넣으면 아무 일도 안 일어나고, 그 상태에서도 sim 은 숫자를 뱉는다.
+            //   같은 전투를 조건 없이 / 조건 켜진 채로 돌려 실제 피해를 비교한다.
+            int DamageWith(params ConditionalBoost[] boosts)
+            {
+                var hero = Ally(0, "C1", "C1-A", new Coord(3, 2));
+                hero.ConditionalBoosts = boosts;
+
+                var sink = new ListEventSink();
+                new BattleSimulator(Config()).Run(
+                    new[] { hero, Enemy(1, "kappa", new Coord(4, 2), hpOverride: 9999) }, sink);
+
+                return sink.Events.First(e => e.Kind == EventKind.Damage && e.ActorId == 0).Value;
+            }
+
+            int plain = DamageWith();
+            int offCondition = DamageWith(
+                new ConditionalBoost(BoostCondition.HpBelow, 500, StatKey.Attack, 400));
+            int onCondition = DamageWith(
+                new ConditionalBoost(BoostCondition.EnemiesAbove, 0, StatKey.Attack, 400));
+
+            Assert.That(offCondition, Is.EqualTo(plain), "만피인데 hp_below 가 켜졌다");
+            Assert.That(onCondition, Is.EqualTo(plain * 14 / 10),
+                        "적이 있는데 enemies_above 가 안 켜졌다 — 공격 계산에 배선이 없다");
+        }
+
+        [Test]
+        public void 조건부_감소는_받는_피해에_들어간다()
+        {
+            // damageTaken 은 공격과 소비 지점이 다르다(DamageResolver). 한쪽만 배선하기 쉽다.
+            int HpAfter(params ConditionalBoost[] boosts)
+            {
+                var hero = Ally(0, "C1", "C1-A", new Coord(3, 2));
+                hero.ConditionalBoosts = boosts;
+
+                var sink = new ListEventSink();
+                new BattleSimulator(Config()).Run(
+                    new[] { hero, Enemy(1, "kappa", new Coord(4, 2), hpOverride: 9999) }, sink);
+
+                return sink.Events.First(e => e.Kind == EventKind.Damage && e.TargetId == 0).Aux;
+            }
+
+            // 혼자 나갔으므로 is_last_alive 는 처음부터 켜져 있다.
+            int plain = HpAfter();
+            int guarded = HpAfter(
+                new ConditionalBoost(BoostCondition.IsLastAlive, 0, StatKey.DamageTaken, -350));
+
+            Assert.That(guarded, Is.GreaterThan(plain), "받는 피해 감소가 안 들어갔다");
+        }
+
+        [Test]
+        public void 조건은_틱_시작에_한_번만_재고_행동_순서에_안_흔들린다()
+        {
+            // ★ 소비 지점에서 그때그때 평가하면 슬롯 0 번이 마지막 적을 죽인 순간
+            //   슬롯 1 번의 enemies_above 가 같은 틱에 이미 꺼진다. 데이터 어디에도 없는 규칙이다.
+            //   같은 입력을 두 번 돌려 이벤트 열이 완전히 일치하는지로 잡는다.
+            IReadOnlyList<GameEvent> Once()
+            {
+                var a = Ally(0, "C1", "C1-A", new Coord(3, 2));
+                var b = Ally(1, "C2", "C2-A", new Coord(3, 3));
+                a.ConditionalBoosts = new[]
+                {
+                    new ConditionalBoost(BoostCondition.EnemiesAbove, 1, StatKey.Attack, 400),
+                };
+                b.ConditionalBoosts = new[]
+                {
+                    new ConditionalBoost(BoostCondition.IsLastAlive, 0, StatKey.DamageTaken, -350),
+                };
+
+                var sink = new ListEventSink();
+                new BattleSimulator(Config()).Run(new[]
+                {
+                    a, b,
+                    Enemy(2, "slime", new Coord(4, 2)),
+                    Enemy(3, "slime", new Coord(4, 3)),
+                }, sink);
+                return sink.Events;
+            }
+
+            var x = Once();
+            var y = Once();
+
+            Assert.That(y.Count, Is.EqualTo(x.Count));
+            for (int i = 0; i < x.Count; i++)
+                Assert.That(y[i].ToString(), Is.EqualTo(x[i].ToString()), $"{i} 번째 이벤트가 갈렸다");
+        }
+
         [Test]
         public void 실제_로스터_6명의_모든_액티브가_전투를_완주한다()
         {

@@ -138,6 +138,10 @@ namespace DomoNinja.Core.Economy
             {
                 DamageTakenDeltaPermille = stats.DamageTakenDeltaPermille,
                 Loadout = Loadout.Build(active, supports),
+
+                // 조건부 강화만 스탯에 접히지 않고 유닛을 따라 전투로 들어간다 —
+                // 세 조건이 전부 전투 중에 뒤집혀서 시작 시점에 값을 정할 수 없다.
+                ConditionalBoosts = ItemEffects.CollectConditional(data, run, entry),
             };
 
             // ★ 현재 HP 는 라운드를 넘어 누적된다 (A-6). 최대 체력이 메타로 늘었다고
