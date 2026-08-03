@@ -73,10 +73,16 @@ namespace DomoNinja.Sim
     /// 나중에 근거와 함께 올리는 쪽이, 처음부터 손으로 튜닝한 가중치보다 문서에서 강하다.
     /// </para>
     /// <para>
-    /// ⚠️ <b>`M4`·`M6` 은 점수에 넣지 않는다.</b>
-    /// `M4` 는 정의가 미확정이고(`D-71`), `M6` 은 이 봇으로 측정할 수 없다(`D-72`).
-    /// <b>정의가 흔들리는 지표를 목적함수에 넣으면 최적화기가 엉뚱한 걸 쫓는다</b> —
-    /// 그리고 기하평균이라 그 하나가 전체를 0 으로 만든다. 정해지면 그때 넣는다.
+    /// ✅ <b>`M4` 가 D+4 에 들어왔다</b> (`D-71`). 상위 5% 빌드의 클리어 점유율로 정의가 확정됐고,
+    /// <b>`M1` 과 분리되도록</b> 고른 정의다 — 난이도를 고치는 방향이 `M4` 를 깎지 않는다.
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>`M6` 은 예선 지표에서 뺀다</b> (`D-72` — 확정, 보류가 아니다).
+    /// `M6` 은 *"저축 전략이 작동하는가"* 를 재는데 <b>봇은 저축을 안 하도록 의도적으로 설계했다</b>
+    /// (`08` §6.1 — 그래야 측정 대상이 "빌드 자체의 성립 가능성" 으로 분리된다).
+    /// 지표와 봇이 서로를 무효화하고 있어, <b>못 재는 지표를 목적함수에 넣으면
+    /// 최적화기가 봇 정책의 그림자를 쫓는다.</b> 값은 계속 리포트에 내되 점수에서만 뺀다 —
+    /// <b>무엇을 못 재는지 아는 것이 기록으로 남아야 한다.</b>
     /// </para>
     /// </remarks>
     public static class Objective
@@ -103,6 +109,16 @@ namespace DomoNinja.Sim
 
         // 보조는 15~70%.
         private static readonly Desirability SupportShare = new Desirability("supportShare", 0.0, 0.15, 0.70, 1.0);
+
+        /// <summary>
+        /// `M4` — 상위 5% 빌드의 클리어 점유율. <b>35% 미만이면 만족</b> (`08` §6.2 · `D-71`).
+        /// </summary>
+        /// <remarks>
+        /// 하한을 두지 않는다. 균등 분포(5%)보다 <b>더 고른 건 나쁠 게 없다</b> —
+        /// 하한을 두면 최적화기가 <b>일부러 지배 빌드를 만들어</b> 점수를 채우려 든다.
+        /// 위쪽 한계 60% 는 "상위 5% 가 클리어의 6할" 이면 사실상 단일 해라는 뜻이다.
+        /// </remarks>
+        private static readonly Desirability TopShare = new Desirability("M4", -1.0, 0.0, 0.35, 0.60);
 
         // 1런 3~5분. 아래로는 0분, 위로는 8분을 한계로.
         private static readonly Desirability RunMinutes = new Desirability("M5", 0.0, 3.0, 5.0, 8.0);
@@ -156,6 +172,11 @@ namespace DomoNinja.Sim
             // M3c — 보조 채택률
             AddWorst(terms, "M3c", metrics["M3c"] as JObject, SupportShare, "가장 치우친 보조");
 
+            // M4 — 상위 5% 빌드의 클리어 점유율 (D-71)
+            double share = (double?)metrics["M4"]?["topShare"] ?? 0;
+            terms.Add(new Term { Name = "M4", Value = share, Score = TopShare.Score(share),
+                                 Note = "상위 5% 빌드가 가져가는 클리어 몫 (균등이면 5%)" });
+
             // M5 — 1런 시간
             double minutes = (double?)metrics["M5"]?["combatMinutesAvg"] ?? 0;
             terms.Add(new Term { Name = "M5", Value = minutes, Score = RunMinutes.Score(minutes),
@@ -185,11 +206,11 @@ namespace DomoNinja.Sim
                 ["D"] = Math.Round(d, 4),
                 ["metaPoint"] = metaPoint,
                 ["terms"] = breakdown,
-                ["excluded"] = new JArray("M4", "M6"),
+                ["excluded"] = new JArray("M6"),
                 ["_excludedWhy"] =
-                    "M4 는 정의 미확정(D-71), M6 은 이 봇으로 측정 불가(D-72). " +
-                    "정의가 흔들리는 지표를 목적함수에 넣으면 최적화기가 엉뚱한 걸 쫓고, " +
-                    "기하평균이라 그 하나가 전체를 0 으로 만든다.",
+                    "M6 은 이 봇으로 측정할 수 없다 — 저축 전략을 재는 지표인데 봇은 저축을 " +
+                    "안 하도록 의도적으로 설계돼 있다(08 §6.1). 지표와 봇이 서로를 무효화한다. " +
+                    "예선 지표에서 뺀다(D-72 확정). 값은 리포트에 계속 내되 점수에서만 뺀다.",
                 ["verdict"] = d >= 1.0 ? "pass" : "fail",
                 ["violations"] = new JArray(terms.Where(t => t.Score < 1.0).Select(t => (object)t.Name).ToArray()),
             };

@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    지표·목적함수 테스트.
+
+    ⚠️ core.tests 와 달리 이건 Unity 에서 돌지 않는다 — sim 은 Unity 밖 전용이다.
+    그래도 NUnit 3.x 를 맞춘다. 두 테스트 프로젝트가 다른 프레임워크를 쓰면
+    dotnet test 출력이 갈라지고 CI 로그를 읽는 비용이 늘어난다.
+
+    ★ 이 프로젝트가 존재하는 이유:
+      P4 최적화기는 D 하나만 보고 수천 번 값을 고친다. D 가 틀리면
+      "최적화기가 무엇을 개선했는가" 를 말할 근거가 통째로 사라지는데,
+      그 사실이 어디에도 안 나타난다 — 숫자는 계속 나오기 때문이다.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>DomoNinja.Sim.Tests</AssemblyName>
+    <RootNamespace>DomoNinja.Sim.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../sim/DomoNinja.Sim.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      /data 경로 해석을 복사하지 않고 링크한다. 두 벌이 되면 출력 디렉토리 구조가
+      바뀔 때 한쪽만 고쳐지고, 그쪽 테스트는 "데이터를 못 찾아서" 가 아니라
+      엉뚱한 이유로 깨진다. (core.tests 와 같은 파일이다)
+    -->
+    <Compile Include="../core.tests/RepoData.cs" Link="RepoData.cs" />
+  </ItemGroup>
+
+</Project>

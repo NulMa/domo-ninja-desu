@@ -30,6 +30,16 @@ namespace DomoNinja.Sim
         /// <summary>`M2` 의 HP 구간. 천분율 하한.</summary>
         private static readonly int[] HpBuckets = { 0, 200, 400, 600, 800 };
 
+        /// <summary>
+        /// `M4` 가 "상위" 로 보는 빌드 비율 (`D-71`). <b>사람이 고른 값이다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 5% 면 4,320 중 216 빌드다. 균등 분포에서 이들이 가져가는 클리어 몫이 정확히 5% 이므로
+        /// 스펙의 <b>"35% 미만"</b> 은 <b>제 몫의 7배까지 허용</b>한다는 뜻이 된다.
+        /// 더 좁히면(1%) 표본이 얇아 시드 잡음에 흔들리고, 넓히면(20%) 독식을 못 잡는다.
+        /// </remarks>
+        private const double TopFraction = 0.05;
+
         public sealed class Sample
         {
             public BuildTarget Build = null!;
@@ -181,17 +191,26 @@ namespace DomoNinja.Sim
         }
 
         /// <summary>
-        /// 지배 빌드 감시. <b>목표: 최상위 빌드 35% 미만.</b>
+        /// 상위 <see cref="TopFraction"/> 빌드가 <b>전체 클리어 중 차지하는 비율</b>. 목표 35% 미만 (`D-71`).
         /// </summary>
         /// <remarks>
-        /// ⚠️ <b>"점유율"의 정의가 스펙에 없다.</b> 봇이 모든 빌드를 똑같이 한 번씩 돌기 때문에
-        /// 등장 빈도로 재면 어느 빌드든 1/4320 이라 지표가 성립하지 않는다.
-        ///
-        /// 여기서는 <b>"클리어한 빌드 중 상위 몇 %가 클리어의 절반을 가져가는가"</b> 로 읽었다 —
-        /// 한 빌드가 압도적이면 그 값이 작아진다. 함께 최고 클리어율도 같이 낸다.
-        ///
-        /// <b>이 해석은 확정이 아니다.</b> `M4` 는 `D-30` 채택의 결정적 근거였던 지표라
-        /// 정의가 흔들리면 그 근거도 흔들린다 — 사람이 한 번 정하고 스펙에 적어야 한다.
+        /// <para>
+        /// 봇이 4,320 빌드를 <b>똑같이 한 번씩</b> 돌기 때문에 등장 빈도로 재면 어느 빌드든 1/4320 이다.
+        /// 그래서 "점유율" 을 <b>클리어의 몫</b>으로 읽는다 — 균등하면 상위 5% 가 클리어의 5% 를 가져가고,
+        /// 한 줌이 독식하면 그 값이 올라간다. <b>35% 는 제 몫의 7배</b>다.
+        /// </para>
+        /// <para>
+        /// ★ <b><c>M1</c> 과 분리된다는 게 이 정의를 고른 이유다.</b> D+3 구현은
+        /// *"클리어의 절반을 가져가는 빌드 비율"* 이었는데, 분모가 전체 빌드 수라
+        /// <b>게임이 어려워져 클리어 가능한 빌드가 줄면 그 값이 같이 떨어진다.</b>
+        /// 최적화기가 <c>M1</c> 을 고치는 방향이 곧 <c>M4</c> 를 깎는 방향이 되어
+        /// <b>기하평균 안에서 두 지표가 서로 싸운다.</b> 비율로 재면 클리어 총량이 줄어도
+        /// 분포가 균등한 한 값이 유지된다.
+        /// </para>
+        /// <para>
+        /// ⚠️ <b><see cref="TopFraction"/> 5% 는 사람이 고른 값이다</b> (`D-71`).
+        /// 스펙의 *"35% 미만"* 이라는 문장은 그대로 살렸다 — 임계값을 새로 정하지 않아도 되는 쪽을 택했다.
+        /// </para>
         /// </remarks>
         private static JObject M4(IReadOnlyList<Sample> samples)
         {
@@ -200,32 +219,39 @@ namespace DomoNinja.Sim
                 .Select(g => new
                 {
                     Id = g.Key,
-                    ClearRate = g.Count(x => x.Summary.Cleared) / (double)g.Count(),
+                    Clears = g.Count(x => x.Summary.Cleared),
                 })
-                .OrderByDescending(x => x.ClearRate)
+                .OrderByDescending(x => x.Clears)
+                // 동률을 id 로 끊는다. 안 끊으면 상위 N 의 경계에서 어느 빌드가 들어가는지가
+                // 정렬 구현에 달리고, 같은 입력이 다른 M4 를 내게 된다.
                 .ThenBy(x => x.Id, StringComparer.Ordinal)
                 .ToList();
 
-            double totalClear = byBuild.Sum(b => b.ClearRate);
-            double half = totalClear / 2.0;
+            long totalClears = byBuild.Sum(b => (long)b.Clears);
 
-            int needed = 0;
-            double acc = 0;
-            foreach (var b in byBuild)
-            {
-                acc += b.ClearRate;
-                needed++;
-                if (acc >= half) break;
-            }
+            // 반올림이 아니라 올림이다 — 빌드가 적을 때 상위 0개가 되면 M4 가 항상 0 이 된다.
+            int topCount = (int)Math.Ceiling(byBuild.Count * TopFraction);
+            if (topCount < 1) topCount = 1;
+            if (topCount > byBuild.Count) topCount = byBuild.Count;
+
+            long topClears = 0;
+            for (int i = 0; i < topCount; i++) topClears += byBuild[i].Clears;
+
+            double share = totalClears == 0 ? 0 : topClears / (double)totalClears;
 
             return new JObject
             {
-                ["_definitionPending"] = "점유율 정의가 스펙에 없다. 08 §6.2 에 사람이 확정해야 한다.",
+                ["_definition"] = $"상위 {TopFraction:P0} 빌드가 전체 클리어 중 차지하는 비율 (D-71). "
+                                + $"균등하면 {TopFraction:P0}, 목표는 35% 미만.",
                 ["builds"] = byBuild.Count,
-                ["topClearRate"] = Round(byBuild.Count == 0 ? 0 : byBuild[0].ClearRate),
+                ["topCount"] = topCount,
+                ["topShare"] = Round(share),
                 ["topBuildId"] = byBuild.Count == 0 ? "" : byBuild[0].Id,
-                ["buildsForHalfOfClears"] = needed,
-                ["concentration"] = Round(byBuild.Count == 0 ? 0 : needed / (double)byBuild.Count),
+
+                // 참고값. 목표 판정에는 안 쓰지만 "한 빌드가 100% 인가" 는 눈으로 봐야 한다.
+                ["topBuildClearRate"] = Round(samples.Count == 0 || byBuild.Count == 0
+                    ? 0
+                    : byBuild[0].Clears / (double)samples.Count(s => s.Build.Id == byBuild[0].Id)),
             };
         }
 
@@ -263,6 +289,12 @@ namespace DomoNinja.Sim
 
             return new JObject
             {
+                // ★ 이 값은 게임의 성질이 아니라 봇 정책의 그림자다. 리포트를 읽는 사람이
+                //   숫자만 보고 "2라운드에 몰린다" 로 읽지 않도록 값 옆에 붙여둔다.
+                ["_notMeasurable"] =
+                    "M6 은 저축 전략(08 §4.3)이 작동하는가를 재는데, 봇은 저축을 안 하도록 " +
+                    "의도적으로 설계돼 있다(08 §6.1). 이 분포는 봇 정책의 귀결이지 게임의 성질이 아니다. " +
+                    "예선 지표·목적함수에서 제외한다(D-72 확정).",
                 ["histogram"] = histogram,
                 ["neverBought"] = samples.Count - bought.Count,
                 ["avgRound"] = bought.Count == 0 ? 0d : Round(bought.Average(s => s.Summary.FirstActivationRound), 3),
