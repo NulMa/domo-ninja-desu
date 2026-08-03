@@ -437,7 +437,7 @@ GameObject:
   - component: {fileID: 30828229}
   - component: {fileID: 30828228}
   m_Layer: 0
-  m_Name: Label
+  m_Name: DescLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2370,7 +2370,7 @@ GameObject:
   - component: {fileID: 294754768}
   - component: {fileID: 294754767}
   m_Layer: 0
-  m_Name: Label
+  m_Name: LevelLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3815,7 +3815,7 @@ GameObject:
   - component: {fileID: 456844839}
   - component: {fileID: 456844838}
   m_Layer: 0
-  m_Name: Label
+  m_Name: LevelLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3894,7 +3894,7 @@ GameObject:
   - component: {fileID: 470611851}
   - component: {fileID: 470611850}
   m_Layer: 0
-  m_Name: Label
+  m_Name: DescLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4888,7 +4888,7 @@ GameObject:
   - component: {fileID: 593447286}
   - component: {fileID: 593447285}
   m_Layer: 0
-  m_Name: Label
+  m_Name: DescLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5208,7 +5208,7 @@ GameObject:
   - component: {fileID: 643196715}
   - component: {fileID: 643196714}
   m_Layer: 0
-  m_Name: Label
+  m_Name: NameLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5287,7 +5287,7 @@ GameObject:
   - component: {fileID: 652930233}
   - component: {fileID: 652930232}
   m_Layer: 0
-  m_Name: Label
+  m_Name: DescLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5443,7 +5443,7 @@ GameObject:
   - component: {fileID: 659852302}
   - component: {fileID: 659852301}
   m_Layer: 0
-  m_Name: Label
+  m_Name: NameLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7373,7 +7373,7 @@ GameObject:
   - component: {fileID: 945314405}
   - component: {fileID: 945314404}
   m_Layer: 0
-  m_Name: Connector
+  m_Name: Connector2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9498,7 +9498,7 @@ GameObject:
   - component: {fileID: 1187307292}
   - component: {fileID: 1187307291}
   m_Layer: 0
-  m_Name: Label
+  m_Name: LevelLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10273,7 +10273,7 @@ GameObject:
   - component: {fileID: 1297878315}
   - component: {fileID: 1297878314}
   m_Layer: 0
-  m_Name: Label
+  m_Name: LevelLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10428,7 +10428,7 @@ GameObject:
   - component: {fileID: 1300200613}
   - component: {fileID: 1300200612}
   m_Layer: 0
-  m_Name: Label
+  m_Name: DescLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -10974,7 +10974,7 @@ GameObject:
   - component: {fileID: 1367930000}
   - component: {fileID: 1367929999}
   m_Layer: 0
-  m_Name: Label
+  m_Name: NameLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11053,7 +11053,7 @@ GameObject:
   - component: {fileID: 1380799307}
   - component: {fileID: 1380799306}
   m_Layer: 0
-  m_Name: Label
+  m_Name: CurrencyValueLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -11577,6 +11577,50 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1472042187}
   m_CullTransparentMesh: 1
+--- !u!1 &1478364699
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1478364701}
+  - component: {fileID: 1478364700}
+  m_Layer: 0
+  m_Name: RunManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1478364700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1478364699}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90dd44563612f7f408da5db948c47b48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: DomoNinja.Unity::DomoNinja.Unity.RunManager
+--- !u!4 &1478364701
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1478364699}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1484074985
 GameObject:
   m_ObjectHideFlags: 0
@@ -11898,7 +11942,7 @@ GameObject:
   - component: {fileID: 1519536979}
   - component: {fileID: 1519536978}
   m_Layer: 0
-  m_Name: Label
+  m_Name: TitleLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14430,7 +14474,7 @@ GameObject:
   - component: {fileID: 1807202806}
   - component: {fileID: 1807202805}
   m_Layer: 0
-  m_Name: Label
+  m_Name: NameLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14509,7 +14553,7 @@ GameObject:
   - component: {fileID: 1825698401}
   - component: {fileID: 1825698400}
   m_Layer: 0
-  m_Name: Connector
+  m_Name: Connector1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -14974,7 +15018,7 @@ GameObject:
   - component: {fileID: 1869194487}
   - component: {fileID: 1869194486}
   m_Layer: 0
-  m_Name: Label
+  m_Name: NameLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -16072,7 +16116,7 @@ GameObject:
   - component: {fileID: 2061462840}
   - component: {fileID: 2061462839}
   m_Layer: 0
-  m_Name: Label
+  m_Name: LevelLabel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -16534,3 +16578,4 @@ SceneRoots:
   - {fileID: 2042708164}
   - {fileID: 583998979}
   - {fileID: 1769356858}
+  - {fileID: 1478364701}
