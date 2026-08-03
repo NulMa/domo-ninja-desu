@@ -69,12 +69,22 @@ namespace DomoNinja.Sim
         /// core 는 파일을 직접 열지 않는다 — WebGL 에 파일 시스템이 없어서다.
         /// 읽는 방법은 실행 환경이 정하고, 여기서는 디스크다.
         /// </remarks>
-        private static GameData LoadData(string dataDir, ParamOverrides.Set? overrides = null) =>
-            GameDataFiles.Load(ParamOverrides.Wrap(name =>
+        private static GameData LoadData(string dataDir, ParamOverrides.Set? overrides = null,
+                                         BalanceReport.DataHasher? hasher = null)
+        {
+            Func<string, string?> read = name =>
             {
                 string path = Path.Combine(dataDir, name);
                 return File.Exists(path) ? File.ReadAllText(path) : null;
-            }, overrides));
+            };
+
+            // 순서가 중요하다 — 덮어쓰기를 **적용한 뒤**를 해싱해야 지문이 지문 노릇을 한다.
+            // 앞뒤가 바뀌면 최적화기가 돌린 모든 실행이 같은 해시를 갖는다.
+            read = ParamOverrides.Wrap(read, overrides);
+            if (hasher != null) read = hasher.Wrap(read);
+
+            return GameDataFiles.Load(read);
+        }
 
         /// <summary>
         /// `params.json` → `metrics.json`.
@@ -98,10 +108,13 @@ namespace DomoNinja.Sim
             if (paramsPath != null && !File.Exists(paramsPath))
                 Console.Error.WriteLine($"경고: {paramsPath} 가 없어 기본값으로 돈다");
 
+            string? balancePath = ArgAfter(args, "--balance");
+            var hasher = new BalanceReport.DataHasher();
+
             GameData data;
             try
             {
-                data = LoadData(dataDir, p.Overrides);
+                data = LoadData(dataDir, p.Overrides, hasher);
             }
             catch (DataValidationException ex)
             {
@@ -124,7 +137,14 @@ namespace DomoNinja.Sim
             Console.WriteLine($"빌드 {(p.BuildLimit > 0 ? p.BuildLimit.ToString() : "전부")} × 시드 {p.Seeds} · {p.Stage} · {p.Meta}");
 
             var report = SimRunner.Run(data, p);
-            File.WriteAllText(outPath, SimRunner.ToJson(report, p, data).ToString());
+            var json = SimRunner.ToJson(report, p, data);
+            File.WriteAllText(outPath, json.ToString());
+
+            if (balancePath != null)
+            {
+                var balance = BalanceReport.From(json, p, hasher.Hash(), GitCommit(dataDir));
+                File.WriteAllText(balancePath, balance.ToString());
+            }
 
             Console.WriteLine();
             Console.WriteLine($"  런 {report.Runs:N0}회 · {report.ElapsedMs:N0}ms");
@@ -132,8 +152,62 @@ namespace DomoNinja.Sim
             Console.WriteLine($"  유닛-틱당 {report.MicrosPerUnitTick:F3}µs " +
                               $"({(report.MicrosPerUnitTick <= 5.0 ? "예산 내" : "예산 초과")})");
             Console.WriteLine($"  → {outPath}");
+            if (balancePath != null) Console.WriteLine($"  → {balancePath} (스냅샷)");
 
             return 0;
+        }
+
+        /// <summary>
+        /// 리포트에 박을 커밋 해시. <b>어느 코드로 낸 숫자인지가 없으면 재현이 성립하지 않는다</b> (`D-55`).
+        /// </summary>
+        /// <remarks>
+        /// ★ <c>git</c> 을 <b>프로세스로 부르지 않는다.</b> <c>.git/HEAD</c> 를 읽는다 —
+        /// <c>core</c>·<c>sim</c> 이 외부 프로세스를 띄우지 못하게 <c>balance.yml</c> 가드가 막고 있고,
+        /// 그 가드는 *"게임은 자기 힘으로 돈다"* 를 지키려고 둔 것이다. 리포트 한 줄 때문에 뚫지 않는다.
+        /// </remarks>
+        private static string GitCommit(string dataDir)
+        {
+            try
+            {
+                var dir = new DirectoryInfo(dataDir);
+                while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+                    dir = dir.Parent;
+                if (dir == null) return "unknown";
+
+                string gitDir = Path.Combine(dir.FullName, ".git");
+                string head = File.ReadAllText(Path.Combine(gitDir, "HEAD")).Trim();
+
+                if (!head.StartsWith("ref:", StringComparison.Ordinal))
+                    return head.Length >= 7 ? head.Substring(0, 7) : head;
+
+                string refPath = Path.Combine(gitDir, head.Substring(4).Trim().Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(refPath))
+                {
+                    string sha = File.ReadAllText(refPath).Trim();
+                    return sha.Length >= 7 ? sha.Substring(0, 7) : sha;
+                }
+
+                // 참조가 packed-refs 에 접혀 있는 경우. 갓 클론한 저장소가 이 상태다.
+                string packed = Path.Combine(gitDir, "packed-refs");
+                if (File.Exists(packed))
+                {
+                    string want = head.Substring(4).Trim();
+                    foreach (string line in File.ReadAllLines(packed))
+                    {
+                        if (line.Length < 42 || line[0] == '#' || line[0] == '^') continue;
+                        if (line.EndsWith(" " + want, StringComparison.Ordinal))
+                            return line.Substring(0, 7);
+                    }
+                }
+
+                return "unknown";
+            }
+            catch
+            {
+                // 해시를 못 읽는 게 시뮬을 멈출 이유는 아니다. 다만 "모른다" 를 그대로 적는다 —
+                // 빈 문자열이면 리포트를 읽는 쪽이 "안 넣었나" 와 구분할 수 없다.
+                return "unknown";
+            }
         }
 
         /// <remarks>
