@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Rng;
@@ -68,12 +69,12 @@ namespace DomoNinja.Sim
         /// core 는 파일을 직접 열지 않는다 — WebGL 에 파일 시스템이 없어서다.
         /// 읽는 방법은 실행 환경이 정하고, 여기서는 디스크다.
         /// </remarks>
-        private static GameData LoadData(string dataDir) =>
-            GameDataFiles.Load(name =>
+        private static GameData LoadData(string dataDir, ParamOverrides.Set? overrides = null) =>
+            GameDataFiles.Load(ParamOverrides.Wrap(name =>
             {
                 string path = Path.Combine(dataDir, name);
                 return File.Exists(path) ? File.ReadAllText(path) : null;
-            });
+            }, overrides));
 
         /// <summary>
         /// `params.json` → `metrics.json`.
@@ -100,15 +101,26 @@ namespace DomoNinja.Sim
             GameData data;
             try
             {
-                data = LoadData(dataDir);
+                data = LoadData(dataDir, p.Overrides);
             }
             catch (DataValidationException ex)
             {
                 Console.Error.WriteLine(ex.Message);
                 return 3;
             }
+            catch (ArgumentException ex)
+            {
+                // 경로가 안 맞은 경우. 조용히 넘기면 최적화기가 헛돈다 — ParamOverrides 주석 참조.
+                Console.Error.WriteLine(ex.Message);
+                return 4;
+            }
 
             Console.WriteLine($"데이터: {dataDir}");
+            if (p.Overrides != null)
+            {
+                int count = p.Overrides.Sum(f => f.Value.Count);
+                Console.WriteLine($"덮어쓰기: {count}개 · 지문 {ParamOverrides.Hash(p.Overrides)}");
+            }
             Console.WriteLine($"빌드 {(p.BuildLimit > 0 ? p.BuildLimit.ToString() : "전부")} × 시드 {p.Seeds} · {p.Stage} · {p.Meta}");
 
             var report = SimRunner.Run(data, p);

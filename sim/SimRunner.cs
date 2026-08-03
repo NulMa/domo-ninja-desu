@@ -36,6 +36,11 @@ namespace DomoNinja.Sim
         /// <summary>빌드별 상세를 결과에 담을지. 4,320개면 파일이 커진다.</summary>
         public bool IncludeBuilds { get; set; } = true;
 
+        /// <summary>
+        /// 최적화기가 시도할 파라미터 값. <b>`/data` 파일은 건드리지 않는다</b> (`ParamOverrides`).
+        /// </summary>
+        public ParamOverrides.Set? Overrides { get; set; }
+
         public static SimParams FromJson(string json)
         {
             var o = JObject.Parse(json);
@@ -49,18 +54,31 @@ namespace DomoNinja.Sim
             if (o["parallel"] != null) p.Parallel = (bool)o["parallel"]!;
             if (o["includeBuilds"] != null) p.IncludeBuilds = (bool)o["includeBuilds"]!;
 
+            p.Overrides = ParamOverrides.FromJson(o["overrides"] as JObject);
+
             return p;
         }
 
-        public JObject ToJson() => new JObject
+        public JObject ToJson()
         {
-            ["seeds"] = Seeds,
-            ["seedStart"] = SeedStart,
-            ["stage"] = Stage,
-            ["meta"] = Meta,
-            ["buildLimit"] = BuildLimit,
-            ["parallel"] = Parallel,
-        };
+            var result = new JObject
+            {
+                ["seeds"] = Seeds,
+                ["seedStart"] = SeedStart,
+                ["stage"] = Stage,
+                ["meta"] = Meta,
+                ["buildLimit"] = BuildLimit,
+                ["parallel"] = Parallel,
+
+                // ★ 값 자체와 지문을 둘 다 남긴다. 지문만 있으면 대조는 되지만 읽을 수가 없고,
+                //   값만 있으면 [BAL] 커밋 본문에서 한 줄로 가리킬 수단이 없다 (`D-55`).
+                ["overridesHash"] = ParamOverrides.Hash(Overrides),
+            };
+
+            if (Overrides != null) result["overrides"] = ParamOverrides.ToJson(Overrides);
+
+            return result;
+        }
     }
 
     /// <summary>빌드 하나의 집계.</summary>
