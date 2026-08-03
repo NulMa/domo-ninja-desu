@@ -20,7 +20,7 @@ namespace DomoNinja.Sim.Tests
             'M3b': { 'C1': { 'C1-A': 0.5, 'C1-B': 0.5 } },
             'M3c': { 'C1-P1': 0.4, 'C1-P2': 0.4 },
             'M4': { 'topShare': 0.10 },
-            'M5': { 'combatMinutesAvg': 4.0 },
+            'M5': { 'runMinutesAvg': 4.0, 'combatMinutesAvg': 1.0 },
             'M6': { 'avgRound': 2.0 },
             'M7': { 'timeoutRate': 0.01 }
         }".Replace('\'', '"'));
@@ -79,7 +79,7 @@ namespace DomoNinja.Sim.Tests
             // ★ 기하평균을 고른 이유. 산술평균이면 "M5 를 포기하고 나머지로 벌충하는" 해가
             //   최적으로 뽑히는데, 최적화기는 그런 구멍을 반드시 찾아낸다.
             var broken = Perfect();
-            broken["M5"]!["combatMinutesAvg"] = 20.0;   // 허용 한계(8분) 밖
+            broken["M5"]!["runMinutesAvg"] = 20.0;   // 허용 한계(8분) 밖
 
             Assert.That(D(broken), Is.EqualTo(0.0));
         }

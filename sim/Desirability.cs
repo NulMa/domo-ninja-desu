@@ -177,10 +177,10 @@ namespace DomoNinja.Sim
             terms.Add(new Term { Name = "M4", Value = share, Score = TopShare.Score(share),
                                  Note = "상위 5% 빌드가 가져가는 클리어 몫 (균등이면 5%)" });
 
-            // M5 — 1런 시간
-            double minutes = (double?)metrics["M5"]?["combatMinutesAvg"] ?? 0;
+            // M5 — 1런 시간 (전투 + 조작 추정, `D-74`)
+            double minutes = (double?)metrics["M5"]?["runMinutesAvg"] ?? 0;
             terms.Add(new Term { Name = "M5", Value = minutes, Score = RunMinutes.Score(minutes),
-                                 Note = "전투 틱만 — 하한으로 읽는다" });
+                                 Note = "전투 + 라운드당 조작 추정 — 상수는 D+6 실측으로 교체" });
 
             // M7 — 타임아웃
             double timeout = (double?)metrics["M7"]?["timeoutRate"] ?? 0;

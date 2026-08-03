@@ -138,6 +138,54 @@ namespace DomoNinja.Sim.Tests
             Assert.That((double)b["topShare"]!, Is.EqualTo((double)a["topShare"]!));
         }
 
+        // ────────────────────────────── M5 (D-74)
+
+        private static JObject M5Of(IReadOnlyList<Metrics.Sample> samples) =>
+            (JObject)Metrics.Compute(_data, samples, 20)["M5"]!;
+
+        [Test]
+        public void M5_는_전투에_라운드당_조작_시간을_더한다()
+        {
+            // ★ D-74. 전에는 전투 틱만 재면서 목표는 "1런 3~5분"(05 §1.8) 을 댔다.
+            //   §1.8 에서 한 라운드는 상점 + 배치 + 전투다 — 잰 것과 목표가 달랐다.
+            //   그 오독이 d=0.153 으로 나왔고 "전투를 6.5배 늘려야 한다" 는 결론까지 갔다.
+            var m5 = M5Of(Spread(1, 5));
+
+            double combat = (double)m5["combatMinutesAvg"]!;
+            double run = (double)m5["runMinutesAvg"]!;
+            double rounds = (double)m5["avgRoundsReached"]!;
+            double perRound = (int)m5["interactionSecondsPerRound"]! / 60.0;
+
+            Assert.That(run, Is.EqualTo(combat + rounds * perRound).Within(0.01));
+            Assert.That(run, Is.GreaterThan(combat), "조작 시간이 안 더해졌다");
+        }
+
+        [Test]
+        public void M5_는_기계가_잰_것과_사람이_가정한_것을_나눠_낸다()
+        {
+            // 합쳐서만 내면 나중에 상수를 실측으로 교체할 때 무엇이 바뀌었는지 못 읽는다.
+            var m5 = M5Of(Spread(1, 5));
+
+            foreach (string key in new[] { "combatMinutesAvg", "interactionSecondsPerRound",
+                                           "avgRoundsReached", "runMinutesAvg" })
+                Assert.That(m5[key], Is.Not.Null, key);
+
+            Assert.That((string)m5["_provisional"]!, Does.Contain("D+6"),
+                        "잠정값이라는 사실과 교체 시점이 리포트에 없다");
+        }
+
+        [Test]
+        public void 조작_시간_상수는_데이터에_없다()
+        {
+            // ★★ 일부러 /data 에 두지 않았다. 그쪽은 최적화기가 값을 쓰는 표면이라,
+            //    거기 있으면 최적화기가 이 숫자를 올려서 M5 를 통과시킬 수 있다 —
+            //    게임은 하나도 안 바꾸고 "플레이어가 느리다" 고 주장해서 점수를 얻는다.
+            //    측정 모델의 가정은 최적화 대상이 아니다.
+            foreach (string file in new[] { "economy.json", "characters.json", "meta.json" })
+                Assert.That(RepoData.Read(file), Does.Not.Contain("interactionSeconds"),
+                            $"{file} 에 조작 시간 상수가 들어갔다 — 최적화기가 지표를 살 수 있게 된다");
+        }
+
         // ────────────────────────────── M6 (D-72)
 
         [Test]

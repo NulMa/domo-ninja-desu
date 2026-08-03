@@ -40,6 +40,31 @@ namespace DomoNinja.Sim
         /// </remarks>
         private const double TopFraction = 0.05;
 
+        /// <summary>
+        /// `M5` 가 한 라운드의 <b>조작</b>(상점 + 배치)에 잡아주는 시간(초). <b>잠정값</b> (`D-74`).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>이 상수가 없으면 `M5` 는 잰 것과 목표가 다른 지표가 된다.</b>
+        /// 시뮬은 전투 틱만 셀 수 있는데(봇은 조작에 시간을 안 쓴다) 목표 *"1런 3~5분"* 은
+        /// `05` §1.8 의 값이고 <b>거기서 한 라운드는 상점 + 배치 + 전투</b>다.
+        /// D+4 에 이 둘을 직접 비교해 <c>d</c>=0.153 이 나왔고,
+        /// *"전투를 6.5배 늘려야 한다"* 는 결론까지 갔다 — <b>그건 오독이었다.</b>
+        /// </para>
+        /// <para>
+        /// ★ <b>일부러 <c>/data</c> 에 두지 않았다.</b> 그쪽은 최적화기가 값을 쓰는 표면이라,
+        /// 여기 있으면 <b>최적화기가 이 숫자를 올려서 `M5` 를 통과시킬 수 있다</b> —
+        /// 게임은 하나도 안 바꾸고 *"플레이어가 느리다"* 고 주장해서 점수를 얻는다.
+        /// <b>측정 모델의 가정은 최적화 대상이 아니다.</b>
+        /// </para>
+        /// <para>
+        /// ⚠️ <b>잠정값이다.</b> 상점 5칸을 훑고 0~2개 사고 3명 배치를 확인하는 데 드는 시간을
+        /// 15초로 잡았다. <b>`P5` UI 가 완주하는 D+6 에 실측으로 교체한다</b> —
+        /// 과대평가하면 `M5` 가 거짓 통과하므로, 리포트에 값을 드러내 둔다.
+        /// </para>
+        /// </remarks>
+        private const int InteractionSecondsPerRound = 15;
+
         public sealed class Sample
         {
             public BuildTarget Build = null!;
@@ -265,13 +290,31 @@ namespace DomoNinja.Sim
         /// </remarks>
         private static JObject M5(IReadOnlyList<Sample> samples, int tickRate)
         {
-            var minutes = samples.Select(s => s.Summary.TotalTicks / (double)tickRate / 60.0).ToList();
+            var combat = samples.Select(s => s.Summary.TotalTicks / (double)tickRate / 60.0).ToList();
+            var rounds = samples.Select(s => (double)s.Summary.RoundsReached).ToList();
+
+            double interaction = InteractionSecondsPerRound / 60.0;
+            var total = combat.Zip(rounds, (c, r) => c + r * interaction).ToList();
 
             return new JObject
             {
-                ["_note"] = "전투 틱만. 배치·상점 조작 시간은 포함되지 않는다 — 하한으로 읽는다.",
-                ["combatMinutesAvg"] = Round(minutes.Average(), 3),
-                ["combatMinutesMax"] = Round(minutes.Max(), 3),
+                ["_definition"] =
+                    $"1런 = 전투 시간 + 라운드당 조작 {InteractionSecondsPerRound}초 × 도달 라운드 (D-74). " +
+                    "목표 3~5분은 05 §1.8 의 '1런 3~5분 / 라운드 20~30초' 이고, " +
+                    "여기서 한 라운드는 상점 + 배치 + 전투다.",
+
+                ["runMinutesAvg"] = Round(total.Average(), 3),
+                ["runMinutesMax"] = Round(total.Max(), 3),
+
+                // 기계가 실제로 잰 것과 사람이 가정한 것을 나눠 낸다.
+                // 합쳐서만 내면 나중에 상수를 교체할 때 무엇이 바뀌었는지 못 읽는다.
+                ["combatMinutesAvg"] = Round(combat.Average(), 3),
+                ["combatMinutesMax"] = Round(combat.Max(), 3),
+                ["interactionSecondsPerRound"] = InteractionSecondsPerRound,
+                ["avgRoundsReached"] = Round(rounds.Average(), 2),
+
+                ["_provisional"] =
+                    "★ 조작 시간은 아직 추정값이다. P5 UI 완주(D+6) 후 실측으로 교체할 것 — 19 §6.6.",
             };
         }
 
