@@ -95,6 +95,7 @@ namespace DomoNinja.Core.Skills
                 case "self_damage":
                 case "extra_attack":
                 case "recast":
+                case "aoe":
                     return true;
                 default:
                     return false;
@@ -117,10 +118,64 @@ namespace DomoNinja.Core.Skills
                 case "heal": return Heal(effect, ctx, skillPowerPermille);
                 case "status": return ApplyStatus(effect, ctx, skillPowerPermille);
                 case "self_damage": return SelfDamage(effect, ctx);
+                case "aoe": return AreaDamage(effect, ctx, skillPowerPermille);
                 case "extra_attack": return new EffectOutcome((int?)effect["count"] ?? 1, 0);
                 case "recast": return new EffectOutcome(0, (int?)effect["maxChain"] ?? 1);
                 default: return EffectOutcome.None;
             }
+        }
+
+        /// <summary>
+        /// 평타와 무관하게 <b>스스로 터지는</b> 전체 광역 (<c>C2-B</c> 파동).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ 최상위 <c>aoe</c>(<see cref="Loadout.Aoe"/>)와 <b>다른 것이다.</b>
+        /// 그쪽은 *"평타가 광역이 된다"* 이고 이건 *"주기적으로 광역 한 방이 나간다"* 다.
+        /// <c>C2-B</c> 는 텍스트가 *"3초마다"* 라고 적어두고 데이터는 최상위에 있어
+        /// <b>평타마다(0.9초) 전체 광역</b>이 나가고 있었다 (`D-73`).
+        /// </para>
+        /// <para>
+        /// ⚠️ <b>피해가 <c>Strike</c> 를 거치지 않는다</b> — 그래서 <c>on_hit</c>·<c>on_kill</c> 이 안 터진다.
+        /// 여기서 공격 기계를 다시 부르면 <see cref="EffectOutcome"/> 을 둔 이유가 무너진다:
+        /// 광역이 처치를 만들고 그 <c>on_kill</c> 이 또 광역을 부르면 <b>멈추는 지점이 코드에 안 보인다.</b>
+        /// 지금 데이터에는 그런 조합이 없고, 생기면 이 주석이 판단 지점이다.
+        /// </para>
+        /// <para>
+        /// <c>scope</c> 는 <c>all_enemies</c> 만 받는다. 나머지 범위는 <b>주 표적을 중심으로</b> 잡는데
+        /// 주기 트리거에는 표적이 없다. 검증 규칙 <c>R24</c> 가 데이터에서 막는다.
+        /// </para>
+        /// </remarks>
+        private static EffectOutcome AreaDamage(JObject e, in EffectContext ctx, int skillPower)
+        {
+            if ((string?)e["scope"] != "all_enemies") return EffectOutcome.None;
+
+            // 평타 밖에서 터지므로 곱할 "이번 공격의 피해" 가 없다. 시전자 최대 체력이 유일한 기준이다.
+            if ((string?)e["damageSource"] != "maxHp") return EffectOutcome.None;
+
+            int permille = Permille.Apply(
+                Permille.FromMultiplier((double?)e["value"] ?? 0d), skillPower);
+            int amount = Permille.Apply(ctx.Self.MaxHp, permille);
+            if (amount <= 0) return EffectOutcome.None;
+
+            var foes = ctx.Foes;
+            bool any = false;
+
+            for (int i = 0; i < foes.Count; i++)
+            {
+                if (!foes[i].IsAlive) continue;
+
+                // 표적별 Attack 이벤트는 내지 않는다 — 한 방이지 여러 번 때린 게 아니다.
+                if (!any)
+                {
+                    ctx.Sink.Emit(new GameEvent(EventKind.Attack, ctx.Tick, ctx.Self.Id, -1, 0));
+                    any = true;
+                }
+
+                DamageResolver.ApplyDamage(foes[i], amount, ctx.Self.Id, ctx.Tick, ctx.Sink);
+            }
+
+            return EffectOutcome.None;
         }
 
         private static EffectOutcome Heal(JObject e, in EffectContext ctx, int skillPower)

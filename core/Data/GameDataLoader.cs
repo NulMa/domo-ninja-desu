@@ -755,6 +755,22 @@ namespace DomoNinja.Core.Data
                           : "heal 에 permille 도 fromDamagePermille 도 없다"));
             }
 
+            // R24 — 중첩 aoe 는 all_enemies + maxHp 만 받는다.
+            //   나머지 scope 는 주 표적을 중심으로 범위를 잡는데, 주기 트리거에는 표적이 없다.
+            //   damageSource 가 maxHp 가 아니면 곱할 "이번 공격의 피해" 가 없다.
+            //   둘 다 실행기가 조용히 넘기는 형태라 데이터에서 막는다.
+            if (template == "aoe" && !topLevel)
+            {
+                string? scope = (string?)o["scope"];
+                if (scope != "all_enemies")
+                    e.Add(new ValidationError("R24", where,
+                        $"중첩 aoe 의 scope 가 `{scope}` 다 — 주기 트리거에는 주 표적이 없어 범위를 잡을 수 없다"));
+
+                if ((string?)o["damageSource"] != "maxHp")
+                    e.Add(new ValidationError("R24", where,
+                        "중첩 aoe 에 damageSource: maxHp 가 없다 — 평타 밖에서 터지므로 곱할 피해가 없다"));
+            }
+
             if (o["effect"] != null) ValidateEffect(o["effect"]!, skillId, topLevel: false, e);
         }
 
