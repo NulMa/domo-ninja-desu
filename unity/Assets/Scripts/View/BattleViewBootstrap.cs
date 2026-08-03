@@ -46,7 +46,6 @@ namespace DomoNinja.Unity.View
 
             _board = new GameObject("Board").AddComponent<BoardView>();
             _board.transform.SetParent(transform, false);
-            _board.Initialize(Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName));
 
             _replayer = gameObject.AddComponent<BattleReplayer>();
             _replayer.Bind(_board);
@@ -55,6 +54,12 @@ namespace DomoNinja.Unity.View
             yield return StreamingGameData.LoadAsync(
                 loaded => data = loaded,
                 error => Debug.LogError($"[View] 데이터 로드 실패 — {error}"));
+
+            // ★ 보드 초기화를 데이터 로드 **뒤로** 옮겼다. 스프라이트 경로를 데이터에서 받아야 하는데,
+            //   앞에서 만들면 넘길 것이 없어 View 가 이름으로 추측하게 된다 — 적 4종이 그렇게 사라졌다.
+            //   데이터가 없어도 격자는 그린다: "데이터를 못 읽었다" 와 "화면이 안 떴다" 는 다른 사고다.
+            _board.Initialize(Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName),
+                              BoardView.SpritePathsFrom(data));
 
             if (data == null) yield break;
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Events;
 using UnityEngine;
@@ -29,6 +30,11 @@ namespace DomoNinja.Unity.View
         private SpriteCatalog _catalog;
         private Transform _unitRoot;
 
+        /// <summary>
+        /// 유닛 종류 → 스프라이트 경로. <b>데이터가 준 그대로다</b> — View 가 추측하지 않는다.
+        /// </summary>
+        private IReadOnlyDictionary<string, string> _spritePaths;
+
         /// <summary>화면에 올라와 있는 유닛 1체.</summary>
         private sealed class UnitView
         {
@@ -39,13 +45,47 @@ namespace DomoNinja.Unity.View
             public bool IsAlly;
         }
 
-        public void Initialize(SpriteCatalog catalog)
+        /// <param name="spritePaths">
+        /// 유닛 종류 → 스프라이트 경로. <see cref="SpritePathsFrom"/> 로 만든다.
+        /// <b><c>null</c> 이면 이름으로 추측하는 옛 규칙으로 떨어진다</b> — 그 경로는 적 4종을 놓친다.
+        /// </param>
+        public void Initialize(SpriteCatalog catalog,
+                               IReadOnlyDictionary<string, string> spritePaths = null)
         {
             _catalog = catalog;
+            _spritePaths = spritePaths;
             BuildGrid();
 
             _unitRoot = new GameObject("Units").transform;
             _unitRoot.SetParent(transform, false);
+        }
+
+        /// <summary>
+        /// <see cref="GameData"/> 가 들고 있는 스프라이트 경로를 그대로 뽑는다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>이 함수가 있어야 하는 이유가 D+4 에 실측으로 드러났다.</b>
+        /// 전에는 View 가 <c>typeId</c> 첫 글자를 대문자로 바꿔 경로를 <b>추측</b>했는데,
+        /// 데이터의 실제 이름과 <b>적 4종이 어긋난다</b> —
+        /// <c>bat→BlueBat</c> · <c>kappa→KappaGreen</c> · <c>lantern→LanternRed</c> · <c>trex→TRex</c>.
+        /// <para>
+        /// 그 유닛들은 <b>자리표시자로 떴고 콘솔에는 아무 에러도 안 났다.</b>
+        /// 화면을 실제로 띄워보기 전에는 안 드러나는 종류이고,
+        /// 매핑을 <c>encounters.json</c> 에 둔 이유가 바로 <b>이 추측을 없애는 것</b>이었다.
+        /// </para>
+        /// </remarks>
+        public static Dictionary<string, string> SpritePathsFrom(GameData data)
+        {
+            var map = new Dictionary<string, string>();
+            if (data == null) return map;
+
+            foreach (var c in data.Characters)
+                if (!string.IsNullOrEmpty(c.Sprite)) map[c.Id] = c.Sprite;
+
+            foreach (var kv in data.EnemyTypes)
+                if (!string.IsNullOrEmpty(kv.Value.Sprite)) map[kv.Key] = kv.Value.Sprite;
+
+            return map;
         }
 
         /// <summary>격자. 아군 진영과 적 진영을 색으로 나눈다.</summary>
@@ -111,7 +151,7 @@ namespace DomoNinja.Unity.View
             spriteObject.transform.SetParent(root.transform, false);
 
             var renderer = spriteObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = _catalog != null ? _catalog.Find(SpritePathOf(spec.TypeId)) : null;
+            renderer.sprite = _catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null;
             renderer.sortingOrder = 10;
 
             if (renderer.sprite == null)
@@ -215,13 +255,28 @@ namespace DomoNinja.Unity.View
             new Coord(orderKey % Coord.BoardWidth, orderKey / Coord.BoardWidth);
 
         /// <summary>
-        /// 유닛 종류 → 스프라이트 폴더.
+        /// 유닛 종류 → 스프라이트 경로. <b>데이터에 있으면 그걸 쓴다.</b>
         /// </summary>
         /// <remarks>
-        /// ⚠️ 임시 구현이다. 데이터의 <c>sprite</c> 필드를 이벤트 로그가 싣고 오지 않아서
-        /// 지금은 이름으로 추측한다. 로그 포맷 v2 에서 <c>UnitSpec</c> 에 스프라이트 경로를
-        /// 넣거나, View 가 <c>GameData</c> 를 함께 받는 쪽으로 정리해야 한다 —
-        /// D+4 포맷 리뷰 안건이다.
+        /// ★ D+4 포맷 리뷰 결론 — <b>이벤트 로그를 늘리지 않고 View 가 <c>GameData</c> 를 받는 쪽</b>으로 정했다.
+        /// 로그의 <c>UnitSpec</c> 에 스프라이트 경로를 실으면 <b>전투당 수만 건의 로그에 같은 문자열이 반복</b>되고,
+        /// 동결한 포맷(`23`)도 건드려야 한다. 스프라이트는 <b>연출의 정보</b>지 전투의 정보가 아니다.
+        /// </remarks>
+        private string ResolveSpritePath(string typeId)
+        {
+            if (_spritePaths != null && _spritePaths.TryGetValue(typeId, out string path))
+                return path;
+
+            return SpritePathOf(typeId);
+        }
+
+        /// <summary>
+        /// 데이터가 없을 때의 <b>대비책</b>. 이름으로 추측한다.
+        /// </summary>
+        /// <remarks>
+        /// ⚠️ <b>이 규칙은 적 4종을 놓친다</b> — <c>bat</c>·<c>kappa</c>·<c>lantern</c>·<c>trex</c>.
+        /// 그래서 <see cref="Initialize"/> 에 <c>spritePaths</c> 를 넘기는 게 정상 경로이고,
+        /// 여기는 더미 로그 재생처럼 <c>GameData</c> 가 없는 경우만 쓴다.
         /// </remarks>
         public static string SpritePathOf(string typeId)
         {
