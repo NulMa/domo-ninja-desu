@@ -332,6 +332,22 @@ namespace DomoNinja.Core.Tests
         }
 
         [Test]
+        public void R24_중첩_aoe_의_범위가_주_표적을_필요로_하면_잡는다()
+        {
+            // 주기 트리거에는 "지금 때리는 상대" 가 없다. radius·adjacent 는 그걸 중심으로
+            // 범위를 잡으므로 실행기가 조용히 아무 일도 안 하게 된다.
+            var errors = ErrorsAfter(f => FindNestedAoe(f.Skills)["scope"] = "radius");
+            AssertCaught(errors, "R24");
+        }
+
+        [Test]
+        public void R24_중첩_aoe_에_피해_기준이_없으면_잡는다()
+        {
+            var errors = ErrorsAfter(f => FindNestedAoe(f.Skills).Remove("damageSource"));
+            AssertCaught(errors, "R24");
+        }
+
+        [Test]
         public void 위반이_여러_건이면_한_번에_전부_보고한다()
         {
             // 최적화기가 값을 써넣는 파일들이라, 한 번에 하나씩 알려주면 CI 를 그만큼 반복하게 된다.
@@ -392,6 +408,11 @@ namespace DomoNinja.Core.Tests
 
         private static JObject FindEffectWithShield(JObject skills) =>
             FindEffect(skills, o => (string?)o["kind"] == "shield" && o["overflowToHp"] != null);
+
+        /// <summary>트리거 안에 들어 있는 <c>aoe</c> — `D-73` 이후 <c>C2-B</c> 파동 하나뿐이다.</summary>
+        private static JObject FindNestedAoe(JObject skills) =>
+            FindEffect(skills, o => (string?)o["template"] == "aoe" && o["scope"] != null
+                                    && (string?)o["scope"] == "all_enemies");
 
         private static JObject FindStationaryShield(JObject skills) =>
             FindEffect(skills, o => (bool?)o["whileStationary"] == true);

@@ -459,6 +459,48 @@ namespace DomoNinja.Core.Tests
             Assert.That(u.Shield, Is.EqualTo(20), "부여가 손해가 됐다");
         }
 
+        // ────────────────────────────── C2-B 파동 (D-73)
+
+        [Test]
+        public void 파동은_평타마다가_아니라_3초마다_광역을_낸다()
+        {
+            // ★ D-73. aoe 가 최상위에 있어 평타마다(C2 공격 간격 18틱 = 0.9초) 전체 광역이
+            //   나가고 있었다. 텍스트는 "3초마다" 다. 이득은 3.3배 자주 나오는데
+            //   대가(자해)만 every_n_tick 안에 있어 둘이 분리돼 있었다.
+            var monk = Ally(0, "C2", "C2-B", new Coord(3, 2));
+            var (_, sink) = Run(monk,
+                                Enemy(1, "slime", new Coord(4, 2), hpOverride: 9999),
+                                Enemy(2, "slime", new Coord(4, 3), hpOverride: 9999));
+
+            // 뒤쪽 적(#2)은 사거리 밖이라 평타로는 절대 안 맞는다. 맞았다면 광역이다.
+            var splash = sink.Events
+                .Where(e => e.Kind == EventKind.Damage && e.ActorId == 0 && e.TargetId == 2)
+                .Select(e => e.Tick).ToList();
+
+            Assert.That(splash, Is.Not.Empty, "광역이 아예 안 나갔다");
+            foreach (int tick in splash)
+                Assert.That(tick % 60, Is.EqualTo(0), $"{tick}틱은 60의 배수가 아니다 — 평타에 묶여 있다");
+        }
+
+        [Test]
+        public void 파동의_이득과_대가가_같은_틱에_붙어_있다()
+        {
+            // 분리돼 있던 것이 D-73 의 실체다. 같은 주기로 묶였는지 직접 본다.
+            var monk = Ally(0, "C2", "C2-B", new Coord(3, 2));
+            var (_, sink) = Run(monk, Enemy(1, "slime", new Coord(4, 2), hpOverride: 9999));
+
+            var selfHarm = sink.Events
+                .Where(e => e.Kind == EventKind.Damage && e.ActorId == 0 && e.TargetId == 0)
+                .Select(e => e.Tick).ToList();
+            var splash = sink.Events
+                .Where(e => e.Kind == EventKind.Damage && e.ActorId == 0 && e.TargetId == 1)
+                .Select(e => e.Tick).ToList();
+
+            Assert.That(selfHarm, Is.Not.Empty);
+            foreach (int tick in selfHarm)
+                Assert.That(splash, Does.Contain(tick), $"{tick}틱에 대가만 나가고 이득이 없다");
+        }
+
         // ────────────────────────────── 조건부 강화 (아이템 conditionalBoost)
 
         [Test]

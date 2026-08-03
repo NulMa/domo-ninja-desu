@@ -82,7 +82,8 @@ namespace DomoNinja.Core.Tests
             Assert.That(fired, Is.Empty);
 
             set.CollectPeriodic(60, fired);
-            Assert.That(fired.Count, Is.EqualTo(1));
+            Assert.That(fired.Count, Is.EqualTo(2),
+                        "D-73 이후 광역과 자해가 같은 60틱 주기에 둘 다 걸려 있다");
         }
 
         [Test]
@@ -99,7 +100,8 @@ namespace DomoNinja.Core.Tests
                 count += fired.Count;
             }
 
-            Assert.That(count, Is.EqualTo(5), "60·120·180·240·300 다섯 번");
+            // D-73 이후 C2-B 는 같은 60틱 주기에 광역과 자해 둘을 건다.
+            Assert.That(count, Is.EqualTo(10), "60·120·180·240·300 다섯 번 × 효과 2개");
         }
 
         [Test]
@@ -111,14 +113,14 @@ namespace DomoNinja.Core.Tests
             var fired = new List<CompiledTrigger>();
 
             set.CollectPeriodic(65, fired);    // 60 을 지나쳐서 들어왔다
-            Assert.That(fired.Count, Is.EqualTo(1));
+            Assert.That(fired.Count, Is.EqualTo(2));
 
             fired.Clear();
             set.CollectPeriodic(119, fired);
             Assert.That(fired, Is.Empty, "다음은 120 이지 125 가 아니다");
 
             set.CollectPeriodic(120, fired);
-            Assert.That(fired.Count, Is.EqualTo(1));
+            Assert.That(fired.Count, Is.EqualTo(2));
         }
 
         // ────────────────────────────── HP 임계
@@ -175,7 +177,8 @@ namespace DomoNinja.Core.Tests
 
             Assert.That(compiled, Is.EqualTo(declared),
                 "conditional 이 있는데 트리거로 안 잡힌 게 있다 — 알 수 없는 trigger.type 이 조용히 버려졌다");
-            Assert.That(declared, Is.EqualTo(13), "현재 데이터 기준");
+            Assert.That(declared, Is.EqualTo(14),
+                        "현재 데이터 기준. D-73 으로 C2-B 의 광역이 최상위에서 트리거 안으로 들어와 하나 늘었다");
         }
 
         /// <summary>`hp_below` 를 쓰는 스킬이 아직 없어서 테스트용으로 만든다.</summary>
