@@ -1,0 +1,552 @@
+{
+  "provenance": {
+    "generatedAt": "2026-08-03T08:25:21.587725+00:00",
+    "simCommit": "b6f624e",
+    "workingTreeDirty": true,
+    "sampler": "cmaes",
+    "samplerSeed": 1,
+    "trials": 60,
+    "seedLadder": [
+      1,
+      2,
+      4
+    ],
+    "simCalls": 158,
+    "searchAxes": [
+      "C1.hp",
+      "C1.attack",
+      "C1.attackInterval",
+      "C2.hp",
+      "C3.hp",
+      "C4.attack",
+      "C4.attackInterval",
+      "C5.attackInterval",
+      "C6.hp",
+      "C6.attackInterval",
+      "price.skillActivate",
+      "price.supportSkill.lo"
+    ],
+    "searchAxisCount": 12,
+    "totalAxisCount": 31,
+    "_ladderNote": "예산 축은 시드다. 빌드 공간을 자르면 M3a·M3b·M3c 가 무너져 D 가 0 이 된다 — evaluate.Evaluator 주석의 실측 참조."
+  },
+  "baseline": {
+    "d": 0.6369,
+    "violations": [
+      "M2",
+      "M3a",
+      "M3c",
+      "M5"
+    ],
+    "values": {
+      "C1.hp": 120,
+      "C1.attack": 45,
+      "C1.attackInterval": 24,
+      "C2.hp": 180,
+      "C3.hp": 90,
+      "C4.attack": 30,
+      "C4.attackInterval": 20,
+      "C5.attackInterval": 26,
+      "C6.hp": 110,
+      "C6.attackInterval": 22,
+      "price.skillActivate": 5,
+      "price.supportSkill.lo": 3
+    }
+  },
+  "best": {
+    "d": 0.7584,
+    "dAtSearchBudget": 0.7591,
+    "violations": [
+      "M2",
+      "M3a",
+      "M3c",
+      "M5"
+    ],
+    "values": {
+      "C1.hp": 138,
+      "C1.attack": 44,
+      "C1.attackInterval": 22,
+      "C2.hp": 171,
+      "C3.hp": 78,
+      "C4.attack": 33,
+      "C4.attackInterval": 20,
+      "C5.attackInterval": 25,
+      "C6.hp": 127,
+      "C6.attackInterval": 21,
+      "price.skillActivate": 6,
+      "price.supportSkill.lo": 3
+    },
+    "overrides": {
+      "characters.json": {
+        "$.characters[?(@.id=='C1')].hp": 138,
+        "$.characters[?(@.id=='C1')].attack": 44,
+        "$.characters[?(@.id=='C1')].attackInterval": 22,
+        "$.characters[?(@.id=='C2')].hp": 171,
+        "$.characters[?(@.id=='C3')].hp": 78,
+        "$.characters[?(@.id=='C4')].attack": 33,
+        "$.characters[?(@.id=='C4')].attackInterval": 20,
+        "$.characters[?(@.id=='C5')].attackInterval": 25,
+        "$.characters[?(@.id=='C6')].hp": 127,
+        "$.characters[?(@.id=='C6')].attackInterval": 21
+      },
+      "economy.json": {
+        "$.prices.skillActivate": 6,
+        "$.prices.supportSkill[0]": 3
+      }
+    }
+  },
+  "top5": [
+    {
+      "d": 0.7591,
+      "values": {
+        "C1.hp": 138.4198,
+        "C1.attack": 44.4187,
+        "C1.attackInterval": 21.7273,
+        "C2.hp": 171.4559,
+        "C3.hp": 78.0928,
+        "C4.attack": 32.5042,
+        "C4.attackInterval": 20.1391,
+        "C5.attackInterval": 25.2783,
+        "C6.hp": 126.712,
+        "C6.attackInterval": 20.5145,
+        "price.skillActivate": 5.949,
+        "price.supportSkill.lo": 2.9542
+      }
+    },
+    {
+      "d": 0.7543,
+      "values": {
+        "C1.hp": 152.0824,
+        "C1.attack": 44.442,
+        "C1.attackInterval": 20.7812,
+        "C2.hp": 147.969,
+        "C3.hp": 89.1117,
+        "C4.attack": 30.7081,
+        "C4.attackInterval": 19.5741,
+        "C5.attackInterval": 25.278,
+        "C6.hp": 107.8322,
+        "C6.attackInterval": 26.2355,
+        "price.skillActivate": 4.7431,
+        "price.supportSkill.lo": 3.4911
+      }
+    },
+    {
+      "d": 0.7502,
+      "values": {
+        "C1.hp": 129.1127,
+        "C1.attack": 48.7446,
+        "C1.attackInterval": 23.3539,
+        "C2.hp": 165.6688,
+        "C3.hp": 91.9038,
+        "C4.attack": 33.9952,
+        "C4.attackInterval": 18.9491,
+        "C5.attackInterval": 23.1979,
+        "C6.hp": 117.3223,
+        "C6.attackInterval": 19.6779,
+        "price.skillActivate": 4.7741,
+        "price.supportSkill.lo": 2.7863
+      }
+    },
+    {
+      "d": 0.7481,
+      "values": {
+        "C1.hp": 133.4752,
+        "C1.attack": 45.3856,
+        "C1.attackInterval": 22.8517,
+        "C2.hp": 157.1824,
+        "C3.hp": 75.3139,
+        "C4.attack": 33.243,
+        "C4.attackInterval": 17.6021,
+        "C5.attackInterval": 22.7126,
+        "C6.hp": 130.4773,
+        "C6.attackInterval": 19.8354,
+        "price.skillActivate": 5.7233,
+        "price.supportSkill.lo": 3.3338
+      }
+    },
+    {
+      "d": 0.7479,
+      "values": {
+        "C1.hp": 124.3264,
+        "C1.attack": 51.3488,
+        "C1.attackInterval": 22.9826,
+        "C2.hp": 192.0793,
+        "C3.hp": 78.7375,
+        "C4.attack": 32.6765,
+        "C4.attackInterval": 18.6772,
+        "C5.attackInterval": 30.9982,
+        "C6.hp": 123.7869,
+        "C6.attackInterval": 20.8287,
+        "price.skillActivate": 5.1093,
+        "price.supportSkill.lo": 3.1032
+      }
+    }
+  ],
+  "trajectory": [
+    {
+      "trial": 0,
+      "d": 0.5975,
+      "pruned": false,
+      "best": 0.5975
+    },
+    {
+      "trial": 1,
+      "d": 0.6406,
+      "pruned": true,
+      "best": 0.5975
+    },
+    {
+      "trial": 2,
+      "d": 0.6225,
+      "pruned": true,
+      "best": 0.5975
+    },
+    {
+      "trial": 3,
+      "d": 0.6759,
+      "pruned": false,
+      "best": 0.6759
+    },
+    {
+      "trial": 4,
+      "d": 0.6231,
+      "pruned": true,
+      "best": 0.6759
+    },
+    {
+      "trial": 5,
+      "d": 0.6106,
+      "pruned": true,
+      "best": 0.6759
+    },
+    {
+      "trial": 6,
+      "d": 0.6996,
+      "pruned": false,
+      "best": 0.6996
+    },
+    {
+      "trial": 7,
+      "d": 0.5739,
+      "pruned": true,
+      "best": 0.6996
+    },
+    {
+      "trial": 8,
+      "d": 0.6517,
+      "pruned": true,
+      "best": 0.6996
+    },
+    {
+      "trial": 9,
+      "d": 0.6332,
+      "pruned": true,
+      "best": 0.6996
+    },
+    {
+      "trial": 10,
+      "d": 0.5035,
+      "pruned": true,
+      "best": 0.6996
+    },
+    {
+      "trial": 11,
+      "d": 0.5639,
+      "pruned": true,
+      "best": 0.6996
+    },
+    {
+      "trial": 12,
+      "d": 0.7218,
+      "pruned": false,
+      "best": 0.7218
+    },
+    {
+      "trial": 13,
+      "d": 0.7032,
+      "pruned": false,
+      "best": 0.7218
+    },
+    {
+      "trial": 14,
+      "d": 0.7179,
+      "pruned": false,
+      "best": 0.7218
+    },
+    {
+      "trial": 15,
+      "d": 0.6051,
+      "pruned": true,
+      "best": 0.7218
+    },
+    {
+      "trial": 16,
+      "d": 0.5611,
+      "pruned": true,
+      "best": 0.7218
+    },
+    {
+      "trial": 17,
+      "d": 0.6605,
+      "pruned": true,
+      "best": 0.7218
+    },
+    {
+      "trial": 18,
+      "d": 0.7223,
+      "pruned": false,
+      "best": 0.7223
+    },
+    {
+      "trial": 19,
+      "d": 0.6951,
+      "pruned": true,
+      "best": 0.7223
+    },
+    {
+      "trial": 20,
+      "d": 0.7591,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 21,
+      "d": 0.6947,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 22,
+      "d": 0.7153,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 23,
+      "d": 0.7046,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 24,
+      "d": 0.6183,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 25,
+      "d": 0.4059,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 26,
+      "d": 0.6463,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 27,
+      "d": 0.5767,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 28,
+      "d": 0.6339,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 29,
+      "d": 0.6879,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 30,
+      "d": 0.5454,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 31,
+      "d": 0.5793,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 32,
+      "d": 0.6924,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 33,
+      "d": 0.6421,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 34,
+      "d": 0.6251,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 35,
+      "d": 0.4928,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 36,
+      "d": 0.6957,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 37,
+      "d": 0.7308,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 38,
+      "d": 0.6193,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 39,
+      "d": 0.7479,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 40,
+      "d": 0.7276,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 41,
+      "d": 0.7481,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 42,
+      "d": 0.7302,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 43,
+      "d": 0.7502,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 44,
+      "d": 0.7543,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 45,
+      "d": 0.7114,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 46,
+      "d": 0.7244,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 47,
+      "d": 0.7409,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 48,
+      "d": 0.7375,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 49,
+      "d": 0.7233,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 50,
+      "d": 0.6701,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 51,
+      "d": 0.6648,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 52,
+      "d": 0.7407,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 53,
+      "d": 0.5425,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 54,
+      "d": 0.7477,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 55,
+      "d": 0.7165,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 56,
+      "d": 0.7265,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 57,
+      "d": 0.7235,
+      "pruned": false,
+      "best": 0.7591
+    },
+    {
+      "trial": 58,
+      "d": 0.6567,
+      "pruned": true,
+      "best": 0.7591
+    },
+    {
+      "trial": 59,
+      "d": 0.6932,
+      "pruned": true,
+      "best": 0.7591
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "complete": 27,
+    "pruned": 33
+  }
+}
