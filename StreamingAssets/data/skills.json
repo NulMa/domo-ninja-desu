@@ -73,7 +73,8 @@
       "id": "C2-B", "character": "C2", "name": "파동", "role": "브루저",
       "icon": "Skill/Monk/Main/C2-B_파동",
       "effects": [
-        { "template": "aoe", "scope": "all_enemies", "damageSource": "maxHp", "value": 0.12 },
+        { "_fix": "D-73 (2026-08-03) — aoe 가 최상위에 있어 평타마다(0.9초) 전체 광역이 나가고 있었다. 텍스트는 '3초마다' 다. 이득은 3.3배 자주 나오는데 대가(자해)만 every_n_tick 안에 있어 둘이 분리돼 있었고, M3a 에서 C2 출전률 91.6%(목표 20~80%)로 실측됐다. 최적화기는 12% 를 깎을 수는 있어도 이 구조를 못 바꾼다.",
+          "template": "conditional", "trigger": { "type": "every_n_tick", "value": 60 }, "effect": { "template": "aoe", "scope": "all_enemies", "damageSource": "maxHp", "value": 0.12 } },
         { "template": "conditional", "trigger": { "type": "every_n_tick", "value": 60 }, "effect": { "template": "self_damage", "value": 0.08 } }
       ],
       "text": { "gain": "3초마다 최대 체력 12%의 전체 광역 공격", "cost": "발동마다 자신의 체력 8% 소모" },
