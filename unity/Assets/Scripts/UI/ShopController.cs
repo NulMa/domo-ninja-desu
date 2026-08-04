@@ -4,6 +4,7 @@ using DomoNinja.Core.Economy;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
+using DomoNinja.Unity.View;
 
 namespace DomoNinja.Unity
 {
@@ -38,6 +39,25 @@ namespace DomoNinja.Unity
             }
         }
 
+        private readonly struct TargetSlot
+        {
+            public readonly Button Button;
+            public readonly UImage Face;
+            public readonly Text NameLabel;
+            public readonly Text StatusLabel;
+
+            public TargetSlot(Button button, UImage face, Text nameLabel, Text statusLabel)
+            {
+                Button = button;
+                Face = face;
+                NameLabel = nameLabel;
+                StatusLabel = statusLabel;
+            }
+        }
+
+        private static readonly Color AliveSlotColor = new Color(0.180f, 0.190f, 0.210f, 1f);
+        private static readonly Color DeadSlotColor = new Color(0.120f, 0.100f, 0.100f, 1f);
+
         private Transform _board;
         private Text _currencyLabel;
         private Button[] _slotButtons;
@@ -49,6 +69,12 @@ namespace DomoNinja.Unity
 
         private bool _sellMode;
         private readonly List<SellEntry> _sellableItems = new List<SellEntry>();
+
+        private Transform _targetPicker;
+        private TargetSlot[] _targetSlots;
+        private Button _targetCancelButton;
+        private SpriteCatalog _catalog;
+        private int _pendingOfferIndex = -1;
 
         private void Awake()
         {
@@ -70,6 +96,35 @@ namespace DomoNinja.Unity
             _sellTab.onClick.AddListener(() => SetSellMode(true));
             _rerollButton.onClick.AddListener(OnReroll);
             _nextRoundButton.onClick.AddListener(OnNextRound);
+
+            _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
+            BindTargetPicker();
+        }
+
+        private void BindTargetPicker()
+        {
+            _targetPicker = transform.Find("TargetPicker");
+            if (_targetPicker == null) return; // 아직 씬에 없으면 자동 지정으로 조용히 폴백한다.
+
+            var panel = _targetPicker.Find("Panel");
+            _targetSlots = new TargetSlot[3];
+            for (int i = 0; i < 3; i++)
+            {
+                var slot = panel.Find("Slot" + i);
+                var button = EnsureButton(slot.gameObject);
+                var face = slot.Find("Face").GetComponent<UImage>();
+                var nameLabel = slot.Find("NameLabel").GetComponent<Text>();
+                var statusLabel = slot.Find("StatusLabel").GetComponent<Text>();
+                _targetSlots[i] = new TargetSlot(button, face, nameLabel, statusLabel);
+
+                int captured = i;
+                button.onClick.AddListener(() => OnTargetSlotClicked(captured));
+            }
+
+            _targetCancelButton = EnsureButton(panel.Find("CancelButton").gameObject);
+            _targetCancelButton.onClick.AddListener(CloseTargetPicker);
+
+            _targetPicker.gameObject.SetActive(false);
         }
 
         private void BindSlot(int index, string childName)
@@ -85,6 +140,7 @@ namespace DomoNinja.Unity
         {
             RunManager.Instance?.EnsureShopRestocked();
             _sellMode = false;
+            CloseTargetPicker();
             RefreshUI();
         }
 
@@ -169,21 +225,79 @@ namespace DomoNinja.Unity
             if (offers == null || offerIndex >= offers.Count) return;
 
             var offer = offers[offerIndex];
-            mgr.TryBuy(offerIndex, TargetForOffer(mgr, offer));
+            if (!NeedsTarget(offer))
+            {
+                mgr.TryBuy(offerIndex, null);
+                return;
+            }
+
+            // 대상 선택 UI가 씬에 없으면(구버전 씬 등) 생존한 첫 캐릭터로 자동 지정해 폴백한다.
+            if (_targetPicker == null)
+            {
+                mgr.TryBuy(offerIndex, FirstAliveCharacterId(mgr));
+                return;
+            }
+
+            OpenTargetPicker(mgr, offerIndex);
         }
 
-        /// <summary>
-        /// 대상 지정이 필요한 품목(`statBoost`·`conditionalBoost`·`healItem`)은
-        /// 아직 대상 선택 UI가 없어 <b>생존한 첫 번째 출전 캐릭터로 자동 지정한다.</b>
-        /// </summary>
-        private static string TargetForOffer(RunManager mgr, ShopOffer offer)
-        {
-            if (offer.Kind != OfferKind.Item || offer.Id == "teamBoost") return null;
+        /// <summary>대상 지정이 필요한 품목(`statBoost`·`conditionalBoost`·`healItem`). `teamBoost`는 전체 대상이라 제외.</summary>
+        private static bool NeedsTarget(ShopOffer offer) => offer.Kind == OfferKind.Item && offer.Id != "teamBoost";
 
+        private static string FirstAliveCharacterId(RunManager mgr)
+        {
             foreach (var entry in mgr.CurrentRun.Deployed)
                 if (entry.IsAlive) return entry.CharacterId;
 
             return null;
+        }
+
+        private void OpenTargetPicker(RunManager mgr, int offerIndex)
+        {
+            _pendingOfferIndex = offerIndex;
+
+            var deployed = mgr.CurrentRun.Deployed;
+            for (int i = 0; i < _targetSlots.Length; i++)
+            {
+                if (i >= deployed.Count)
+                {
+                    _targetSlots[i].Button.gameObject.SetActive(false);
+                    continue;
+                }
+
+                var entry = deployed[i];
+                var def = mgr.Data.FindCharacter(entry.CharacterId);
+
+                _targetSlots[i].Button.gameObject.SetActive(true);
+                _targetSlots[i].Button.interactable = entry.IsAlive;
+                _targetSlots[i].Face.color = entry.IsAlive ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+                var slotImg = _targetSlots[i].Button.GetComponent<UImage>();
+                if (slotImg != null) slotImg.color = entry.IsAlive ? AliveSlotColor : DeadSlotColor;
+                _targetSlots[i].Face.sprite = def != null ? _catalog?.Find(def.Sprite) : null;
+                _targetSlots[i].NameLabel.text = def != null ? def.Name : entry.CharacterId;
+                _targetSlots[i].StatusLabel.text = entry.IsAlive ? $"HP {entry.Hp}/{entry.MaxHp}" : "사망";
+            }
+
+            _targetPicker.gameObject.SetActive(true);
+        }
+
+        private void OnTargetSlotClicked(int slotIndex)
+        {
+            var mgr = RunManager.Instance;
+            if (mgr == null || _pendingOfferIndex < 0) return;
+
+            var deployed = mgr.CurrentRun.Deployed;
+            if (slotIndex >= deployed.Count || !deployed[slotIndex].IsAlive) return;
+
+            mgr.TryBuy(_pendingOfferIndex, deployed[slotIndex].CharacterId);
+            CloseTargetPicker();
+            RefreshUI();
+        }
+
+        private void CloseTargetPicker()
+        {
+            _pendingOfferIndex = -1;
+            if (_targetPicker != null) _targetPicker.gameObject.SetActive(false);
         }
 
         private void OnSellClicked(RunManager mgr, int slotIndex)
