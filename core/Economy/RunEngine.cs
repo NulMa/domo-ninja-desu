@@ -168,16 +168,69 @@ namespace DomoNinja.Core.Economy
         }
 
         /// <summary>라운드 하나를 치른다. 결과는 <paramref name="run"/> 에 반영된다.</summary>
+        /// <summary>
+        /// 이번 라운드 적 구성을 <b>전투를 실행하지 않고</b> 뽑는다 (`D-75`).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// `D-53` 이 *"매 라운드 재배치 + 적 배치 공개"* 로 정해뒀는데,
+        /// <see cref="PlayRound(RunState, MetaProgress, DeterministicRandom, IEventSink, bool)"/> 은
+        /// 추첨과 전투가 한 덩어리라 <b>물어보는 순간 전투가 같이 끝나버린다.</b>
+        /// 플레이어에게 적을 보여주려면 그 둘을 갈라야 한다.
+        /// </para>
+        /// <para>
+        /// ⚠️ <b>RNG 를 소비한다.</b> 라운드당 정확히 한 번만 불러야 하고,
+        /// 그 결과를 <see cref="PlayRound(RunState, MetaProgress, VariantDef, IEventSink, IReadOnlyDictionary{string, Coord}, bool)"/>
+        /// 에 그대로 넘겨야 한다. <b>두 번 부르면 관문 스트림이 한 칸 더 밀려
+        /// 이후 라운드 구성이 통째로 달라진다</b> — 그리고 그건 결과 숫자로는 안 보인다.
+        /// </para>
+        /// </remarks>
+        public VariantDef PeekVariant(RunState run, DeterministicRandom rng)
+        {
+            var round = FindRound(run.StageId, run.Round);
+            return PickVariant(round, rng);
+        }
+
+        /// <summary>
+        /// 미리 뽑은 변형과 <b>플레이어 배치</b>로 한 라운드를 치른다 (`D-75`).
+        /// </summary>
+        /// <param name="variant"><see cref="PeekVariant"/> 가 돌려준 것을 그대로 넘긴다.</param>
+        /// <param name="allyPlacement">
+        /// 캐릭터 id → 좌표. <b>살아 있는 아군 전원</b>이 있어야 한다. <c>null</c> 이면 표준 배치.
+        /// </param>
+        /// <remarks>
+        /// ★ <b>기존 오버로드를 고치지 않고 새로 추가했다.</b>
+        /// <see cref="PlayRun"/>(봇 경로)과 <c>sim</c> 이 지금 그대로 쓰고 있고,
+        /// 그쪽 시그니처가 바뀌면 <b>4,320 빌드 전수 탐색과 밸런스 수치 전체가 같이 흔들린다.</b>
+        /// </remarks>
+        public RoundOutcome PlayRound(RunState run, MetaProgress meta, VariantDef variant,
+                                      IEventSink sink,
+                                      IReadOnlyDictionary<string, Coord>? allyPlacement = null,
+                                      bool collectLog = false) =>
+            RunRound(run, meta, FindRound(run.StageId, run.Round), variant, sink, allyPlacement, collectLog);
+
         public RoundOutcome PlayRound(RunState run, MetaProgress meta, DeterministicRandom rng,
                                       IEventSink sink, bool collectLog = false)
         {
             var round = FindRound(run.StageId, run.Round);
             var variant = PickVariant(round, rng);
 
+            return RunRound(run, meta, round, variant, sink, null, collectLog);
+        }
+
+        /// <summary>두 진입점이 공유하는 본체. <b>여기가 유일한 라운드 처리 경로다.</b></summary>
+        /// <remarks>
+        /// 갈라두면 봇 경로와 플레이어 경로가 <b>다른 게임을 돌게 되고</b>,
+        /// `sim` 이 낸 밸런스 수치가 실제 플레이와 어긋나도 아무 데서도 안 드러난다.
+        /// </remarks>
+        private RoundOutcome RunRound(RunState run, MetaProgress meta, RoundDef round, VariantDef variant,
+                                      IEventSink sink,
+                                      IReadOnlyDictionary<string, Coord>? allyPlacement, bool collectLog)
+        {
             // 진입 시점에 재둔다. 전투가 끝난 뒤에는 이 값을 복원할 수 없다.
             int entryHp = EntryHpPermille(run);
 
-            var units = BattleSetup.Build(_data, run, variant, meta);
+            var units = BattleSetup.Build(_data, run, variant, meta, allyPlacement);
             var result = new BattleSimulator(_config).Run(
                 units, sink, StageNumber(run.StageId), run.Round, 0, collectLog);
 

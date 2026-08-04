@@ -1,6 +1,7 @@
 // Unity 는 Directory.Build.props 를 읽지 않는다 — 파일마다 nullable 문맥을 명시한다.
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using DomoNinja.Core.Combat;
 using DomoNinja.Core.Data;
@@ -51,7 +52,16 @@ namespace DomoNinja.Core.Economy
         private static readonly int[] RowOrder = { 2, 3, 1, 4, 0, 5 };
 
         /// <summary>한 라운드에 올릴 유닛 전부. <b>슬롯 인덱스 오름차순으로 돌려준다.</b></summary>
-        public static List<Unit> Build(GameData data, RunState run, VariantDef variant, MetaProgress meta)
+        /// <param name="allyPlacement">
+        /// 플레이어가 고른 아군 좌표 (캐릭터 id → 좌표). <c>null</c> 이면 <b>표준 배치</b>로 떨어진다.
+        /// </param>
+        /// <remarks>
+        /// ★ <b>표준 배치를 지우지 않고 폴백으로 남긴다.</b> <c>sim</c> 은 4,320 빌드를
+        /// 사람 없이 돌려야 하고, `M4` 를 *"표준 배치 하의 정확값"* 이라고 말하려면
+        /// <b>그 표준이 계속 존재해야 한다</b> (`08` §6.1).
+        /// </remarks>
+        public static List<Unit> Build(GameData data, RunState run, VariantDef variant, MetaProgress meta,
+                                       IReadOnlyDictionary<string, Coord>? allyPlacement = null)
         {
             var units = new List<Unit>();
 
@@ -70,7 +80,8 @@ namespace DomoNinja.Core.Economy
             // ★ 자리는 유닛을 다 만든 뒤에 정한다 — 사거리를 알아야 앞뒤가 갈리는데,
             //   사거리는 스킬·보조를 다 반영한 뒤에야 확정된다(C4-A 저격은 5 → 7).
             //   슬롯 인덱스는 건드리지 않는다. 위치만 바뀌지 순회 순서는 로스터 순서 그대로다.
-            PlaceAllies(units);
+            if (allyPlacement != null) ApplyPlayerPlacement(units, allyPlacement);
+            else PlaceAllies(units);
 
             foreach (var placement in variant.Units)
             {
@@ -79,6 +90,56 @@ namespace DomoNinja.Core.Economy
             }
 
             return units;
+        }
+
+        /// <summary>
+        /// 플레이어가 고른 좌표를 그대로 놓는다 (`D-53` 매 라운드 재배치 · `D-75`).
+        /// </summary>
+        /// <exception cref="ArgumentException">
+        /// 빠진 유닛 · 진영 밖 · 겹침 중 하나라도 있으면.
+        /// </exception>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>View 를 신뢰하지 않고 여기서 검증한다.</b> 이 프로젝트가 데이터 로더(`R01`~`R24`)와
+        /// 최적화기 덮어쓰기에서 지켜온 것과 같은 규칙이다 — <b>조용히 보정하면 잘못된 배치가
+        /// 정상값처럼 전투에 실리고, 그건 결과 숫자로는 구분되지 않는다.</b>
+        /// UI 버그를 UI 가 아니라 밸런스 리포트에서 발견하게 되는 게 최악이다.
+        /// </para>
+        /// <para>
+        /// ★ <b>전원을 요구한다. 일부만 받지 않는다.</b>
+        /// <see cref="PlaceAllies"/> 는 <b>전체를 사거리순으로 정렬해</b> 열을 배정하므로,
+        /// 빈 자리만 표준배치로 메우면 <b>표준도 플레이어 의도도 아닌 제3의 배치</b>가 되고
+        /// 열이 겹칠 수도 있다. *"일부만 놓았다"* 는 상태는 정의할 수 없다 —
+        /// 플레이어가 손을 안 댔어도 유닛은 어딘가에 서 있으므로 <b>UI 가 전원 좌표를 안다.</b>
+        /// </para>
+        /// </remarks>
+        private static void ApplyPlayerPlacement(List<Unit> units,
+                                                 IReadOnlyDictionary<string, Coord> placement)
+        {
+            var taken = new Dictionary<int, string>();
+
+            foreach (var u in units)
+            {
+                if (u.Team != Team.Ally) continue;
+
+                if (!placement.TryGetValue(u.TypeId, out var at))
+                    throw new ArgumentException(
+                        $"배치 좌표가 없는 아군이 있다: {u.TypeId}. " +
+                        "전원 좌표를 넘겨야 한다 — 일부만 놓은 상태는 정의되지 않는다 (`D-75`).");
+
+                if (!at.IsAllyZone)
+                    throw new ArgumentException(
+                        $"{u.TypeId} 의 좌표 {at} 가 아군 진영 밖이다 " +
+                        $"(x 는 0~{Coord.AllyMaxX}, y 는 0~{Coord.BoardHeight - 1}).");
+
+                if (taken.TryGetValue(at.OrderKey, out string? other))
+                    throw new ArgumentException(
+                        $"{u.TypeId} 와 {other} 가 같은 칸 {at} 에 배치됐다. " +
+                        "겹치면 나중 유닛이 보드에 안 올라가고 전투가 조용히 한 명 적은 채로 돈다.");
+
+                taken[at.OrderKey] = u.TypeId;
+                u.At = at;
+            }
         }
 
         /// <summary>
