@@ -90,8 +90,46 @@ ECONOMY = [
 ]
 
 
+# ─────────────────────────────────────────────────────────────
+# 2회차 확장 — 흐름 파라미터 (2026-08-03)
+#
+# 1회차는 캐릭터 스탯 + 가격만 열었고, 그걸로 `M2`(난이도 곡선)와 `M5`(런 시간)가
+# 안 움직였다. 둘 다 **라운드와 라운드 사이**에서 정해지는 값인데 그 축이 하나도 없었다.
+#
+# ★ 구조 상수는 열지 않는다 — `run.totalRounds`(8) · `run.lives`(3) ·
+#   `roster.*` · `board.*` 는 게임의 형태 자체이고 `05` §1.8 이 영상 제약에서 역산한 값이다.
+#   **최적화기가 8라운드를 12라운드로 바꾸면 그건 튜닝이 아니라 다른 게임이다.**
+#
+# ★ `encounters.json`(관문 구성)도 열지 않는다. 저작 영역이고 `D-74` 에서 같은 판단을 했다.
+# ─────────────────────────────────────────────────────────────
+FLOW = [
+    # 회복률 — 이긴 라운드 뒤 얼마나 돌려주나. `M2`(진입 HP 구간별 패배율)에 직접 닿는다.
+    Param("heal.onWin", "economy.json", "$.healing.roundEnd.healOnWinPermille", 0.5, lo_abs=50),
+
+    # 재화 — 빌드가 언제 서는가. `M3c`(보조 채택률)와 `M2` 둘 다에 걸린다.
+    Param("currency.onWin", "economy.json", "$.currency.onWin", 0.5, lo_abs=1),
+    Param("currency.onLose", "economy.json", "$.currency.onLose", 0.6, lo_abs=1),
+    Param("currency.start", "economy.json", "$.currency.startingAmount", 1.0, lo_abs=0),
+
+    # 서든데스 — 전투 길이의 상한을 정한다. `M5`·`M7` 축이다.
+    Param("sd.timeout", "economy.json", "$.combat.timeoutTicks", 0.5, lo_abs=200),
+    Param("sd.ramp", "economy.json", "$.combat.suddenDeath.rampTicks", 0.5, lo_abs=100),
+    Param("sd.dmgStart", "economy.json",
+          "$.combat.suddenDeath.fixedDamagePermille.start", 0.7, lo_abs=1),
+    Param("sd.dmgMax", "economy.json",
+          "$.combat.suddenDeath.fixedDamagePermille.max", 0.5, lo_abs=50),
+
+    # 상점 리롤 비용 — 저축 압력. 봇은 리롤을 안 하므로 μ*=0 이 나올 것이고,
+    # 그게 나오면 "봇 정책의 그림자" 목록에 한 줄 더 붙는다 (M6·아이템 가격과 같은 계열).
+    Param("shop.rerollCost", "economy.json", "$.shop.rerollCost", 0.6, lo_abs=1),
+
+    # 회복 아이템 효과 — 봇이 아이템을 안 사서 역시 0 이 예상된다. 대조군으로 둔다.
+    Param("item.heal", "economy.json", "$.items.healItem.healPermille", 0.5, lo_abs=50),
+]
+
+
 def all_params() -> list[Param]:
-    return _character_params() + ECONOMY
+    return _character_params() + ECONOMY + FLOW
 
 
 # ─────────────────────────────────────────────────────────────
