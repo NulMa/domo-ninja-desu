@@ -58,6 +58,10 @@ namespace DomoNinja.Unity
         private bool _shopRestockedThisRound;
         private int _roundsWon;
 
+        /// <summary><see cref="PeekVariant"/> 가 뽑아둔 이번 라운드 변형. 라운드당 정확히 한 번만 뽑아야 한다(`D-75`).</summary>
+        private VariantDef? _peekedVariant;
+        private int _peekedForRound = -1;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -106,6 +110,8 @@ namespace DomoNinja.Unity
             CurrentShop = new Shop(Data);
             _shopRestockedThisRound = false;
             _roundsWon = 0;
+            _peekedVariant = null;
+            _peekedForRound = -1;
         }
 
         /// <summary>이번 라운드 상점 재고를 채운다 — 라운드당 정확히 한 번만.</summary>
@@ -134,15 +140,44 @@ namespace DomoNinja.Unity
             CurrentRun != null && CurrentShop != null &&
             CurrentShop.TrySellTeamItem(CurrentRun, itemKey, optionIndex);
 
-        /// <summary>라운드 하나를 치른다. 상점은 이 호출 전에 이미 끝나 있어야 한다(A-8).</summary>
-        public RoundOutcome? PlayRound(IEventSink sink, bool collectLog = true)
+        /// <summary>
+        /// 이번 라운드 적 구성을 전투 없이 미리 본다(`D-75`) — 배치 화면이 적을 공개하는 데 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// 같은 라운드에서 다시 부르면 캐시를 그대로 돌려준다. 두 번 뽑으면 관문 스트림이 한 칸
+        /// 더 밀려 이후 라운드 구성이 통째로 달라지고, 그건 결과 숫자로는 드러나지 않는다.
+        /// </remarks>
+        public VariantDef? PeekVariant()
         {
-            if (_engine == null || CurrentRun == null || Meta == null || _encounterRng == null) return null;
+            if (_engine == null || CurrentRun == null || _encounterRng == null) return null;
 
-            var outcome = _engine.PlayRound(CurrentRun, Meta, _encounterRng, sink, collectLog);
+            if (_peekedForRound != CurrentRun.Round)
+            {
+                _peekedVariant = _engine.PeekVariant(CurrentRun, _encounterRng);
+                _peekedForRound = CurrentRun.Round;
+            }
+
+            return _peekedVariant;
+        }
+
+        /// <summary>
+        /// 플레이어가 고른 배치로 라운드를 치른다(`D-53`·`D-75`). 상점은 이 호출 전에 이미 끝나 있어야 한다(A-8).
+        /// </summary>
+        /// <param name="allyPlacement">캐릭터 id → 좌표. 살아 있는 아군 전원이 있어야 한다.</param>
+        public RoundOutcome? PlayRoundWithPlacement(IReadOnlyDictionary<string, Coord> allyPlacement,
+                                                    IEventSink sink, bool collectLog = true)
+        {
+            if (_engine == null || CurrentRun == null || Meta == null) return null;
+
+            var variant = PeekVariant();
+            if (variant == null) return null;
+
+            var outcome = _engine.PlayRound(CurrentRun, Meta, variant, sink, allyPlacement, collectLog);
             if (outcome.Won) _roundsWon++;
 
             _shopRestockedThisRound = false;
+            _peekedVariant = null;
+            _peekedForRound = -1;
             return outcome;
         }
 
