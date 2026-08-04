@@ -33,6 +33,13 @@ namespace DomoNinja.Unity.View
 
         public bool IsPlaying => _playing;
 
+        /// <summary>재생 배속. UI 의 배속 버튼이 이걸 바꾼다.</summary>
+        public float Speed
+        {
+            get => _speed;
+            set => _speed = value;
+        }
+
         /// <summary>재생이 끝난 뒤에도 마지막 상태는 화면에 남는다.</summary>
         public bool IsFinished => _log != null && _cursor >= _log.Events.Count;
 

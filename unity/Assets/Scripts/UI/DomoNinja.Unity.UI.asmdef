@@ -3,7 +3,8 @@
   "rootNamespace": "DomoNinja.Unity.UI",
   "references": [
     "DomoNinja.Core",
-    "DomoNinja.Unity"
+    "DomoNinja.Unity",
+    "DomoNinja.Unity.View"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
