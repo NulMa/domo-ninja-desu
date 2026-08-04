@@ -1,0 +1,688 @@
+{
+  "provenance": {
+    "generatedAt": "2026-08-04T02:23:23.221548+00:00",
+    "simCommit": "839cae1",
+    "workingTreeDirty": true,
+    "sampler": "cmaes",
+    "samplerSeed": 2,
+    "trials": 80,
+    "seedLadder": [
+      1,
+      2,
+      4
+    ],
+    "simCalls": 208,
+    "searchAxes": [
+      "C1.hp",
+      "C1.attack",
+      "C1.attackInterval",
+      "C2.hp",
+      "C2.attack",
+      "C3.hp",
+      "C3.attack",
+      "C3.attackInterval",
+      "C4.attack",
+      "C4.attackInterval",
+      "C5.attack",
+      "price.skillActivate",
+      "heal.onWin",
+      "currency.onWin"
+    ],
+    "searchAxisCount": 14,
+    "totalAxisCount": 41,
+    "_ladderNote": "예산 축은 시드다. 빌드 공간을 자르면 M3a·M3b·M3c 가 무너져 D 가 0 이 된다 — evaluate.Evaluator 주석의 실측 참조."
+  },
+  "baseline": {
+    "d": 0.9011,
+    "violations": [
+      "M2",
+      "M3a",
+      "M3c",
+      "M5"
+    ],
+    "values": {
+      "C1.hp": 138,
+      "C1.attack": 44,
+      "C1.attackInterval": 22,
+      "C2.hp": 171,
+      "C2.attack": 22,
+      "C3.hp": 78,
+      "C3.attack": 18,
+      "C3.attackInterval": 9,
+      "C4.attack": 33,
+      "C4.attackInterval": 20,
+      "C5.attack": 34,
+      "price.skillActivate": 6,
+      "heal.onWin": 400,
+      "currency.onWin": 6
+    }
+  },
+  "best": {
+    "d": 0.9448,
+    "dAtSearchBudget": 0.9506,
+    "violations": [
+      "M2",
+      "M5"
+    ],
+    "values": {
+      "C1.hp": 153,
+      "C1.attack": 48,
+      "C1.attackInterval": 22,
+      "C2.hp": 178,
+      "C2.attack": 22,
+      "C3.hp": 83,
+      "C3.attack": 15,
+      "C3.attackInterval": 8,
+      "C4.attack": 38,
+      "C4.attackInterval": 20,
+      "C5.attack": 32,
+      "price.skillActivate": 6,
+      "heal.onWin": 391,
+      "currency.onWin": 4
+    },
+    "overrides": {
+      "characters.json": {
+        "$.characters[?(@.id=='C1')].hp": 153,
+        "$.characters[?(@.id=='C1')].attack": 48,
+        "$.characters[?(@.id=='C1')].attackInterval": 22,
+        "$.characters[?(@.id=='C2')].hp": 178,
+        "$.characters[?(@.id=='C2')].attack": 22,
+        "$.characters[?(@.id=='C3')].hp": 83,
+        "$.characters[?(@.id=='C3')].attack": 15,
+        "$.characters[?(@.id=='C3')].attackInterval": 8,
+        "$.characters[?(@.id=='C4')].attack": 38,
+        "$.characters[?(@.id=='C4')].attackInterval": 20,
+        "$.characters[?(@.id=='C5')].attack": 32
+      },
+      "economy.json": {
+        "$.prices.skillActivate": 6,
+        "$.healing.roundEnd.healOnWinPermille": 391,
+        "$.currency.onWin": 4
+      }
+    }
+  },
+  "top5": [
+    {
+      "d": 0.9506,
+      "values": {
+        "C1.hp": 153.3552,
+        "C1.attack": 47.6365,
+        "C1.attackInterval": 21.8836,
+        "C2.hp": 177.9955,
+        "C2.attack": 21.9239,
+        "C3.hp": 83.4963,
+        "C3.attack": 14.8852,
+        "C3.attackInterval": 7.864,
+        "C4.attack": 38.0276,
+        "C4.attackInterval": 20.2531,
+        "C5.attack": 32.1541,
+        "price.skillActivate": 5.8025,
+        "heal.onWin": 390.6708,
+        "currency.onWin": 3.6706
+      }
+    },
+    {
+      "d": 0.9503,
+      "values": {
+        "C1.hp": 137.9511,
+        "C1.attack": 50.5026,
+        "C1.attackInterval": 23.3078,
+        "C2.hp": 194.0407,
+        "C2.attack": 18.845,
+        "C3.hp": 87.3724,
+        "C3.attack": 16.9631,
+        "C3.attackInterval": 8.277,
+        "C4.attack": 37.3166,
+        "C4.attackInterval": 18.962,
+        "C5.attack": 33.7442,
+        "price.skillActivate": 5.5935,
+        "heal.onWin": 342.7972,
+        "currency.onWin": 4.9482
+      }
+    },
+    {
+      "d": 0.9406,
+      "values": {
+        "C1.hp": 168.7375,
+        "C1.attack": 48.3449,
+        "C1.attackInterval": 23.7951,
+        "C2.hp": 143.8408,
+        "C2.attack": 22.6295,
+        "C3.hp": 85.6018,
+        "C3.attack": 13.7889,
+        "C3.attackInterval": 8.5912,
+        "C4.attack": 33.5837,
+        "C4.attackInterval": 20.3868,
+        "C5.attack": 32.4017,
+        "price.skillActivate": 6.8366,
+        "heal.onWin": 381.3268,
+        "currency.onWin": 6.0333
+      }
+    },
+    {
+      "d": 0.936,
+      "values": {
+        "C1.hp": 157.8004,
+        "C1.attack": 51.7059,
+        "C1.attackInterval": 22.5801,
+        "C2.hp": 167.4812,
+        "C2.attack": 16.8762,
+        "C3.hp": 86.2236,
+        "C3.attack": 14.9861,
+        "C3.attackInterval": 9.0504,
+        "C4.attack": 35.3258,
+        "C4.attackInterval": 20.0758,
+        "C5.attack": 27.0311,
+        "price.skillActivate": 5.3771,
+        "heal.onWin": 429.606,
+        "currency.onWin": 4.1715
+      }
+    },
+    {
+      "d": 0.933,
+      "values": {
+        "C1.hp": 152.3501,
+        "C1.attack": 49.725,
+        "C1.attackInterval": 20.6445,
+        "C2.hp": 164.5837,
+        "C2.attack": 18.384,
+        "C3.hp": 81.8886,
+        "C3.attack": 17.1217,
+        "C3.attackInterval": 9.9392,
+        "C4.attack": 36.7133,
+        "C4.attackInterval": 18.9068,
+        "C5.attack": 33.6126,
+        "price.skillActivate": 5.5173,
+        "heal.onWin": 333.6167,
+        "currency.onWin": 4.1789
+      }
+    }
+  ],
+  "trajectory": [
+    {
+      "trial": 0,
+      "d": 0.5579,
+      "pruned": false,
+      "best": 0.5579
+    },
+    {
+      "trial": 1,
+      "d": 0.933,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 2,
+      "d": 0.7302,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 3,
+      "d": 0.8703,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 4,
+      "d": 0.9107,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 5,
+      "d": 0.446,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 6,
+      "d": 0.0,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 7,
+      "d": 0.8021,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 8,
+      "d": 0.873,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 9,
+      "d": 0.8595,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 10,
+      "d": 0.8055,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 11,
+      "d": 0.528,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 12,
+      "d": 0.9044,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 13,
+      "d": 0.8843,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 14,
+      "d": 0.8174,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 15,
+      "d": 0.8864,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 16,
+      "d": 0.8544,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 17,
+      "d": 0.7747,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 18,
+      "d": 0.6581,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 19,
+      "d": 0.0,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 20,
+      "d": 0.0,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 21,
+      "d": 0.7646,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 22,
+      "d": 0.8771,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 23,
+      "d": 0.7729,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 24,
+      "d": 0.8985,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 25,
+      "d": 0.8971,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 26,
+      "d": 0.677,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 27,
+      "d": 0.8152,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 28,
+      "d": 0.8297,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 29,
+      "d": 0.4388,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 30,
+      "d": 0.847,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 31,
+      "d": 0.7665,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 32,
+      "d": 0.8605,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 33,
+      "d": 0.857,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 34,
+      "d": 0.8855,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 35,
+      "d": 0.8691,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 36,
+      "d": 0.7525,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 37,
+      "d": 0.8128,
+      "pruned": true,
+      "best": 0.933
+    },
+    {
+      "trial": 38,
+      "d": 0.8713,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 39,
+      "d": 0.8776,
+      "pruned": false,
+      "best": 0.933
+    },
+    {
+      "trial": 40,
+      "d": 0.9406,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 41,
+      "d": 0.8869,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 42,
+      "d": 0.643,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 43,
+      "d": 0.7279,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 44,
+      "d": 0.0,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 45,
+      "d": 0.8564,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 46,
+      "d": 0.9119,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 47,
+      "d": 0.7715,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 48,
+      "d": 0.6126,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 49,
+      "d": 0.936,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 50,
+      "d": 0.8158,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 51,
+      "d": 0.8682,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 52,
+      "d": 0.9239,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 53,
+      "d": 0.9063,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 54,
+      "d": 0.8855,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 55,
+      "d": 0.8245,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 56,
+      "d": 0.7955,
+      "pruned": true,
+      "best": 0.9406
+    },
+    {
+      "trial": 57,
+      "d": 0.9136,
+      "pruned": false,
+      "best": 0.9406
+    },
+    {
+      "trial": 58,
+      "d": 0.9503,
+      "pruned": false,
+      "best": 0.9503
+    },
+    {
+      "trial": 59,
+      "d": 0.8828,
+      "pruned": false,
+      "best": 0.9503
+    },
+    {
+      "trial": 60,
+      "d": 0.702,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 61,
+      "d": 0.8421,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 62,
+      "d": 0.7956,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 63,
+      "d": 0.8899,
+      "pruned": false,
+      "best": 0.9503
+    },
+    {
+      "trial": 64,
+      "d": 0.7393,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 65,
+      "d": 0.8238,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 66,
+      "d": 0.9018,
+      "pruned": false,
+      "best": 0.9503
+    },
+    {
+      "trial": 67,
+      "d": 0.8791,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 68,
+      "d": 0.8533,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 69,
+      "d": 0.6757,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 70,
+      "d": 0.8292,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 71,
+      "d": 0.7438,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 72,
+      "d": 0.8078,
+      "pruned": true,
+      "best": 0.9503
+    },
+    {
+      "trial": 73,
+      "d": 0.9191,
+      "pruned": false,
+      "best": 0.9503
+    },
+    {
+      "trial": 74,
+      "d": 0.9506,
+      "pruned": false,
+      "best": 0.9506
+    },
+    {
+      "trial": 75,
+      "d": 0.704,
+      "pruned": true,
+      "best": 0.9506
+    },
+    {
+      "trial": 76,
+      "d": 0.8121,
+      "pruned": true,
+      "best": 0.9506
+    },
+    {
+      "trial": 77,
+      "d": 0.809,
+      "pruned": true,
+      "best": 0.9506
+    },
+    {
+      "trial": 78,
+      "d": 0.7174,
+      "pruned": true,
+      "best": 0.9506
+    },
+    {
+      "trial": 79,
+      "d": 0.9136,
+      "pruned": false,
+      "best": 0.9506
+    }
+  ],
+  "errors": [],
+  "counts": {
+    "complete": 28,
+    "pruned": 52
+  }
+}

@@ -95,15 +95,17 @@ namespace DomoNinja.Core.Tests
         [Test]
         public void 이기면_재화를_더_받는다()
         {
-            // 승리 +6 / 패배 +3 (economy.currency).
-            Assert.That(_data.Economy.CurrencyOnWin, Is.EqualTo(6));
-            Assert.That(_data.Economy.CurrencyOnLose, Is.EqualTo(3));
+            // ★ 값을 박지 않고 데이터에서 읽는다 — [BAL] 커밋이 재화를 바꾸면
+            //   박아둔 숫자가 그때마다 깨진다. 재는 것은 "이기면 더 받는가" 다.
+            int win = _data.Economy.CurrencyOnWin;
+            int lose = _data.Economy.CurrencyOnLose;
+            Assert.That(win, Is.GreaterThan(lose), "이겼는데 덜 받으면 라운드를 이길 이유가 없다");
 
             var engine = Engine();
             var run = engine.StartRun("S1", Trio, Meta());
             var outcome = engine.PlayRound(run, Meta(), new DeterministicRandom(1), NullEventSink.Instance);
 
-            Assert.That(run.Currency, Is.EqualTo(outcome.Won ? 6 : 3));
+            Assert.That(run.Currency, Is.EqualTo(outcome.Won ? win : lose));
         }
 
         [Test]
@@ -116,7 +118,10 @@ namespace DomoNinja.Core.Tests
             var run = engine.StartRun("S1", Trio, meta);
             var outcome = engine.PlayRound(run, meta, new DeterministicRandom(1), NullEventSink.Instance);
 
-            if (outcome.Won) Assert.That(run.Currency, Is.EqualTo(9));
+            // 기대값을 데이터 + 메타 보너스에서 유도한다 ([BAL] 이 재화를 바꾼다).
+            if (outcome.Won)
+                Assert.That(run.Currency,
+                            Is.EqualTo(_data.Economy.CurrencyOnWin + meta.CurrencyOnWinBonus));
         }
 
         [Test]
