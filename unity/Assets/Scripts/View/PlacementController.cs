@@ -4,6 +4,7 @@ using DomoNinja.Core.Domain;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace DomoNinja.Unity.View
 {
@@ -24,6 +25,7 @@ namespace DomoNinja.Unity.View
     public sealed class PlacementController : MonoBehaviour
     {
         private static readonly int[] RowOrder = { 2, 3, 1, 4, 0, 5 };
+        private static readonly List<RaycastResult> RaycastBuffer = new List<RaycastResult>();
 
         private BoardView _board;
         private readonly Dictionary<string, Coord> _placement = new Dictionary<string, Coord>();
@@ -86,7 +88,7 @@ namespace DomoNinja.Unity.View
             if (_board == null || Mouse.current == null) return;
 
             // UI 버튼 위 클릭은 배치로 새지 않는다. 이미 드래그 중이면 버튼 위에서 놓쳐도 계속 따라간다.
-            bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            bool overUi = IsPointerOverInteractiveUi();
             if (overUi && _dragging == null) return;
 
             if (!overUi && Mouse.current.leftButton.wasPressedThisFrame) OnPress();
@@ -97,6 +99,31 @@ namespace DomoNinja.Unity.View
 
                 if (Mouse.current.leftButton.wasReleasedThisFrame) OnRelease();
             }
+        }
+
+        /// <summary>
+        /// "UI 위" 판정을 <see cref="EventSystem.IsPointerOverGameObject()"/> 대신 직접 한다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>실기 테스트에서 실제로 드러난 문제다.</b> <c>GamePlayScreen</c>/<c>Board</c> 배경 패널이
+        /// 화면 대부분을 덮은 <c>raycastTarget=true</c> Image 라, <c>IsPointerOverGameObject()</c> 를
+        /// 그대로 쓰면 보드 위 클릭까지 전부 "UI 위"로 잡혀 배치 입력이 하나도 안 들어온다 —
+        /// 캐릭터가 항상 처음 자리에 그대로 서 있는 것처럼 보이는 원인이 이거였다.
+        /// 진짜 막아야 하는 건 <see cref="Selectable"/>(버튼 등)이지 배경 패널이 아니다.
+        /// </remarks>
+        private static bool IsPointerOverInteractiveUi()
+        {
+            var es = EventSystem.current;
+            if (es == null) return false;
+
+            var pointerData = new PointerEventData(es) { position = Mouse.current.position.ReadValue() };
+            RaycastBuffer.Clear();
+            es.RaycastAll(pointerData, RaycastBuffer);
+
+            foreach (var r in RaycastBuffer)
+                if (r.gameObject.GetComponentInParent<Selectable>() != null) return true;
+
+            return false;
         }
 
         private void OnPress()
