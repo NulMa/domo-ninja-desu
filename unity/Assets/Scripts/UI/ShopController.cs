@@ -16,7 +16,8 @@ namespace DomoNinja.Unity
     /// </remarks>
     public sealed class ShopController : MonoBehaviour
     {
-        private static readonly Dictionary<string, string> ItemNames = new Dictionary<string, string>
+        /// <summary>아이템 표시명. 데이터에 플레이어용 이름 필드가 없어 여기 하나에 둔다 — InfoPopup 도 이걸 그대로 쓴다.</summary>
+        internal static readonly Dictionary<string, string> ItemNames = new Dictionary<string, string>
         {
             { "statBoost", "스탯 강화" },
             { "teamBoost", "팀 강화" },
