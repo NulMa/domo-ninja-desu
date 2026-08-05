@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using DomoNinja.Core.Combat;
 using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Rng;
@@ -136,7 +137,29 @@ namespace DomoNinja.Sim
             }
             Console.WriteLine($"빌드 {(p.BuildLimit > 0 ? p.BuildLimit.ToString() : "전부")} × 시드 {p.Seeds} · {p.Stage} · {p.Meta}");
 
-            var report = SimRunner.Run(data, p);
+            // ★ 불변식 검사. 켜면 매 틱 유닛·보드를 훑으므로 전수 탐색에는 안 켠다 —
+            //   대신 CI 가 축소 규모(빌드 50 × 시드 5)로 매 푸시마다 돌린다(`fast.yml`).
+            //   런 도중에는 바꾸지 않는다. Parallel.For 진입 전에 한 번만 세운다.
+            BattleInvariants.Enabled = args.Contains("--check");
+            if (BattleInvariants.Enabled) Console.WriteLine("불변식 검사: 켜짐");
+
+            SimRunner.Report report;
+            try
+            {
+                report = SimRunner.Run(data, p);
+            }
+            catch (AggregateException ex) when (ex.InnerException is BattleInvariantException inner)
+            {
+                // Parallel.For 가 감싸서 던진다. 원문만 보여준다 — 스택보다 위반 목록이 필요하다.
+                Console.Error.WriteLine(inner.Message);
+                return 5;
+            }
+            catch (BattleInvariantException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                return 5;
+            }
+
             var json = SimRunner.ToJson(report, p, data);
             File.WriteAllText(outPath, json.ToString());
 
@@ -245,6 +268,7 @@ namespace DomoNinja.Sim
             Console.WriteLine("DomoNinja.Sim — 헤드리스 시뮬레이터");
             Console.WriteLine();
             Console.WriteLine("  --run [params.json] [--out metrics.json] [--data DIR]   시뮬 실행");
+            Console.WriteLine("      --check   불변식 검사를 켠다. 위반 시 즉시 중단(exit 5)");
             Console.WriteLine("  --replay [--seed N] [--build N] [--round N] [--stage S1]   런 1회를 읽기 좋게 출력");
             Console.WriteLine("  --selftest    결정론 자체 점검 (게이트 2)");
             Console.WriteLine("  --version     버전 출력");

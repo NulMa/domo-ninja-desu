@@ -166,6 +166,11 @@ namespace DomoNinja.Core.Combat
         /// <summary>매 틱의 본체. <b>슬롯 인덱스 오름차순, 유닛별 이동 → 공격.</b></summary>
         private void StepUnits(IReadOnlyList<Unit> units, Board board, int tick, IEventSink sink)
         {
+            RemoveCorpses(units, board);
+
+            // 켜져 있을 때만. 부르는 자리가 규칙의 일부다 — 시체 정리 직후여야 한다.
+            if (BattleInvariants.Enabled) BattleInvariants.Verify(units, board, tick);
+
             for (int i = 0; i < units.Count; i++)
             {
                 var u = units[i];
@@ -196,6 +201,44 @@ namespace DomoNinja.Core.Combat
                 // 이동한 뒤 사거리에 들어왔을 수 있다. 같은 틱에 이동과 공격이 모두 일어난다.
                 if (u.InRangeOf(targetUnit)) TryAttack(u, targetUnit, tick, sink);
                 else if (u.AttackCooldown > 0) u.AttackCooldown--;
+            }
+        }
+
+        /// <summary>
+        /// 죽은 유닛이 점유하던 칸을 비운다. <b>규칙: 틱 시작 시점에 죽어 있으면 보드에 없다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>이게 없으면 시체가 벽이 된다.</b> <see cref="Board.StepToward"/> 는 경로 탐색이 아니라
+        /// 그리디 1스텝이고, 막히면 <see cref="TryStep"/> 이 쿨다운도 안 쓰고 그 틱을 포기한다.
+        /// 자기 상태가 하나도 안 바뀌므로 <b>다음 틱에 똑같이 실패한다</b> — 스스로는 못 빠져나온다.
+        /// 게다가 진영이 x축으로 갈려 있어(<see cref="Coord.AllyMaxX"/>) 초반엔 거의 항상
+        /// <c>|dx| ≥ |dy|</c> 다. 즉 <b>첫 사망자들의 시체가 접전선에 세로 벽으로 쌓이고</b>,
+        /// 벽 뒤 유닛은 비켜갈 조건(<c>|dy| &gt; |dx|</c>)을 만들려면 dx 를 줄여야 하는데
+        /// 그 dx 를 못 줄여서 막힌 상태다. 표적이 먼저 움직이지 않는 한 영구다.
+        /// </para>
+        /// <para>
+        /// ⚠️ <b>죽은 그 순간이 아니라 다음 틱 시작에 치워진다.</b> 슬롯 0 이 죽인 시체는
+        /// 그 틱 동안 슬롯 1~N 을 막는다. 즉시 치우려면 <see cref="DamageResolver"/> 가
+        /// 보드를 알아야 하는데, 그러면 피해 계산이 배치를 참조하게 된다 — 경계를 그쪽으로 넘기지 않는다.
+        /// <b>1틱(0.05초) 지연은 결정론적이므로 규칙으로 못박는다.</b>
+        /// </para>
+        /// <para>
+        /// 여기 한 곳에 모아둔 이유는 사망 경로가 넷이기 때문이다 — 피격·주기 효과 자멸(C2-B)·
+        /// 지속 피해·서든데스. <c>continue</c> 자리마다 흩어놓으면 새 경로가 생겼을 때 빠진다.
+        /// <see cref="ApplySuddenDeath"/> 가 이 함수보다 먼저 도는 것도 그래서 괜찮다.
+        /// </para>
+        /// </remarks>
+        private static void RemoveCorpses(IReadOnlyList<Unit> units, Board board)
+        {
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                if (u.IsAlive) continue;
+
+                // 소유 확인은 Board.Remove 안에 있다 — 죽은 유닛의 At 는 죽은 자리를 계속
+                // 가리키고, 그 칸엔 이미 산 유닛이 들어와 있을 수 있다.
+                board.Remove(u.Id, u.At);
             }
         }
 

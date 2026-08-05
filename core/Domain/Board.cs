@@ -76,9 +76,45 @@ namespace DomoNinja.Core.Domain
             return true;
         }
 
-        public void Remove(Coord c)
+        /// <summary>
+        /// 그 칸을 비운다 — <b><paramref name="unitId"/> 가 실제로 거기 있을 때만.</b>
+        /// 비웠으면 true.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>좌표만 받는 버전을 두지 않는다.</b> 시체 치우기는 죽은 유닛에 대해 매 틱 다시 도는데,
+        /// 그 유닛의 <see cref="Unit.At"/> 는 죽은 자리를 계속 가리킨다. 이미 비워진 그 칸에
+        /// 산 유닛이 걸어 들어온 뒤 좌표만으로 다시 지우면 <b>산 유닛이 보드에서 사라진다</b> —
+        /// 유닛은 살아 있는데 칸은 비어 있으니 다른 유닛이 같은 칸에 겹쳐 선다.
+        /// </para>
+        /// <para>
+        /// 호출부가 <c>if (OccupantAt(c) == id)</c> 를 앞에 붙이면 되는 일이지만,
+        /// <b>붙이는 걸 잊을 수 있는 형태로 두지 않는다.</b> 이 파일이 겪은 버그가 정확히
+        /// "있는데 아무도 안 부르는 메서드"였다. 잘못 부를 수 있는 메서드도 같은 부류다.
+        /// </para>
+        /// </remarks>
+        public bool Remove(int unitId, Coord c)
         {
-            if (InBounds(c)) _occupant[c.OrderKey] = Empty;
+            if (!InBounds(c) || _occupant[c.OrderKey] != unitId) return false;
+            _occupant[c.OrderKey] = Empty;
+            return true;
+        }
+
+        /// <summary>지금 점유 중인 칸 수. 불변식 검사(<see cref="Combat.BattleInvariants"/>)가 쓴다.</summary>
+        /// <remarks>
+        /// 유닛 쪽에서 보드를 보는 검사(<i>산 유닛은 자기 칸을 점유한다</i>)만으로는
+        /// <b>주인 없는 점유</b>를 못 잡는다 — 유닛 목록 어디에도 없는 id 가 칸을 물고 있는 경우다.
+        /// 그래서 반대 방향으로 한 번 더 센다.
+        /// </remarks>
+        public int OccupiedCount
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _occupant.Length; i++)
+                    if (_occupant[i] != Empty) n++;
+                return n;
+            }
         }
 
         /// <summary>
