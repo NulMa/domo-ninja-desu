@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace DomoNinja.Core.Tests
 {
     /// <summary>
-    /// 시체가 칸을 물고 있으면 안 된다.
+    /// 시체가 칸을 물고 있으면 안 된다 — 그리고 그걸 <b>불변식으로도</b> 잡는다.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -17,8 +17,9 @@ namespace DomoNinja.Core.Tests
     /// <b>자기 상태가 안 바뀌니 다음 틱에 똑같이 실패한다.</b>
     /// </para>
     /// <para>
-    /// ⚠️ <b>이 테스트는 수정 전 코드에서 반드시 실패해야 한다.</b> 통과하는 회귀 테스트는
-    /// 회귀 테스트가 아니다. 실제로 수정 전에는 <c>AllyLoss</c>(서든데스로 아군 전멸)가 나온다.
+    /// ⚠️ <b>이 테스트들은 수정 전 코드에서 반드시 실패해야 한다.</b> 통과하는 회귀 테스트는
+    /// 회귀 테스트가 아니다. 아래 <c>시체가_길을_막으면_영원히_못_지나간다</c> 는
+    /// 수정 전에 <c>AllyLoss</c>(서든데스로 아군 전멸)를 낸다.
     /// </para>
     /// </remarks>
     [TestFixture]
@@ -71,14 +72,82 @@ namespace DomoNinja.Core.Tests
         }
 
         /// <summary>
+        /// 시체 정리가 <b>산 유닛을 지우지 않는지</b>. 가드가 없으면 여기서 깨진다.
+        /// </summary>
+        /// <remarks>
+        /// 죽은 유닛의 <see cref="Unit.At"/> 는 죽은 자리를 계속 가리키고, 정리는 매 틱 다시 돈다.
+        /// 좌표만으로 지우면 <b>그 칸에 걸어 들어온 산 유닛이 보드에서 사라진다</b> —
+        /// 유닛은 살아 있는데 칸은 비어 있으니 다른 유닛이 같은 칸에 겹쳐 선다.
+        /// 위 테스트는 이걸 못 잡는다(겹쳐도 이기기는 한다). 불변식이 잡는다.
+        /// </remarks>
+        [Test]
+        public void 시체_정리가_그_칸에_들어온_산_유닛을_지우지_않는다()
+        {
+            bool before = BattleInvariants.Enabled;
+            BattleInvariants.Enabled = true;
+            try
+            {
+                var sim = new BattleSimulator(Config());
+
+                var hero = Ally(0, 0, 2, hp: 5000, atk: 50);
+                var blocker = Enemy(1, 2, 2, hp: 1);
+                var behind = Enemy(2, 4, 2, hp: 1);
+
+                Assert.DoesNotThrow(() => sim.Run(new[] { hero, blocker, behind },
+                                                  NullEventSink.Instance));
+            }
+            finally
+            {
+                BattleInvariants.Enabled = before;
+            }
+        }
+
+        /// <summary>
+        /// 불변식 검사가 <b>실제로 위반을 잡는지</b>. 검사기 자체의 회귀 테스트다.
+        /// </summary>
+        /// <remarks>
+        /// 항상 통과하는 검사는 검사가 아니다. 위반을 손으로 만들어 터지는 걸 확인한다 —
+        /// 이게 없으면 <see cref="BattleInvariants.Verify"/> 가 조용히 무력해져도 아무도 모른다.
+        /// </remarks>
+        [Test]
+        public void 불변식_검사는_시체_점유를_잡는다()
+        {
+            var board = new Board();
+            var dead = new Unit(0, Team.Ally, "C1", 100, 10, 20, 1, 5, new Coord(2, 2));
+            var alive = new Unit(1, Team.Enemy, "slime", 100, 10, 20, 1, 5, new Coord(4, 2));
+
+            board.TryPlace(dead.Id, dead.At);
+            board.TryPlace(alive.Id, alive.At);
+
+            dead.Hp = 0;   // 죽었는데 보드에는 그대로 — 이게 그 버그의 상태다
+
+            var ex = Assert.Throws<BattleInvariantException>(
+                () => BattleInvariants.Verify(new[] { dead, alive }, board, tick: 7));
+
+            Assert.That(ex!.Message, Does.Contain("죽은 유닛 0"));
+            Assert.That(ex.Message, Does.Contain("(2,2)"));
+        }
+
+        /// <summary>불변식 검사가 <b>겹침</b>도 잡는지. 위 가드가 없을 때 실제로 생기는 상태다.</summary>
+        [Test]
+        public void 불변식_검사는_유닛_겹침을_잡는다()
+        {
+            var board = new Board();
+            var a = new Unit(0, Team.Ally, "C1", 100, 10, 20, 1, 5, new Coord(2, 2));
+            var b = new Unit(1, Team.Ally, "C1", 100, 10, 20, 1, 5, new Coord(2, 2));
+
+            board.TryPlace(a.Id, a.At);
+            // b 는 같은 칸이라 TryPlace 가 거부한다 — 보드에 없는 채로 좌표만 갖는다.
+
+            Assert.Throws<BattleInvariantException>(
+                () => BattleInvariants.Verify(new[] { a, b }, board, tick: 0));
+        }
+
+        /// <summary>
         /// <see cref="Board.Remove"/> 는 <b>주인이 맞을 때만</b> 비운다.
         /// </summary>
         /// <remarks>
-        /// 좌표만 받는 오버로드를 두지 않은 이유가 이것이다. 시체 치우기는 죽은 유닛에 대해
-        /// 매 틱 다시 도는데 그 유닛의 <see cref="Unit.At"/> 는 죽은 자리를 계속 가리킨다.
-        /// 이미 비워진 그 칸에 산 유닛이 걸어 들어온 뒤 좌표만으로 또 지우면
-        /// <b>산 유닛이 보드에서 사라진다</b> — 유닛은 살아 있는데 칸은 비었으니 겹쳐 서게 된다.
-        ///
+        /// 좌표만 받는 오버로드를 두지 않은 이유가 이것이다 —
         /// "부르는 쪽이 확인하면 된다"는 확인을 잊을 수 있다는 뜻이고,
         /// 이 저장소는 이미 <b>있는데 아무도 안 부르는 메서드</b>로 한 번 당했다.
         /// </remarks>
@@ -97,6 +166,20 @@ namespace DomoNinja.Core.Tests
             Assert.That(board.IsFree(c), Is.True);
 
             Assert.That(board.Remove(7, c), Is.False, "이미 빈 칸을 또 비울 수는 없다");
+        }
+
+        [Test]
+        public void OccupiedCount_는_점유_칸_수다()
+        {
+            var board = new Board();
+            Assert.That(board.OccupiedCount, Is.Zero);
+
+            board.TryPlace(0, new Coord(1, 1));
+            board.TryPlace(1, new Coord(2, 1));
+            Assert.That(board.OccupiedCount, Is.EqualTo(2));
+
+            board.Remove(0, new Coord(1, 1));
+            Assert.That(board.OccupiedCount, Is.EqualTo(1));
         }
     }
 }

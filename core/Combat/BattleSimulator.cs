@@ -168,6 +168,9 @@ namespace DomoNinja.Core.Combat
         {
             RemoveCorpses(units, board);
 
+            // 켜져 있을 때만. 부르는 자리가 규칙의 일부다 — 시체 정리 직후여야 한다.
+            if (BattleInvariants.Enabled) BattleInvariants.Verify(units, board, tick);
+
             for (int i = 0; i < units.Count; i++)
             {
                 var u = units[i];

@@ -100,6 +100,23 @@ namespace DomoNinja.Core.Domain
             return true;
         }
 
+        /// <summary>지금 점유 중인 칸 수. 불변식 검사(<see cref="Combat.BattleInvariants"/>)가 쓴다.</summary>
+        /// <remarks>
+        /// 유닛 쪽에서 보드를 보는 검사(<i>산 유닛은 자기 칸을 점유한다</i>)만으로는
+        /// <b>주인 없는 점유</b>를 못 잡는다 — 유닛 목록 어디에도 없는 id 가 칸을 물고 있는 경우다.
+        /// 그래서 반대 방향으로 한 번 더 센다.
+        /// </remarks>
+        public int OccupiedCount
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _occupant.Length; i++)
+                    if (_occupant[i] != Empty) n++;
+                return n;
+            }
+        }
+
         /// <summary>
         /// 목표를 향한 <b>그리디 1스텝</b> 목적지. 경로 탐색은 하지 않는다 (`_schema` §7.1).
         /// </summary>
