@@ -322,6 +322,7 @@ namespace DomoNinja.Unity
         private void OnNextRound()
         {
             UIScreenManager.ShowScreen("GamePlay");
+            UIScreenManager.ShowPopup("StageIntro");
         }
 
         private static string OfferLabel(ShopOffer offer, RunManager mgr)

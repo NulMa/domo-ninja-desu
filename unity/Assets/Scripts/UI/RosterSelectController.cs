@@ -139,6 +139,7 @@ namespace DomoNinja.Unity
 
             mgr.StartNewRun(mgr.SelectedStageId, _selected);
             UIScreenManager.ShowScreen("GamePlay");
+            UIScreenManager.ShowPopup("StageIntro");
         }
 
         private static Button EnsureButton(GameObject go)
