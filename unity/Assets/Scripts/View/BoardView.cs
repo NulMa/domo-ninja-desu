@@ -200,6 +200,105 @@ namespace DomoNinja.Unity.View
             return bar.transform;
         }
 
+        // ────────────────────────────── 배치 조정 (`08` §5-5, `D-53`, `D-75`)
+
+        /// <summary>배치 화면에 세운 스프라이트 하나. 전투 규칙을 모르고 좌표·색만 갖는다.</summary>
+        private sealed class PlacementUnit
+        {
+            public Transform Root;
+            public SpriteRenderer Sprite;
+        }
+
+        private static readonly Color PlacementSelectedColor = new Color(1f, 0.92f, 0.35f);
+
+        private Transform _placementRoot;
+        private readonly Dictionary<string, PlacementUnit> _placementAllies = new Dictionary<string, PlacementUnit>();
+
+        /// <summary>
+        /// 배치 조정 화면을 세운다 — 아군은 <paramref name="allyPlacement"/> 좌표에, 적은 공개된 좌표에 선다.
+        /// </summary>
+        /// <remarks>
+        /// 전투 재생용 유닛(<see cref="Setup"/>)과는 <b>별개 트리다.</b> 여기 세운 스프라이트는
+        /// <see cref="PlacementController"/> 가 좌표만 옮기고, 실제 판정은 "전투 시작" 시점에 core 가 한다.
+        /// </remarks>
+        public void ShowPlacementPreview(IReadOnlyDictionary<string, Coord> allyPlacement,
+                                         IReadOnlyList<EnemyPlacement> enemies)
+        {
+            ClearPlacementPreview();
+
+            _placementRoot = new GameObject("PlacementPreview").transform;
+            _placementRoot.SetParent(transform, false);
+
+            foreach (var kv in allyPlacement)
+                _placementAllies[kv.Key] = CreatePlacementUnit(kv.Key, kv.Value);
+
+            foreach (var e in enemies)
+                CreatePlacementUnit(e.Type, e.At);
+        }
+
+        public void ClearPlacementPreview()
+        {
+            if (_placementRoot != null) Object.Destroy(_placementRoot.gameObject);
+            _placementRoot = null;
+            _placementAllies.Clear();
+        }
+
+        private PlacementUnit CreatePlacementUnit(string typeId, Coord at)
+        {
+            var root = new GameObject(typeId);
+            root.transform.SetParent(_placementRoot, false);
+            root.transform.position = ToWorld(at);
+
+            var renderer = root.AddComponent<SpriteRenderer>();
+            renderer.sprite = _catalog != null ? _catalog.Find(ResolveSpritePath(typeId)) : null;
+            renderer.sortingOrder = 10;
+
+            if (renderer.sprite == null)
+            {
+                // ★ CreateUnit 과 같은 이유 — 안 보이게 두면 "스프라이트가 없는 것"과
+                //   "유닛이 안 만들어진 것"이 구분되지 않는다.
+                var placeholder = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                placeholder.transform.SetParent(root.transform, false);
+                placeholder.transform.localScale = Vector3.one * 0.5f;
+                Object.Destroy(placeholder.GetComponent<Collider>());
+                placeholder.GetComponent<MeshRenderer>().material =
+                    new Material(Shader.Find("Sprites/Default")) { color = Color.magenta };
+            }
+            else
+            {
+                var size = renderer.sprite.bounds.size;
+                float scale = size.x > 0 ? CellSize * 0.8f / Mathf.Max(size.x, size.y) : 1f;
+                root.transform.localScale = Vector3.one * scale;
+            }
+
+            return new PlacementUnit { Root = root.transform, Sprite = renderer };
+        }
+
+        /// <summary>격자 칸으로 스냅 이동. 드롭 확정 · 되돌림 둘 다 이걸 쓴다.</summary>
+        public void MoveAllyPreview(string characterId, Coord to)
+        {
+            if (_placementAllies.TryGetValue(characterId, out var u)) u.Root.position = ToWorld(to);
+        }
+
+        /// <summary>드래그 중 커서를 자유롭게 따라간다 — 격자에 스냅하지 않는다.</summary>
+        public void SetAllyPreviewFreePosition(string characterId, Vector3 worldPos)
+        {
+            if (_placementAllies.TryGetValue(characterId, out var u))
+                u.Root.position = new Vector3(worldPos.x, worldPos.y, u.Root.position.z);
+        }
+
+        public void SetPlacementSelected(string characterId)
+        {
+            foreach (var kv in _placementAllies)
+                if (kv.Value.Sprite != null)
+                    kv.Value.Sprite.color = kv.Key == characterId ? PlacementSelectedColor : Color.white;
+        }
+
+        /// <summary>월드 좌표를 보드 칸으로 되돌린다. <see cref="ToWorld"/> 의 역함수다.</summary>
+        public static Coord CoordAt(Vector3 world) => new Coord(
+            Mathf.RoundToInt(world.x + (Coord.BoardWidth - 1) * 0.5f),
+            Mathf.RoundToInt((Coord.BoardHeight - 1) * 0.5f - world.y));
+
         // ────────────────────────────── 이벤트 반영
 
         public void MoveTo(int unitId, int coordKey)
