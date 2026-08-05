@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -20,7 +21,7 @@ namespace DomoNinja.Unity
         private Transform _portraitGrid;
         private Transform _confirmedTray;
         private Button _enterBattleButton;
-        private Text _infoLabel;
+        private TMP_Text _infoLabel;
         private SpriteCatalog _catalog;
 
         private readonly List<string> _selected = new List<string>();
@@ -31,7 +32,7 @@ namespace DomoNinja.Unity
             _portraitGrid = board.Find("PortraitGrid");
             _confirmedTray = board.Find("ConfirmedTray");
             _enterBattleButton = EnsureButton(board.Find("EnterBattleButton").gameObject);
-            _infoLabel = board.Find("InfoPanel/Label").GetComponent<Text>();
+            _infoLabel = board.Find("InfoPanel/Label").GetComponent<TMP_Text>();
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
 

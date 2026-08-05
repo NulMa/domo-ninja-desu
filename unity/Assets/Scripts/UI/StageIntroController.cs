@@ -1,5 +1,6 @@
 using DomoNinja.Core.Data;
 using DomoNinja.Unity.View;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -31,7 +32,7 @@ namespace DomoNinja.Unity
         private RectTransform _container;
         private Button _startBattleButton;
         private SpriteCatalog _catalog;
-        private Font _font;
+        private TMP_FontAsset _fontAsset;
 
         private void Awake()
         {
@@ -41,7 +42,7 @@ namespace DomoNinja.Unity
             _startBattleButton.onClick.AddListener(OnStartBattle);
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
-            _font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            _fontAsset = TMP_Settings.defaultFontAsset;
         }
 
         private void OnEnable() => Rebuild();
@@ -113,14 +114,14 @@ namespace DomoNinja.Unity
             roundLabel.anchoredPosition = new Vector2(0, -92);
             roundLabel.sizeDelta = new Vector2(0, 24);
             AddText(roundLabel, boss ? $"R{roundNumber} 보스" : $"R{roundNumber}", 14,
-                    current ? Color.white : TextMain, TextAnchor.MiddleCenter);
+                    current ? Color.white : TextMain, TextAlignmentOptions.Center);
 
             var axisLabel = MakeRT("AxisLabel", node);
             axisLabel.anchorMin = new Vector2(0, 0);
             axisLabel.anchorMax = new Vector2(1, 1);
             axisLabel.offsetMin = new Vector2(8, 8);
             axisLabel.offsetMax = new Vector2(-8, -120);
-            AddText(axisLabel, round.AxisTested, 11, TextDim, TextAnchor.UpperCenter);
+            AddText(axisLabel, round.AxisTested, 11, TextDim, TextAlignmentOptions.Top);
 
             if (current)
             {
@@ -130,7 +131,7 @@ namespace DomoNinja.Unity
                 marker.pivot = new Vector2(0.5f, 0f);
                 marker.anchoredPosition = new Vector2(0, 6);
                 marker.sizeDelta = new Vector2(30, 22);
-                AddText(marker, "▼", 18, CurrentColor, TextAnchor.MiddleCenter);
+                AddText(marker, "▼", 18, CurrentColor, TextAlignmentOptions.Center);
             }
         }
 
@@ -167,12 +168,12 @@ namespace DomoNinja.Unity
             rt.sizeDelta = new Vector2(width, height);
         }
 
-        private Text AddText(RectTransform rt, string text, int size, Color color, TextAnchor align)
+        private TMP_Text AddText(RectTransform rt, string text, int size, Color color, TextAlignmentOptions align)
         {
-            var t = rt.gameObject.AddComponent<Text>();
-            t.font = _font; t.fontSize = size; t.color = color; t.alignment = align; t.text = text;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
+            var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            t.font = _fontAsset; t.fontSize = size; t.color = color; t.alignment = align; t.text = text;
+            t.textWrappingMode = TextWrappingModes.Normal;
+            t.overflowMode = TextOverflowModes.Truncate;
             return t;
         }
 

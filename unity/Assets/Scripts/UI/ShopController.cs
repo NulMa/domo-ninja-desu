@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Economy;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -44,10 +45,10 @@ namespace DomoNinja.Unity
         {
             public readonly Button Button;
             public readonly UImage Face;
-            public readonly Text NameLabel;
-            public readonly Text StatusLabel;
+            public readonly TMP_Text NameLabel;
+            public readonly TMP_Text StatusLabel;
 
-            public TargetSlot(Button button, UImage face, Text nameLabel, Text statusLabel)
+            public TargetSlot(Button button, UImage face, TMP_Text nameLabel, TMP_Text statusLabel)
             {
                 Button = button;
                 Face = face;
@@ -60,9 +61,9 @@ namespace DomoNinja.Unity
         private static readonly Color DeadSlotColor = new Color(0.120f, 0.100f, 0.100f, 1f);
 
         private Transform _board;
-        private Text _currencyLabel;
+        private TMP_Text _currencyLabel;
         private Button[] _slotButtons;
-        private Text[] _slotLabels;
+        private TMP_Text[] _slotLabels;
         private Button _buyTab;
         private Button _sellTab;
         private Button _rerollButton;
@@ -80,10 +81,10 @@ namespace DomoNinja.Unity
         private void Awake()
         {
             _board = transform.Find("Board");
-            _currencyLabel = _board.Find("CurrencyDisplay/Label").GetComponent<Text>();
+            _currencyLabel = _board.Find("CurrencyDisplay/Label").GetComponent<TMP_Text>();
 
             _slotButtons = new Button[5];
-            _slotLabels = new Text[5];
+            _slotLabels = new TMP_Text[5];
 
             for (int i = 0; i < 3; i++) BindSlot(i, "SkillSlot" + (i + 1));
             for (int i = 0; i < 2; i++) BindSlot(3 + i, "ItemSlot" + (i + 1));
@@ -114,8 +115,8 @@ namespace DomoNinja.Unity
                 var slot = panel.Find("Slot" + i);
                 var button = EnsureButton(slot.gameObject);
                 var face = slot.Find("Face").GetComponent<UImage>();
-                var nameLabel = slot.Find("NameLabel").GetComponent<Text>();
-                var statusLabel = slot.Find("StatusLabel").GetComponent<Text>();
+                var nameLabel = slot.Find("NameLabel").GetComponent<TMP_Text>();
+                var statusLabel = slot.Find("StatusLabel").GetComponent<TMP_Text>();
                 _targetSlots[i] = new TargetSlot(button, face, nameLabel, statusLabel);
 
                 int captured = i;
@@ -133,7 +134,7 @@ namespace DomoNinja.Unity
             var slot = _board.Find(childName);
             var button = EnsureButton(slot.gameObject);
             _slotButtons[index] = button;
-            _slotLabels[index] = slot.Find("Label").GetComponent<Text>();
+            _slotLabels[index] = slot.Find("Label").GetComponent<TMP_Text>();
             button.onClick.AddListener(() => OnSlotClicked(index));
         }
 

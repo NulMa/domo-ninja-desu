@@ -4,6 +4,7 @@ using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Events;
 using DomoNinja.Unity.View;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -22,7 +23,7 @@ namespace DomoNinja.Unity
 
         private Button _startBattleButton;
         private Button _speedButton;
-        private Text _speedLabel;
+        private TMP_Text _speedLabel;
         private Transform _board;
 
         private BoardView _boardView;
@@ -40,7 +41,7 @@ namespace DomoNinja.Unity
             _board = transform.Find("Board");
             _startBattleButton = EnsureButton(_board.Find("StartBattleButton").gameObject);
             _speedButton = EnsureButton(_board.Find("SpeedButton").gameObject);
-            _speedLabel = _board.Find("SpeedButton/Label").GetComponent<Text>();
+            _speedLabel = _board.Find("SpeedButton/Label").GetComponent<TMP_Text>();
 
             _startBattleButton.onClick.AddListener(OnStartBattle);
             _speedButton.onClick.AddListener(OnCycleSpeed);
