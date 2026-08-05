@@ -165,6 +165,10 @@ namespace DomoNinja.Unity
                 while (_replayer.IsPlaying) yield return null;
             }
 
+            // 재생이 끝나면 다음 화면(상점/결과)으로 넘어가기 전에 보드를 비운다 —
+            // 안 비우면 world-space 유닛 스프라이트가 그 화면 위에 그대로 남아 겹쳐 보인다.
+            _boardView.Clear();
+
             var run = mgr.CurrentRun;
             bool runOver = run == null || run.IsOver || run.Round > mgr.Data.Economy.TotalRounds;
 
