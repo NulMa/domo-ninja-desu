@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DomoNinja.Core.Data;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -16,17 +17,17 @@ namespace DomoNinja.Unity
     {
         private static readonly string[] RowIds = { "M-ATK", "M-HP", "M-HASTE", "M-MOVE", "M-GOLD" };
 
-        private Text _currencyLabel;
+        private TMP_Text _currencyLabel;
         private Button _resetButton;
 
-        private readonly Dictionary<string, Text> _levelLabels = new Dictionary<string, Text>();
+        private readonly Dictionary<string, TMP_Text> _levelLabels = new Dictionary<string, TMP_Text>();
         private readonly Dictionary<string, Button> _upgradeButtons = new Dictionary<string, Button>();
-        private readonly Dictionary<string, Text> _upgradeButtonLabels = new Dictionary<string, Text>();
+        private readonly Dictionary<string, TMP_Text> _upgradeButtonLabels = new Dictionary<string, TMP_Text>();
 
         private void Awake()
         {
             var board = transform.Find("Board");
-            _currencyLabel = board.Find("CurrencyValueLabel").GetComponent<Text>();
+            _currencyLabel = board.Find("CurrencyValueLabel").GetComponent<TMP_Text>();
 
             var closeButton = board.Find("CloseButton").gameObject;
             var close = EnsureButton(closeButton);
@@ -38,15 +39,15 @@ namespace DomoNinja.Unity
             foreach (string id in RowIds)
             {
                 var row = board.Find("Row_" + id);
-                var nameLabel = row.Find("NameLabel").GetComponent<Text>();
+                var nameLabel = row.Find("NameLabel").GetComponent<TMP_Text>();
                 var def = FindDef(id);
                 if (def != null) nameLabel.text = def.Name;
 
-                _levelLabels[id] = row.Find("LevelLabel").GetComponent<Text>();
+                _levelLabels[id] = row.Find("LevelLabel").GetComponent<TMP_Text>();
 
                 var upgradeButton = EnsureButton(row.Find("UpgradeButton").gameObject);
                 _upgradeButtons[id] = upgradeButton;
-                _upgradeButtonLabels[id] = row.Find("UpgradeButton/Label").GetComponent<Text>();
+                _upgradeButtonLabels[id] = row.Find("UpgradeButton/Label").GetComponent<TMP_Text>();
 
                 string rowId = id;
                 upgradeButton.onClick.AddListener(() => OnUpgradeClicked(rowId));

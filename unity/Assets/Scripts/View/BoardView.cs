@@ -152,7 +152,7 @@ namespace DomoNinja.Unity.View
 
             var renderer = spriteObject.AddComponent<SpriteRenderer>();
             renderer.sprite = _catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null;
-            renderer.sortingOrder = 10;
+            renderer.sortingOrder = 0;
 
             if (renderer.sprite == null)
             {
@@ -251,7 +251,7 @@ namespace DomoNinja.Unity.View
 
             var renderer = root.AddComponent<SpriteRenderer>();
             renderer.sprite = _catalog != null ? _catalog.Find(ResolveSpritePath(typeId)) : null;
-            renderer.sortingOrder = 10;
+            renderer.sortingOrder = 0;
 
             if (renderer.sprite == null)
             {

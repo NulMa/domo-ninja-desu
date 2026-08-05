@@ -4,7 +4,8 @@
   "references": [
     "DomoNinja.Core",
     "DomoNinja.Unity",
-    "DomoNinja.Unity.View"
+    "DomoNinja.Unity.View",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

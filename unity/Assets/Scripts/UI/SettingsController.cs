@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -11,14 +12,14 @@ namespace DomoNinja.Unity
         private static readonly Color UnmutedColor = new Color(0.22f, 0.23f, 0.25f);
 
         private Slider _bgmSlider;
-        private Text _bgmValueLabel;
+        private TMP_Text _bgmValueLabel;
         private Button _bgmMuteButton;
-        private Text _bgmMuteLabel;
+        private TMP_Text _bgmMuteLabel;
 
         private Slider _sfxSlider;
-        private Text _sfxValueLabel;
+        private TMP_Text _sfxValueLabel;
         private Button _sfxMuteButton;
-        private Text _sfxMuteLabel;
+        private TMP_Text _sfxMuteLabel;
 
         private void Awake()
         {
@@ -27,14 +28,14 @@ namespace DomoNinja.Unity
             var sfxRow = panel.Find("SfxRow");
 
             _bgmSlider = bgmRow.Find("SliderArea/BgmSlider").GetComponent<Slider>();
-            _bgmValueLabel = bgmRow.Find("ValueLabel").GetComponent<Text>();
+            _bgmValueLabel = bgmRow.Find("ValueLabel").GetComponent<TMP_Text>();
             _bgmMuteButton = EnsureButton(bgmRow.Find("MuteButton").gameObject);
-            _bgmMuteLabel = _bgmMuteButton.transform.Find("Label").GetComponent<Text>();
+            _bgmMuteLabel = _bgmMuteButton.transform.Find("Label").GetComponent<TMP_Text>();
 
             _sfxSlider = sfxRow.Find("SliderArea/SfxSlider").GetComponent<Slider>();
-            _sfxValueLabel = sfxRow.Find("ValueLabel").GetComponent<Text>();
+            _sfxValueLabel = sfxRow.Find("ValueLabel").GetComponent<TMP_Text>();
             _sfxMuteButton = EnsureButton(sfxRow.Find("MuteButton").gameObject);
-            _sfxMuteLabel = _sfxMuteButton.transform.Find("Label").GetComponent<Text>();
+            _sfxMuteLabel = _sfxMuteButton.transform.Find("Label").GetComponent<TMP_Text>();
 
             _bgmSlider.onValueChanged.AddListener(v => AudioManager.Instance?.SetBgmVolume(v));
             _sfxSlider.onValueChanged.AddListener(v => AudioManager.Instance?.SetSfxVolume(v));
@@ -71,7 +72,7 @@ namespace DomoNinja.Unity
             RefreshMuteButton(_sfxMuteButton, _sfxMuteLabel, mgr.SfxMuted);
         }
 
-        private static void RefreshMuteButton(Button button, Text label, bool muted)
+        private static void RefreshMuteButton(Button button, TMP_Text label, bool muted)
         {
             label.text = muted ? "음소거 해제" : "음소거";
             var img = button.GetComponent<UImage>();

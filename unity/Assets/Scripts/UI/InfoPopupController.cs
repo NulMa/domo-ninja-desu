@@ -4,6 +4,7 @@ using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Unity.View;
 using Newtonsoft.Json.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -20,10 +21,10 @@ namespace DomoNinja.Unity
         {
             public readonly Button Button;
             public readonly UImage Face;
-            public readonly Text NameLabel;
-            public readonly Text StatusLabel;
+            public readonly TMP_Text NameLabel;
+            public readonly TMP_Text StatusLabel;
 
-            public PortraitSlot(Button button, UImage face, Text nameLabel, Text statusLabel)
+            public PortraitSlot(Button button, UImage face, TMP_Text nameLabel, TMP_Text statusLabel)
             {
                 Button = button; Face = face; NameLabel = nameLabel; StatusLabel = statusLabel;
             }
@@ -51,17 +52,17 @@ namespace DomoNinja.Unity
         private SpriteCatalog _catalog;
 
         private PortraitSlot[] _portraitSlots;
-        private Text _profileLabel;
-        private Text _statsLabel;
+        private TMP_Text _profileLabel;
+        private TMP_Text _statsLabel;
         private UImage _activeSkillIcon;
-        private Text _activeSkillLabel;
-        private Text _supportSkillLabel;
+        private TMP_Text _activeSkillLabel;
+        private TMP_Text _supportSkillLabel;
 
         private Button[] _itemSlotButtons;
         private UImage[] _itemSlotIcons;
         private UImage _detailIcon;
-        private Text _detailNameLabel;
-        private Text _detailDescLabel;
+        private TMP_Text _detailNameLabel;
+        private TMP_Text _detailDescLabel;
 
         private int _selectedCharacterIndex;
         private int _selectedItemIndex;
@@ -97,19 +98,19 @@ namespace DomoNinja.Unity
                 var slot = characterTab.Find("PortraitSlot" + i);
                 var btn = EnsureButton(slot.gameObject);
                 var face = slot.Find("Face").GetComponent<UImage>();
-                var nameLabel = slot.Find("NameLabel").GetComponent<Text>();
-                var statusLabel = slot.Find("StatusLabel").GetComponent<Text>();
+                var nameLabel = slot.Find("NameLabel").GetComponent<TMP_Text>();
+                var statusLabel = slot.Find("StatusLabel").GetComponent<TMP_Text>();
                 _portraitSlots[i] = new PortraitSlot(btn, face, nameLabel, statusLabel);
 
                 int captured = i;
                 btn.onClick.AddListener(() => { _selectedCharacterIndex = captured; RefreshCharacterTab(); });
             }
 
-            _profileLabel = characterTab.Find("ProfileBody/Label").GetComponent<Text>();
-            _statsLabel = characterTab.Find("StatsBody/Label").GetComponent<Text>();
+            _profileLabel = characterTab.Find("ProfileBody/Label").GetComponent<TMP_Text>();
+            _statsLabel = characterTab.Find("StatsBody/Label").GetComponent<TMP_Text>();
             _activeSkillIcon = characterTab.Find("ActiveSkillIcon").GetComponent<UImage>();
-            _activeSkillLabel = characterTab.Find("ActiveSkillBody/Label").GetComponent<Text>();
-            _supportSkillLabel = characterTab.Find("SupportSkillBody/Label").GetComponent<Text>();
+            _activeSkillLabel = characterTab.Find("ActiveSkillBody/Label").GetComponent<TMP_Text>();
+            _supportSkillLabel = characterTab.Find("SupportSkillBody/Label").GetComponent<TMP_Text>();
         }
 
         private void BindItemTab()
@@ -130,8 +131,8 @@ namespace DomoNinja.Unity
             }
 
             _detailIcon = itemTab.Find("DetailIcon").GetComponent<UImage>();
-            _detailNameLabel = itemTab.Find("DetailNameBody/Label").GetComponent<Text>();
-            _detailDescLabel = itemTab.Find("DetailDescBody/Label").GetComponent<Text>();
+            _detailNameLabel = itemTab.Find("DetailNameBody/Label").GetComponent<TMP_Text>();
+            _detailDescLabel = itemTab.Find("DetailDescBody/Label").GetComponent<TMP_Text>();
         }
 
         private void OnEnable()
