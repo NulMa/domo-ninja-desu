@@ -100,8 +100,18 @@ namespace DomoNinja.Unity
         }
 
         /// <summary>
-        /// <b>가장 위에 있는 캔버스</b>에서 처음 만나는 조작 대상.
+        /// <b>가장 위에 있는 캔버스</b>에서 <b>가장 큰</b> 조작 대상.
         /// </summary>
+        /// <remarks>
+        /// ★ 처음엔 계층 순서대로 첫 번째를 골랐다. 그러면 튜토리얼 팝업에서 초점이
+        /// <b>닫기(X)</b> 에 잡힌다 — 먼저 만들어진 자식이기 때문이다. 팝업 안이긴 해도
+        /// 기본 동작은 "다음"이지 "닫기"가 아니다.
+        /// <para>
+        /// 크기를 기준으로 삼는 이유 — <c>19</c> §6.6b 가 이미 <b>"진행 동작은 가장 크고 밝게"</b> 로
+        /// 배치 규칙을 정해뒀다. 그 규칙을 지킨 화면에서는 <b>가장 큰 것이 곧 주 동작</b>이다.
+        /// 규칙과 다른 신호를 새로 만들면 둘이 어긋날 때 어느 쪽이 맞는지 알 수 없다.
+        /// </para>
+        /// </remarks>
         /// <remarks>
         /// ★ 처음에는 계층 순서만 보고 골랐다. 그러면 팝업이 열려 있어도
         /// <b>그 아래 깔린 화면의 버튼에 초점이 잡힌다</b> — 눈에는 팝업이 떠 있는데
@@ -116,19 +126,21 @@ namespace DomoNinja.Unity
         {
             Selectable best = null;
             int bestOrder = int.MinValue;
+            float bestArea = -1f;
 
             foreach (var s in Object.FindObjectsByType<Selectable>(FindObjectsInactive.Exclude))
             {
                 if (!IsRingable(s)) continue;
 
                 int order = OrderOf(s.transform);
+                var rt = s.transform as RectTransform;
+                float area = rt != null ? rt.rect.width * rt.rect.height : 0f;
 
-                if (order > bestOrder ||
-                    (order == bestOrder && best != null &&
-                     s.transform.GetSiblingIndex() < best.transform.GetSiblingIndex()))
+                if (order > bestOrder || (order == bestOrder && area > bestArea))
                 {
                     best = s;
                     bestOrder = order;
+                    bestArea = area;
                 }
             }
             return best;
