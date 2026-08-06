@@ -22,6 +22,9 @@ namespace DomoNinja.Unity.View
         /// <summary>1초당 틱. `A-2` 고정값이며 재생 속도와는 무관하다.</summary>
         private const float TicksPerSecond = 20f;
 
+        /// <summary>`23` §2.2 의 <c>StatusKind</c> 중 도발(어그로). 숫자를 그대로 쓰지 않으려고 이름을 준다.</summary>
+        private const int TauntStatusKind = 8;
+
         [Tooltip("재생 배속. 로그는 그대로고 보는 속도만 바뀐다.")]
         [SerializeField] private float _speed = 1f;
 
@@ -62,7 +65,10 @@ namespace DomoNinja.Unity.View
             if (!_playing || _log == null) return;
 
             _playhead += Time.deltaTime * TicksPerSecond * Mathf.Max(0.01f, _speed);
-            _board.ClearFlash();
+
+            // ★ 전에는 여기서 색을 통째로 지웠다. 그러면 번쩍임이 **그 프레임 안에서만** 살아 있어
+            //   60fps 기준 16ms 만 보인다 — 연출이 없는 것과 화면상 같다. 시간으로 되돌린다.
+            _board.TickFlashes(Time.deltaTime);
 
             // 지나간 틱의 이벤트를 순서대로 소비한다.
             while (_cursor < _log.Events.Count && _log.Events[_cursor].Tick <= _playhead)
@@ -90,18 +96,42 @@ namespace DomoNinja.Unity.View
                     _board.FlashAttack(e.ActorId, e.TargetId);
                     break;
 
+                // ★ 맞은 것과 회복한 것을 **다른 그림**으로 낸다.
+                //   전에는 둘 다 SetHp 하나만 불러서, 체력 막대가 오르내리는 것 말고는
+                //   화면에 아무 차이가 없었다 — 영상에서 회복이 회복으로 안 읽힌다.
                 case EventKind.Damage:
+                    _board.SetHp(e.TargetId, e.Aux);
+                    _board.FlashDamage(e.TargetId);
+                    break;
+
                 case EventKind.Heal:
                     _board.SetHp(e.TargetId, e.Aux);
+                    _board.FlashHeal(e.TargetId);
+                    break;
+
+                // Aux 는 적용 후 보호막 총량이다(`23` §2.1). 여기서 더하거나 빼지 않는다.
+                case EventKind.Shield:
+                    _board.SetShield(e.TargetId, e.Aux);
+                    break;
+
+                case EventKind.StatusApply:
+                    if (e.Value == TauntStatusKind) _board.SetTaunt(e.TargetId, true);
+                    break;
+
+                case EventKind.StatusExpire:
+                    if (e.Value == TauntStatusKind) _board.SetTaunt(e.TargetId, false);
+                    break;
+
+                case EventKind.SuddenDeath:
+                    _board.SetSuddenDeath(true);
                     break;
 
                 case EventKind.Death:
                     _board.SetDead(e.TargetId);
                     break;
 
-                // Shield·StatusApply·StatusExpire·SuddenDeath 는 아직 그리지 않는다.
-                // 아이콘·게이지는 연출 영역이라 팀원 몫이고, 여기서 임의로 만들면
-                // 나중에 두 벌이 된다. 로그에는 이미 다 들어와 있다.
+                // 나머지 상태(약화·도트·무적·재생·둔화·속박)는 아직 아이콘이 없다.
+                // 어떤 그림을 쓸지는 연출 결정이라 팀원 몫이고, 로그에는 이미 다 들어와 있다.
             }
         }
     }

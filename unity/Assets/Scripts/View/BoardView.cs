@@ -27,6 +27,8 @@ namespace DomoNinja.Unity.View
         private const float CellSize = 1f;
 
         private readonly Dictionary<int, UnitView> _units = new Dictionary<int, UnitView>();
+        private readonly List<MeshRenderer> _gridCells = new List<MeshRenderer>();
+        private bool _suddenDeath;
         private SpriteCatalog _catalog;
         private Transform _unitRoot;
 
@@ -43,6 +45,13 @@ namespace DomoNinja.Unity.View
             public Transform HpFill;
             /// <summary>체력이 가득 찼을 때의 가로 배율. 스프라이트마다 원본 크기가 달라 미리 재둔다.</summary>
             public float FillFullScaleX;
+            public Transform ShieldFill;
+            public float ShieldFullScaleX;
+            /// <summary>도발 대상 표시용. 유닛 스프라이트를 한 장 더 깔아 만든다.</summary>
+            public SpriteRenderer Outline;
+            /// <summary>번쩍임이 남은 시간(초).</summary>
+            public float FlashLeft;
+            public bool IsDead;
             public int MaxHp;
             public bool IsAlly;
         }
@@ -124,6 +133,7 @@ namespace DomoNinja.Unity.View
 
                     var renderer = cell.GetComponent<MeshRenderer>();
                     renderer.material = new Material(Shader.Find("Sprites/Default")) { color = color };
+                    _gridCells.Add(renderer);
                 }
             }
         }
@@ -181,15 +191,87 @@ namespace DomoNinja.Unity.View
             }
 
             var fill = CreateHpBar(root.transform, spec.Team == 0);
+            var shield = CreateShieldBar(root.transform);
+            var outline = CreateOutline(spriteObject.transform, renderer);
+
             return new UnitView
             {
                 Root = root,
                 Sprite = renderer,
                 HpFill = fill,
                 FillFullScaleX = fill != null ? fill.localScale.x : 1f,
+                ShieldFill = shield,
+                ShieldFullScaleX = shield != null ? shield.localScale.x : 1f,
+                Outline = outline,
                 MaxHp = spec.MaxHp,
                 IsAlly = spec.Team == 0,
             };
+        }
+
+        /// <summary>
+        /// 보호막 막대. 유닛 <b>위쪽</b>에 따로 얹는다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 체력 막대 옆이 아니라 반대편에 두는 이유 — 붙여 놓으면 두 막대가 한 막대로 읽혀서
+        /// <b>"체력이 많은 유닛"과 "보호막을 두른 유닛"이 구분되지 않는다.</b>
+        /// </para>
+        /// <para>
+        /// ★ 팩 스프라이트를 안 쓰고 사각형을 쓴다. <c>LifeBarMiniProgress</c> 는 <b>빨강</b>이라
+        /// 청록으로 칠하면 곱해져서 탁한 자주가 된다 — 실제로 처음에 그렇게 나왔다.
+        /// 스프라이트 틴트는 원본보다 밝아질 수 없다.
+        /// </para>
+        /// </remarks>
+        private Transform CreateShieldBar(Transform parent)
+        {
+            var root = new GameObject("ShieldBar");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(0f, 0.44f, -0.1f);
+
+            float height = HpBarHeight * 0.75f;
+            AddQuad(root.transform, "ShieldTrack", new Color(0.12f, 0.14f, 0.17f),
+                    new Vector3(HpBarWidth + 0.04f, height + 0.04f, 1f), Vector3.zero);
+
+            var fill = AddQuad(root.transform, "ShieldFill", new Color(0.44f, 0.85f, 1f),
+                               new Vector3(HpBarWidth, height, 1f), new Vector3(0f, 0f, -0.01f));
+            root.SetActive(false);
+            return fill;
+        }
+
+        private static Transform AddQuad(Transform parent, string name, Color color, Vector3 scale, Vector3 localPos)
+        {
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = name;
+            quad.transform.SetParent(parent, false);
+            quad.transform.localPosition = localPos;
+            quad.transform.localScale = scale;
+
+            var collider = quad.GetComponent<Collider>();
+            if (Application.isPlaying) Object.Destroy(collider); else Object.DestroyImmediate(collider);
+
+            quad.GetComponent<MeshRenderer>().material =
+                new Material(Shader.Find("Sprites/Default")) { color = color };
+            return quad.transform;
+        }
+
+        /// <summary>
+        /// 도발 표시용 외곽선. 유닛 스프라이트를 <b>조금 크게, 단색으로</b> 뒤에 한 장 더 깐다.
+        /// </summary>
+        private static SpriteRenderer CreateOutline(Transform spriteParent, SpriteRenderer source)
+        {
+            if (source == null || source.sprite == null) return null;
+
+            var go = new GameObject("Outline");
+            go.transform.SetParent(spriteParent, false);
+            go.transform.localScale = Vector3.one * 1.3f;
+            go.transform.localPosition = new Vector3(0f, 0f, 0.05f);
+
+            var outline = go.AddComponent<SpriteRenderer>();
+            outline.sprite = source.sprite;
+            outline.color = new Color(1f, 0.75f, 0.2f);
+            outline.sortingOrder = source.sortingOrder - 1;
+            go.SetActive(false);
+            return outline;
         }
 
         /// <summary>체력 막대의 월드 크기. 칸(1) 안에 들어가야 한다.</summary>
@@ -413,26 +495,138 @@ namespace DomoNinja.Unity.View
         {
             if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null) return;
 
+            unit.IsDead = true;
+            unit.FlashLeft = 0f;
             if (unit.Sprite != null) unit.Sprite.color = new Color(1f, 1f, 1f, 0.25f);
             // 빈 트랙은 남긴다 — 막대가 통째로 사라지면 "죽었다"와 "막대를 못 그렸다"가 같아 보인다.
             if (unit.HpFill != null) SetFill(unit, 0f);
+            if (unit.ShieldFill != null) unit.ShieldFill.parent.gameObject.SetActive(false);
+            if (unit.Outline != null) unit.Outline.gameObject.SetActive(false);
         }
 
-        /// <summary>공격 순간을 눈에 띄게. 연출이지 규칙이 아니다.</summary>
-        public void FlashAttack(int actorId, int targetId)
+        /// <summary>번쩍임이 눈에 남아 있는 시간(초).</summary>
+        /// <remarks>
+        /// ★ <b>전에는 한 프레임이었다.</b> 재생기가 매 <c>Update</c> 마다 색을 지우고 그 프레임의
+        /// 이벤트만 다시 칠했기 때문에, 60fps 에서 번쩍임이 <b>16ms 만 보였다.</b>
+        /// 사람 눈에는 안 보이는 시간이고, 그래서 "연출이 없다"가 아니라 <b>"연출이 있는데 안 보인다"</b> 였다.
+        /// </remarks>
+        private const float FlashSeconds = 0.18f;
+
+        private static readonly Color AttackTint = new Color(1f, 0.95f, 0.55f);
+        private static readonly Color DamageTint = new Color(1f, 0.42f, 0.38f);
+        private static readonly Color HealTint = new Color(0.45f, 1f, 0.55f);
+
+        /// <summary>공격하는 쪽을 번쩍인다. <b>맞는 쪽이 아니다</b> — 피격은 <see cref="FlashDamage"/> 가 맡는다.</summary>
+        /// <remarks>
+        /// 전에는 <c>Attack</c> 도 대상을 붉게 칠했다. 그러면 <c>Damage</c> 와 구분이 없어져
+        /// <b>때린 것과 맞은 것이 같은 그림</b>이 된다. 휘두르는 쪽은 노란빛, 맞는 쪽은 붉은빛으로 나눈다.
+        /// </remarks>
+        public void FlashAttack(int actorId, int targetId) => Flash(actorId, AttackTint);
+
+        /// <summary>피격.</summary>
+        public void FlashDamage(int unitId) => Flash(unitId, DamageTint);
+
+        /// <summary>회복. <b>피격과 반드시 달라야 한다</b> — 둘 다 체력 숫자만 바꾸면 화면에서 같은 사건이 된다.</summary>
+        public void FlashHeal(int unitId) => Flash(unitId, HealTint);
+
+        private void Flash(int unitId, Color tint)
         {
-            if (_units.TryGetValue(targetId, out var target) && target.Sprite != null)
-                target.Sprite.color = new Color(1f, 0.6f, 0.6f);
+            if (!_units.TryGetValue(unitId, out var unit) || unit.Sprite == null) return;
+            if (unit.IsDead) return;
+
+            unit.Sprite.color = tint;
+            unit.FlashLeft = FlashSeconds;
         }
 
+        /// <summary>번쩍임을 시간에 따라 되돌린다. 재생기가 매 프레임 부른다.</summary>
+        public void TickFlashes(float deltaTime)
+        {
+            foreach (var unit in _units.Values)
+            {
+                if (unit.Sprite == null || unit.FlashLeft <= 0f) continue;
+
+                unit.FlashLeft -= deltaTime;
+                float t = Mathf.Clamp01(unit.FlashLeft / FlashSeconds);
+                unit.Sprite.color = Color.Lerp(Color.white, unit.Sprite.color, t);
+
+                if (unit.FlashLeft <= 0f) unit.Sprite.color = Color.white;
+            }
+        }
+
+        /// <summary>즉시 되돌린다. 되감기·정지처럼 시간이 이어지지 않는 경우에만 쓴다.</summary>
         public void ClearFlash()
         {
             foreach (var unit in _units.Values)
             {
-                if (unit.Sprite != null && unit.Sprite.color.a > 0.5f)
-                    unit.Sprite.color = Color.white;
+                unit.FlashLeft = 0f;
+                if (unit.Sprite != null && !unit.IsDead) unit.Sprite.color = Color.white;
             }
         }
+
+        // ────────────────────────────── 보호막 · 상태
+
+        /// <summary>
+        /// 보호막을 체력 막대 위에 <b>따로</b> 그린다.
+        /// </summary>
+        /// <remarks>
+        /// 체력에 더해 그리면 "체력이 많은 유닛"과 "보호막을 두른 유닛"이 같아 보인다.
+        /// 폭은 최대 체력을 분모로 삼되 1.0 에서 자른다 — 보호막이 체력보다 클 수 있는데,
+        /// 그때 막대가 칸 밖으로 나가면 보드가 읽히지 않는다.
+        /// </remarks>
+        public void SetShield(int unitId, int shield)
+        {
+            if (!_units.TryGetValue(unitId, out var unit) || unit.ShieldFill == null) return;
+
+            float ratio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)shield / unit.MaxHp);
+            var scale = unit.ShieldFill.localScale;
+            unit.ShieldFill.localScale = new Vector3(unit.ShieldFullScaleX * ratio, scale.y, scale.z);
+
+            var pos = unit.ShieldFill.localPosition;
+            unit.ShieldFill.localPosition = new Vector3(-HpBarWidth * 0.5f * (1f - ratio), pos.y, pos.z);
+
+            // 채움만이 아니라 빈 칸까지 통째로 감춘다. 보호막이 없는 유닛 위에 빈 막대가 늘 떠 있으면
+            // 그건 정보가 아니라 잡음이다 — 보드에 유닛이 12기면 잡음도 12개다.
+            unit.ShieldFill.parent.gameObject.SetActive(shield > 0);
+        }
+
+        /// <summary>
+        /// 도발(어그로) 대상을 <b>외곽선</b>으로 표시한다.
+        /// </summary>
+        /// <remarks>
+        /// 아이콘을 얹지 않은 이유 — 어떤 아이콘을 쓸지는 연출 결정이고 팀원 몫이다.
+        /// 외곽선은 <b>유닛 스프라이트를 그대로 한 장 더 깔아</b> 만들기 때문에 새 그림이 필요 없고,
+        /// 나중에 아이콘이 정해져도 버릴 것이 없다.
+        /// </remarks>
+        public void SetTaunt(int unitId, bool on)
+        {
+            if (_units.TryGetValue(unitId, out var unit) && unit.Outline != null)
+                unit.Outline.gameObject.SetActive(on);
+        }
+
+        /// <summary>
+        /// 서든데스 진입. 판 전체를 붉게 물들여 <b>규칙이 바뀌었음</b>을 알린다.
+        /// </summary>
+        /// <remarks>
+        /// 한 번만 적용한다. 같은 값이 여러 번 들어와도 색을 거듭 곱하면 판이 새빨개진다 —
+        /// 이벤트는 한 번뿐이지만 되감기·재생이 들어오면 여러 번 불릴 수 있다.
+        /// </remarks>
+        public void SetSuddenDeath(bool on)
+        {
+            if (_suddenDeath == on) return;
+            _suddenDeath = on;
+
+            foreach (var cell in _gridCells)
+            {
+                if (cell == null) continue;
+                cell.material.color = on
+                    ? cell.material.color * SuddenDeathTint
+                    : new Color(cell.material.color.r / SuddenDeathTint.r,
+                                cell.material.color.g / SuddenDeathTint.g,
+                                cell.material.color.b / SuddenDeathTint.b);
+            }
+        }
+
+        private static readonly Color SuddenDeathTint = new Color(1.35f, 0.72f, 0.72f);
 
         // ────────────────────────────── 좌표
 

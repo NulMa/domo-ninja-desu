@@ -112,6 +112,11 @@ namespace DomoNinja.Unity.Editor
             board.SetHp(2, 60);
             board.SetHp(3, 25);
             board.SetDead(4);
+
+            // 상태 표시도 같이 세운다. 이것들은 **전투 중 특정 순간에만** 나오는데,
+            // 그 순간을 만들려면 런을 시작해 해당 스킬이 터질 때까지 기다려야 한다.
+            board.SetShield(2, 40);
+            board.SetTaunt(1, true);
         }
 
         /// <summary>
