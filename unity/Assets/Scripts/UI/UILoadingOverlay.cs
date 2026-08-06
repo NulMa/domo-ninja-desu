@@ -26,7 +26,7 @@ namespace DomoNinja.Unity
     public sealed class UILoadingOverlay : MonoBehaviour
     {
         /// <summary>다른 캔버스보다 확실히 위. 화면 캔버스들은 기본값(0)을 쓴다.</summary>
-        private const int SortingOrder = 9000;
+        private const int SortingOrder = UITheme.Layer.Loading;
 
         private static UILoadingOverlay _instance;
 

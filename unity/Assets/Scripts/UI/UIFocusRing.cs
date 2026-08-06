@@ -92,14 +92,38 @@ namespace DomoNinja.Unity
             if (_current != null) Fit((RectTransform)_current.transform);
         }
 
-        /// <summary>켜져 있는 화면에서 처음 만나는 조작 대상.</summary>
+        /// <summary>
+        /// <b>가장 위에 있는 캔버스</b>에서 처음 만나는 조작 대상.
+        /// </summary>
+        /// <remarks>
+        /// ★ 처음에는 계층 순서만 보고 골랐다. 그러면 팝업이 열려 있어도
+        /// <b>그 아래 깔린 화면의 버튼에 초점이 잡힌다</b> — 눈에는 팝업이 떠 있는데
+        /// 방향키는 뒤 화면을 돌아다닌다. 마우스 쪽에서 같은 문제를 <c>b98448d</c> 가 고쳤고
+        /// (팝업이 보이는 것과 클릭을 먼저 받는 것은 별개), 키보드 쪽도 같은 규칙을 따라야 한다.
+        /// <para>
+        /// <see cref="UIScreenManager.ShowPopup"/> 이 팝업을 열 때마다 sortingOrder 를 올려 발급하므로,
+        /// <b>가장 큰 sortingOrder 가 곧 지금 사용자가 보고 있는 화면</b>이다.
+        /// </para>
+        /// </remarks>
         private static Selectable FindFirstSelectable()
         {
             Selectable best = null;
+            int bestOrder = int.MinValue;
+
             foreach (var s in Object.FindObjectsByType<Selectable>(FindObjectsInactive.Exclude))
             {
                 if (!s.IsInteractable() || s.navigation.mode == Navigation.Mode.None) continue;
-                if (best == null || s.transform.GetSiblingIndex() < best.transform.GetSiblingIndex()) best = s;
+
+                var canvas = s.GetComponentInParent<Canvas>();
+                int order = canvas != null ? canvas.rootCanvas.sortingOrder : 0;
+
+                if (order > bestOrder ||
+                    (order == bestOrder && best != null &&
+                     s.transform.GetSiblingIndex() < best.transform.GetSiblingIndex()))
+                {
+                    best = s;
+                    bestOrder = order;
+                }
             }
             return best;
         }

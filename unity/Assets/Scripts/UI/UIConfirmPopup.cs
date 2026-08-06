@@ -26,7 +26,7 @@ namespace DomoNinja.Unity
     /// </remarks>
     public sealed class UIConfirmPopup : MonoBehaviour
     {
-        private const int SortingOrder = 8000;
+        private const int SortingOrder = UITheme.Layer.Confirm;
 
         private static UIConfirmPopup _instance;
 
