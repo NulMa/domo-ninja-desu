@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using DomoNinja.Core.Domain;
+using DomoNinja.Core.Events;
 using DomoNinja.Unity.View;
 using UnityEditor;
 using UnityEngine;
@@ -73,9 +76,42 @@ namespace DomoNinja.Unity.Editor
             var board = root.AddComponent<BoardView>();
             board.Initialize(Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName));
 
+            AddSampleUnits(board);
+
             MarkThrowaway(root.transform);
             Selection.activeGameObject = root;
             SceneView.FrameLastActiveSceneView();
+        }
+
+        /// <summary>
+        /// 체력이 <b>서로 다른</b> 표본 유닛 몇을 세운다.
+        /// </summary>
+        /// <remarks>
+        /// ★ 격자만 그리면 <b>체력바를 편집 모드에서 볼 방법이 없다.</b> 유닛은 전투가 돌아야 생기고,
+        /// 전투는 런을 시작해야 돌기 때문이다. 그래서 체력바를 고칠 때마다 플레이 → 런 시작 →
+        /// 라운드 진입까지 가야 했고, 그렇게 확인한 것은 <b>저장되지 않는다.</b>
+        /// <para>
+        /// 체력을 100/60/25/0 으로 벌려 세우는 이유 — 한 값만 보면 <b>"막대가 한쪽에서 닳는가"</b>를
+        /// 확인할 수 없다. 실제로 예전 막대는 가운데에서 양쪽으로 줄고 있었고 그게 이 방식으로 드러났다.
+        /// </para>
+        /// </remarks>
+        private static void AddSampleUnits(BoardView board)
+        {
+            var units = new List<UnitSpec>
+            {
+                new UnitSpec(1, 0, "C1", 100, new Coord(1, 1).OrderKey),
+                new UnitSpec(2, 0, "C2", 100, new Coord(1, 3).OrderKey),
+                new UnitSpec(3, 1, "slime", 100, new Coord(6, 1).OrderKey),
+                new UnitSpec(4, 1, "slime", 100, new Coord(6, 3).OrderKey),
+            };
+
+            board.Setup(new BattleLog(1, 1, 1UL, units,
+                new List<GameEvent> { new GameEvent(EventKind.RoundEnd, 0, 0, 0, 0) }));
+
+            board.SetHp(1, 100);
+            board.SetHp(2, 60);
+            board.SetHp(3, 25);
+            board.SetDead(4);
         }
 
         /// <summary>

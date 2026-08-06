@@ -41,6 +41,8 @@ namespace DomoNinja.Unity.View
             public GameObject Root;
             public SpriteRenderer Sprite;
             public Transform HpFill;
+            /// <summary>체력이 가득 찼을 때의 가로 배율. 스프라이트마다 원본 크기가 달라 미리 재둔다.</summary>
+            public float FillFullScaleX;
             public int MaxHp;
             public bool IsAlly;
         }
@@ -178,30 +180,99 @@ namespace DomoNinja.Unity.View
                 spriteObject.transform.localScale = Vector3.one * scale;
             }
 
+            var fill = CreateHpBar(root.transform, spec.Team == 0);
             return new UnitView
             {
                 Root = root,
                 Sprite = renderer,
-                HpFill = CreateHpBar(root.transform, spec.Team == 0),
+                HpFill = fill,
+                FillFullScaleX = fill != null ? fill.localScale.x : 1f,
                 MaxHp = spec.MaxHp,
                 IsAlly = spec.Team == 0,
             };
         }
 
-        private static Transform CreateHpBar(Transform parent, bool ally)
+        /// <summary>체력 막대의 월드 크기. 칸(1) 안에 들어가야 한다.</summary>
+        /// <remarks>
+        /// 높이를 0.14 로 잡았다가 화면에서 안 보여 0.22 로 올렸다.
+        /// 원본이 18×4 인데 <b>위아래 1px 씩이 테두리</b>라 실제 색이 차는 건 절반뿐이다 —
+        /// 원본 픽셀 수로 어림하면 두 배 얇게 나온다.
+        /// </remarks>
+        private const float HpBarWidth = 0.8f;
+        private const float HpBarHeight = 0.22f;
+
+        /// <summary>
+        /// 체력 막대. <b>빈 칸(트랙) 위에 채움을 얹는다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ 전에는 <b>단색 사각형 하나</b>였다. 문제가 둘이었다 —
+        /// (1) 빈 칸이 없어서 <b>"체력이 절반"과 "최대 체력이 작은 유닛"이 같아 보였고</b>,
+        /// (2) 사각형의 원점이 가운데라 체력이 줄면 <b>양쪽에서 동시에 줄어들었다.</b>
+        /// 체력은 한쪽에서 닳아야 남은 양이 읽힌다.
+        /// </para>
+        /// <para>
+        /// 팩의 <c>LifeBarMiniUnder</c>/<c>LifeBarMiniProgress</c>(18×4)가 정확히 이 용도로 들어 있다.
+        /// 표에 없으면 <b>예전 사각형으로 떨어진다</b> — 막대가 사라지면 체력이 0 인 것과 구분되지 않는다.
+        /// </para>
+        /// </remarks>
+        private Transform CreateHpBar(Transform parent, bool ally)
+        {
+            var root = new GameObject("HpBar");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = new Vector3(0f, -0.38f, -0.1f);
+
+            var trackSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniUnder") : null;
+            var fillSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniProgress") : null;
+            if (trackSprite == null || fillSprite == null) return CreateFallbackHpBar(root.transform, ally);
+
+            AddBarPart(root.transform, "Track", trackSprite, Color.white, 1, Vector3.zero,
+                       ScaleFor(trackSprite, HpBarWidth, HpBarHeight));
+
+            var fillScale = ScaleFor(fillSprite, HpBarWidth, HpBarHeight);
+            var fill = AddBarPart(root.transform, "Fill", fillSprite,
+                                  ally ? new Color(0.45f, 0.95f, 0.5f) : new Color(1f, 0.45f, 0.42f),
+                                  2, Vector3.zero, fillScale);
+            return fill;
+        }
+
+        /// <summary>스프라이트 원본 크기를 목표 월드 크기로 맞추는 배율.</summary>
+        private static Vector3 ScaleFor(Sprite sprite, float width, float height)
+        {
+            var size = sprite.bounds.size;
+            return new Vector3(size.x > 0f ? width / size.x : 1f,
+                               size.y > 0f ? height / size.y : 1f, 1f);
+        }
+
+        private static Transform AddBarPart(Transform parent, string name, Sprite sprite,
+                                            Color color, int order, Vector3 localPos, Vector3 scale)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = localPos;
+            go.transform.localScale = scale;
+
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = sprite;
+            renderer.color = color;
+            renderer.sortingOrder = order;
+            return go.transform;
+        }
+
+        private static Transform CreateFallbackHpBar(Transform parent, bool ally)
         {
             var bar = GameObject.CreatePrimitive(PrimitiveType.Quad);
-            bar.name = "HpFill";
+            bar.name = "Fill";
             bar.transform.SetParent(parent, false);
-            bar.transform.localPosition = new Vector3(0, -0.42f, -0.1f);
-            bar.transform.localScale = new Vector3(0.8f, 0.1f, 1f);
-            Object.Destroy(bar.GetComponent<Collider>());
+            bar.transform.localScale = new Vector3(HpBarWidth, HpBarHeight, 1f);
+
+            var collider = bar.GetComponent<Collider>();
+            if (Application.isPlaying) Object.Destroy(collider); else Object.DestroyImmediate(collider);
 
             bar.GetComponent<MeshRenderer>().material = new Material(Shader.Find("Sprites/Default"))
             {
                 color = ally ? new Color(0.35f, 0.85f, 0.45f) : new Color(0.9f, 0.35f, 0.35f),
             };
-
             return bar.transform;
         }
 
@@ -318,8 +389,24 @@ namespace DomoNinja.Unity.View
             if (!_units.TryGetValue(unitId, out var unit) || unit.HpFill == null) return;
 
             float ratio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)hp / unit.MaxHp);
+            SetFill(unit, ratio);
+        }
+
+        /// <summary>
+        /// 채움을 <b>왼쪽 끝에 붙인 채로</b> 줄인다.
+        /// </summary>
+        /// <remarks>
+        /// 스프라이트 원점이 가운데라 배율만 줄이면 양쪽에서 동시에 줄어든다.
+        /// 줄어든 만큼 왼쪽으로 밀어 왼쪽 끝을 고정한다 — 스프라이트 피벗을 임포트 설정으로 바꾸는 방법도
+        /// 있지만, 그러면 <b>이 코드가 왜 도는지가 인스펙터 값에 숨는다.</b>
+        /// </remarks>
+        private static void SetFill(UnitView unit, float ratio)
+        {
             var scale = unit.HpFill.localScale;
-            unit.HpFill.localScale = new Vector3(0.8f * ratio, scale.y, scale.z);
+            unit.HpFill.localScale = new Vector3(unit.FillFullScaleX * ratio, scale.y, scale.z);
+
+            var pos = unit.HpFill.localPosition;
+            unit.HpFill.localPosition = new Vector3(-HpBarWidth * 0.5f * (1f - ratio), pos.y, pos.z);
         }
 
         public void SetDead(int unitId)
@@ -327,7 +414,8 @@ namespace DomoNinja.Unity.View
             if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null) return;
 
             if (unit.Sprite != null) unit.Sprite.color = new Color(1f, 1f, 1f, 0.25f);
-            if (unit.HpFill != null) unit.HpFill.localScale = new Vector3(0f, 0.1f, 1f);
+            // 빈 트랙은 남긴다 — 막대가 통째로 사라지면 "죽었다"와 "막대를 못 그렸다"가 같아 보인다.
+            if (unit.HpFill != null) SetFill(unit, 0f);
         }
 
         /// <summary>공격 순간을 눈에 띄게. 연출이지 규칙이 아니다.</summary>
