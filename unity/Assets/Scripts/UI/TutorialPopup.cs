@@ -50,7 +50,7 @@ namespace DomoNinja.Unity
 
         private void Build()
         {
-            UITheme.SetupFullScreenCanvas(gameObject, UITheme.Layer.Popup);
+            UITheme.SetupFullScreenCanvas(gameObject, UITheme.Layer.Tutorial);
 
             // 스크림은 뒤 클릭만 막는다 — 여기서는 아무 곳 터치로 안 닫는다.
             // 카드를 넘겨보는 도중 실수로 배경을 눌러 통째로 닫히면 안 되기 때문이다.

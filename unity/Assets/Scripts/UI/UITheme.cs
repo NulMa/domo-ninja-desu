@@ -71,6 +71,12 @@ namespace DomoNinja.Unity
             /// <summary>일반 팝업. 씬 팝업(10~)보다 위.</summary>
             public const int Popup = 8000;
 
+            /// <summary>오프닝 스토리. 타이틀 위에서 한 번 재생되고 끝난다.</summary>
+            public const int Story = 8100;
+
+            /// <summary>튜토리얼. <b>스토리보다 위</b> — 스토리가 끝나며 스테이지 선택으로 넘어갈 때 겹칠 수 있다.</summary>
+            public const int Tutorial = 8200;
+
             /// <summary>확인창. <b>어떤 팝업보다 위여야 한다</b> — 팝업 위에서 물어보는 창이다.</summary>
             public const int Confirm = 8500;
 
