@@ -181,7 +181,7 @@ namespace DomoNinja.Unity
             }
 
             mgr.EnsureShopRestocked();
-            UIScreenManager.ShowScreen("Shop");
+            BattleVictoryPopup.Show(mgr.LastRoundCurrencyGained, () => UIScreenManager.ShowScreen("Shop"));
         }
 
         private void OnCycleSpeed()

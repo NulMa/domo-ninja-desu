@@ -46,6 +46,9 @@ namespace DomoNinja.Unity
         public int LastRunRoundsWon { get; private set; }
         public int LastRunCurrencyEarned { get; private set; }
 
+        /// <summary>직전 라운드에서 얻은 재화. <see cref="PlayRoundWithPlacement"/> 가 남긴다 — 전투 승리 화면이 읽는다.</summary>
+        public int LastRoundCurrencyGained { get; private set; }
+
         /// <summary>스테이지 선택 화면에서 고른 스테이지. 용병 선택 화면이 <see cref="StartNewRun"/> 때 이걸 읽는다.</summary>
         public string SelectedStageId { get; set; } = "S1";
 
@@ -175,6 +178,7 @@ namespace DomoNinja.Unity
             var outcome = _engine.PlayRound(CurrentRun, Meta, variant, sink, allyPlacement, collectLog);
             if (outcome.Won) _roundsWon++;
 
+            LastRoundCurrencyGained = outcome.CurrencyGained;
             _shopRestockedThisRound = false;
             _peekedVariant = null;
             _peekedForRound = -1;
