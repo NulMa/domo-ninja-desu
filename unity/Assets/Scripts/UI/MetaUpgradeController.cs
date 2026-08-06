@@ -30,10 +30,10 @@ namespace DomoNinja.Unity
             _currencyLabel = board.Find("CurrencyValueLabel").GetComponent<TMP_Text>();
 
             var closeButton = board.Find("CloseButton").gameObject;
-            var close = EnsureButton(closeButton);
+            var close = UITheme.EnsureButton(closeButton);
             close.onClick.AddListener(() => UIScreenManager.HidePopup("MetaUpgrade"));
 
-            _resetButton = EnsureButton(board.Find("ResetButton").gameObject);
+            _resetButton = UITheme.EnsureButton(board.Find("ResetButton").gameObject);
             _resetButton.onClick.AddListener(OnReset);
 
             foreach (string id in RowIds)
@@ -45,7 +45,7 @@ namespace DomoNinja.Unity
 
                 _levelLabels[id] = row.Find("LevelLabel").GetComponent<TMP_Text>();
 
-                var upgradeButton = EnsureButton(row.Find("UpgradeButton").gameObject);
+                var upgradeButton = UITheme.EnsureButton(row.Find("UpgradeButton").gameObject);
                 _upgradeButtons[id] = upgradeButton;
                 _upgradeButtonLabels[id] = row.Find("UpgradeButton/Label").GetComponent<TMP_Text>();
 
@@ -118,15 +118,5 @@ namespace DomoNinja.Unity
                 if (def.Id == id) return def;
 
             return null;
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }

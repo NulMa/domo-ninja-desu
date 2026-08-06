@@ -90,10 +90,10 @@ namespace DomoNinja.Unity
             for (int i = 0; i < 3; i++) BindSlot(i, "SkillSlot" + (i + 1));
             for (int i = 0; i < 2; i++) BindSlot(3 + i, "ItemSlot" + (i + 1));
 
-            _buyTab = EnsureButton(_board.Find("BuyTab").gameObject);
-            _sellTab = EnsureButton(_board.Find("SellTab").gameObject);
-            _rerollButton = EnsureButton(_board.Find("RerollButton").gameObject);
-            _nextRoundButton = EnsureButton(_board.Find("NextRoundButton").gameObject);
+            _buyTab = UITheme.EnsureButton(_board.Find("BuyTab").gameObject);
+            _sellTab = UITheme.EnsureButton(_board.Find("SellTab").gameObject);
+            _rerollButton = UITheme.EnsureButton(_board.Find("RerollButton").gameObject);
+            _nextRoundButton = UITheme.EnsureButton(_board.Find("NextRoundButton").gameObject);
 
             _buyTab.onClick.AddListener(() => SetSellMode(false));
             _sellTab.onClick.AddListener(() => SetSellMode(true));
@@ -114,7 +114,7 @@ namespace DomoNinja.Unity
             for (int i = 0; i < 3; i++)
             {
                 var slot = panel.Find("Slot" + i);
-                var button = EnsureButton(slot.gameObject);
+                var button = UITheme.EnsureButton(slot.gameObject);
                 var face = slot.Find("Face").GetComponent<UImage>();
                 var nameLabel = slot.Find("NameLabel").GetComponent<TMP_Text>();
                 var statusLabel = slot.Find("StatusLabel").GetComponent<TMP_Text>();
@@ -124,7 +124,7 @@ namespace DomoNinja.Unity
                 button.onClick.AddListener(() => OnTargetSlotClicked(captured));
             }
 
-            _targetCancelButton = EnsureButton(panel.Find("CancelButton").gameObject);
+            _targetCancelButton = UITheme.EnsureButton(panel.Find("CancelButton").gameObject);
             _targetCancelButton.onClick.AddListener(CloseTargetPicker);
 
             _targetPicker.gameObject.SetActive(false);
@@ -133,7 +133,7 @@ namespace DomoNinja.Unity
         private void BindSlot(int index, string childName)
         {
             var slot = _board.Find(childName);
-            var button = EnsureButton(slot.gameObject);
+            var button = UITheme.EnsureButton(slot.gameObject);
             _slotButtons[index] = button;
             _slotLabels[index] = slot.Find("Label").GetComponent<TMP_Text>();
             button.onClick.AddListener(() => OnSlotClicked(index));
@@ -150,7 +150,28 @@ namespace DomoNinja.Unity
         private void SetSellMode(bool sell)
         {
             _sellMode = sell;
+            RefreshTabs();
             RefreshUI();
+        }
+
+        /// <summary>
+        /// 어느 탭이 켜져 있는지 그림으로 보여준다.
+        /// </summary>
+        /// <remarks>
+        /// 지금까지 두 탭이 <b>완전히 같게 그려졌다.</b> 화면 내용은 바뀌는데 탭은 그대로라
+        /// "구매 화면인지 판매 화면인지"를 매번 슬롯을 보고 역추론해야 했다.
+        /// 팩에 <c>tab_selected</c>/<c>tab_unselected</c> 가 이미 들어 있다.
+        /// </remarks>
+        private void RefreshTabs()
+        {
+            var selected = UITheme.Find("UI/Theme/tab_selected");
+            var unselected = UITheme.Find("UI/Theme/tab_unselected");
+            if (selected == null || unselected == null) return;
+
+            var buy = _buyTab.targetGraphic as UImage;
+            var sell = _sellTab.targetGraphic as UImage;
+            if (buy != null) buy.sprite = _sellMode ? unselected : selected;
+            if (sell != null) sell.sprite = _sellMode ? selected : unselected;
         }
 
         private void RefreshUI()
@@ -338,15 +359,5 @@ namespace DomoNinja.Unity
                 default:
                     return ItemNames.TryGetValue(offer.Id, out string name) ? name : offer.Id;
             }
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }

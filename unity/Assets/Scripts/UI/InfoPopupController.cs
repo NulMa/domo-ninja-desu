@@ -75,9 +75,9 @@ namespace DomoNinja.Unity
             _characterTab = board.Find("CharacterTab").gameObject;
             _itemTab = board.Find("ItemTab").gameObject;
 
-            var tabCharacter = EnsureButton(board.Find("TabCharacter").gameObject);
-            var tabItem = EnsureButton(board.Find("TabItem").gameObject);
-            var closeButton = EnsureButton(board.Find("CloseButton").gameObject);
+            var tabCharacter = UITheme.EnsureButton(board.Find("TabCharacter").gameObject);
+            var tabItem = UITheme.EnsureButton(board.Find("TabItem").gameObject);
+            var closeButton = UITheme.EnsureButton(board.Find("CloseButton").gameObject);
 
             tabCharacter.onClick.AddListener(() => ShowTab(character: true));
             tabItem.onClick.AddListener(() => ShowTab(character: false));
@@ -97,7 +97,7 @@ namespace DomoNinja.Unity
             for (int i = 0; i < 3; i++)
             {
                 var slot = characterTab.Find("PortraitSlot" + i);
-                var btn = EnsureButton(slot.gameObject);
+                var btn = UITheme.EnsureButton(slot.gameObject);
                 var face = slot.Find("Face").GetComponent<UImage>();
                 var nameLabel = slot.Find("NameLabel").GetComponent<TMP_Text>();
                 var statusLabel = slot.Find("StatusLabel").GetComponent<TMP_Text>();
@@ -123,7 +123,7 @@ namespace DomoNinja.Unity
             for (int i = 0; i < 4; i++)
             {
                 var slot = itemTab.Find("OwnedItemSlot" + i);
-                var btn = EnsureButton(slot.gameObject);
+                var btn = UITheme.EnsureButton(slot.gameObject);
                 _itemSlotButtons[i] = btn;
                 _itemSlotIcons[i] = slot.Find("Icon").GetComponent<UImage>();
 
@@ -358,15 +358,5 @@ namespace DomoNinja.Unity
                 case "damageTaken": return "받는 피해";
                 default: return stat;
             }
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }
