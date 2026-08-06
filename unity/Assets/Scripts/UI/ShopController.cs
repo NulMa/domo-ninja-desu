@@ -19,6 +19,9 @@ namespace DomoNinja.Unity
     /// </remarks>
     public sealed class ShopController : MonoBehaviour
     {
+        /// <summary>런 전용 재화 아이콘. 메타 재화(StageSelect, `Meta/M-GOLD_재화`)와 구분되는 별개 그림이다.</summary>
+        private const string RunCurrencyIconKey = "UI/RunCurrency_재화";
+
         /// <summary>아이템 표시명. 데이터에 플레이어용 이름 필드가 없어 여기 하나에 둔다 — InfoPopup 도 이걸 그대로 쓴다.</summary>
         internal static readonly Dictionary<string, string> ItemNames = new Dictionary<string, string>
         {
@@ -85,7 +88,9 @@ namespace DomoNinja.Unity
         private void Awake()
         {
             _board = transform.Find("Board");
-            _currencyLabel = _board.Find("CurrencyDisplay/Label").GetComponent<TMP_Text>();
+            var currencyDisplay = _board.Find("CurrencyDisplay");
+            _currencyLabel = currencyDisplay.Find("Label").GetComponent<TMP_Text>();
+            currencyDisplay.Find("Icon").GetComponent<UImage>().sprite = UITheme.Find(RunCurrencyIconKey);
 
             _slotButtons = new Button[5];
             _slotLabels = new TMP_Text[5];
@@ -185,7 +190,7 @@ namespace DomoNinja.Unity
             var run = mgr != null ? mgr.CurrentRun : null;
             if (mgr == null || run == null) return;
 
-            _currencyLabel.text = $"재화 {run.Currency}";
+            _currencyLabel.text = run.Currency.ToString();
 
             if (_sellMode) RefreshSellSlots(run);
             else RefreshBuySlots(mgr, run);
