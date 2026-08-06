@@ -34,7 +34,7 @@ namespace DomoNinja.Unity
             var board = transform.Find("Board");
             _portraitGrid = board.Find("PortraitGrid");
             _confirmedTray = board.Find("ConfirmedTray");
-            _enterBattleButton = EnsureButton(board.Find("EnterBattleButton").gameObject);
+            _enterBattleButton = UITheme.EnsureButton(board.Find("EnterBattleButton").gameObject);
             _infoLabel = board.Find("InfoPanel/Label").GetComponent<TMP_Text>();
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
@@ -44,7 +44,7 @@ namespace DomoNinja.Unity
                 if (!cell.name.StartsWith(PortraitPrefix)) continue;
                 string characterId = cell.name.Substring(PortraitPrefix.Length);
 
-                var btn = EnsureButton(cell.gameObject);
+                var btn = UITheme.EnsureButton(cell.gameObject);
                 btn.onClick.AddListener(() => OnPortraitClicked(characterId));
             }
 
@@ -143,15 +143,5 @@ namespace DomoNinja.Unity
             mgr.StartNewRun(mgr.SelectedStageId, _selected);
             UIScreenManager.ShowScreen("GamePlay");
             UIScreenManager.ShowPopup("StageIntro");
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }

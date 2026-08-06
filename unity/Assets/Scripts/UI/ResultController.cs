@@ -19,7 +19,7 @@ namespace DomoNinja.Unity
             _titleLabel = board.Find("TitleLabel").GetComponent<TMP_Text>();
             _statsLabel = board.Find("StatsLabel").GetComponent<TMP_Text>();
             _rewardLabel = board.Find("RewardLabel").GetComponent<TMP_Text>();
-            _confirmButton = EnsureButton(board.Find("ConfirmButton").gameObject);
+            _confirmButton = UITheme.EnsureButton(board.Find("ConfirmButton").gameObject);
 
             _confirmButton.onClick.AddListener(OnConfirm);
         }
@@ -38,15 +38,5 @@ namespace DomoNinja.Unity
         {
             UIScreenManager.HidePopup("Result");
             UIScreenManager.ShowScreen("StageSelect");
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }

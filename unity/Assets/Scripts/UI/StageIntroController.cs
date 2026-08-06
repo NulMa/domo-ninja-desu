@@ -44,7 +44,7 @@ namespace DomoNinja.Unity
             var board = transform.Find("Board");
             _container = SetupScrollableContainer(board.Find("NodeContainer").GetComponent<RectTransform>(),
                                                     out _scrollRect);
-            _startBattleButton = EnsureButton(board.Find("StartBattleButton").gameObject);
+            _startBattleButton = UITheme.EnsureButton(board.Find("StartBattleButton").gameObject);
             _startBattleButton.onClick.AddListener(OnStartBattle);
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
@@ -238,15 +238,5 @@ namespace DomoNinja.Unity
             t.textWrappingMode = TextWrappingModes.Normal;
             t.overflowMode = TextOverflowModes.Truncate;
             return t;
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }

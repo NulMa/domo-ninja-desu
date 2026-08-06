@@ -30,12 +30,12 @@ namespace DomoNinja.Unity
 
             _bgmSlider = bgmRow.Find("SliderArea/BgmSlider").GetComponent<Slider>();
             _bgmValueLabel = bgmRow.Find("ValueLabel").GetComponent<TMP_Text>();
-            _bgmMuteButton = EnsureButton(bgmRow.Find("MuteButton").gameObject);
+            _bgmMuteButton = UITheme.EnsureButton(bgmRow.Find("MuteButton").gameObject);
             _bgmMuteLabel = _bgmMuteButton.transform.Find("Label").GetComponent<TMP_Text>();
 
             _sfxSlider = sfxRow.Find("SliderArea/SfxSlider").GetComponent<Slider>();
             _sfxValueLabel = sfxRow.Find("ValueLabel").GetComponent<TMP_Text>();
-            _sfxMuteButton = EnsureButton(sfxRow.Find("MuteButton").gameObject);
+            _sfxMuteButton = UITheme.EnsureButton(sfxRow.Find("MuteButton").gameObject);
             _sfxMuteLabel = _sfxMuteButton.transform.Find("Label").GetComponent<TMP_Text>();
 
             _bgmSlider.onValueChanged.AddListener(v => AudioManager.Instance?.SetBgmVolume(v));
@@ -78,15 +78,5 @@ namespace DomoNinja.Unity
             label.text = muted ? "음소거 해제" : "음소거";
             var img = button.GetComponent<UImage>();
             if (img != null) img.color = muted ? MutedColor : UnmutedColor;
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }

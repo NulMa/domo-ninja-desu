@@ -17,7 +17,9 @@ namespace DomoNinja.Unity
         public string StageId = "";
 
         // 스프라이트(나무 버튼) 위에 곱해지는 틴트다. 흰색이 원본 그대로다.
-        private static readonly Color LockedColor = new Color(0.45f, 0.45f, 0.45f);
+        // ★ 잠김은 색을 깎지 않는다 — `interactable=false` 가 이미 `button_disabled` 그림으로 바꾼다.
+        //   여기서 또 어둡게 하면 두 번 깎여서 "잠김"이 아니라 "안 보임"이 된다.
+        private static readonly Color LockedColor = Color.white;
         private static readonly Color UnlockedColor = Color.white;
         private static readonly Color SelectedColor = new Color(1.00f, 0.85f, 0.55f);
 

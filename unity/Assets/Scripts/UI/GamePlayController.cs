@@ -39,8 +39,8 @@ namespace DomoNinja.Unity
         private void Awake()
         {
             _board = transform.Find("Board");
-            _startBattleButton = EnsureButton(_board.Find("StartBattleButton").gameObject);
-            _speedButton = EnsureButton(_board.Find("SpeedButton").gameObject);
+            _startBattleButton = UITheme.EnsureButton(_board.Find("StartBattleButton").gameObject);
+            _speedButton = UITheme.EnsureButton(_board.Find("SpeedButton").gameObject);
             _speedLabel = _board.Find("SpeedButton/Label").GetComponent<TMP_Text>();
 
             _startBattleButton.onClick.AddListener(OnStartBattle);
@@ -236,15 +236,5 @@ namespace DomoNinja.Unity
             var catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
             var def = mgr != null && mgr.Data != null ? mgr.Data.FindCharacter(characterId) : null;
             face.GetComponent<UImage>().sprite = def != null && catalog != null ? catalog.Find(def.Sprite) : null;
-        }
-
-        private static Button EnsureButton(GameObject go)
-        {
-            var btn = go.GetComponent<Button>();
-            if (btn == null) btn = go.AddComponent<Button>();
-            var img = go.GetComponent<UImage>();
-            if (img != null) btn.targetGraphic = img;
-            return btn;
-        }
-    }
+        }    }
 }
