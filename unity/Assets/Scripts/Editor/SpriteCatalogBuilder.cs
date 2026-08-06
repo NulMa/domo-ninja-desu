@@ -36,6 +36,34 @@ namespace DomoNinja.Unity.Editor
         /// <summary>대표 스프라이트를 고르는 우선순위. 앞에 있는 걸 먼저 쓴다.</summary>
         private static readonly string[] Preferred = { "Faceset", "Idle", "Idle40x40", "Walk" };
 
+        /// <summary>
+        /// 보드 전투 애니메이션(캐릭터 6 + 보스 2, Idle/Attack)에 쓰는 시트. 값은 정사각 프레임 한 변(px).
+        /// </summary>
+        /// <remarks>
+        /// 키는 <c>Assets/Sprite</c> 기준 확장자 없는 상대 경로 — 파일형 색인 키와 같은 형식이다.
+        /// 여기 없는 PNG는 전부 기존처럼 <see cref="SpriteImportMode.Single"/> 로 남는다
+        /// (몬스터 66종은 방향별 분리 프레임이 없어 이 표에 넣을 게 없다 — `D-77` 스코프 결정).
+        /// </remarks>
+        private static readonly Dictionary<string, int> AnimatedSpriteFrameSize = new Dictionary<string, int>
+        {
+            ["Actor/Character/Samurai/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Samurai/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/Monk/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Monk/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/NinjaRed/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/NinjaRed/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/Hunter/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Hunter/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/NinjaMageBlack/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/NinjaMageBlack/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/Shaman/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Shaman/SeparateAnim/Attack"] = 16,
+            ["Actor/Boss/TenguRed/Idle"] = 82,
+            ["Actor/Boss/TenguRed/Attack"] = 82,
+            ["Actor/Boss/GiantFrog/Idle40x40"] = 40,
+            ["Actor/Boss/GiantFrog/Attack"] = 40,
+        };
+
         public void OnPreprocessBuild(BuildReport report) => Build();
 
         [MenuItem("DomoNinja/스프라이트 카탈로그 생성")]
@@ -67,7 +95,19 @@ namespace DomoNinja.Unity.Editor
                 string asset = path.Replace('\\', '/');
                 if (!(AssetImporter.GetAtPath(asset) is TextureImporter importer)) continue;
 
+                string key = asset.Substring(SpriteRoot.Length + 1);
+                key = key.Substring(0, key.Length - ".png".Length);
+
+                if (AnimatedSpriteFrameSize.TryGetValue(key, out int frameSize))
+                {
+                    if (ApplyAnimatedImport(importer, frameSize)) changed++;
+                    continue;
+                }
+
+                // 예전엔 여기 애니메이션 시트도 섞여 있었다 — Multiple 로 한 번 바뀐 파일이
+                // 이 표에서 빠지면(스코프 축소) 이 조건이 없으면 Multiple 로 영영 남는다.
                 bool needsChange = importer.textureType != TextureImporterType.Sprite
+                                   || importer.spriteImportMode != SpriteImportMode.Single
                                    || importer.filterMode != FilterMode.Point
                                    || importer.textureCompression != TextureImporterCompression.Uncompressed;
 
@@ -84,6 +124,55 @@ namespace DomoNinja.Unity.Editor
             }
 
             return changed;
+        }
+
+        /// <summary>
+        /// 정사각 프레임이 가로로 나열된 시트를 <see cref="SpriteImportMode.Multiple"/> 로 자른다.
+        /// </summary>
+        /// <remarks>
+        /// 프레임 수는 시트 폭에서 역산한다(폭 ÷ <paramref name="frameSize"/>) — 프레임 수를 표에
+        /// 따로 박아두면 아트가 프레임을 늘렸을 때 코드도 같이 고쳐야 하고, 둘이 어긋나면 마지막 프레임이
+        /// 잘리거나 빈 칸이 섞인다. 이름은 <c>{파일명}_{인덱스}</c> — <see cref="AddAnimatedFrameEntries"/> 가
+        /// 이 이름으로 되찾는다.
+        /// </remarks>
+        private static bool ApplyAnimatedImport(TextureImporter importer, int frameSize)
+        {
+            importer.GetSourceTextureWidthAndHeight(out int width, out _);
+            int frameCount = Mathf.Max(1, width / frameSize);
+
+            bool needsChange = importer.textureType != TextureImporterType.Sprite
+                               || importer.spriteImportMode != SpriteImportMode.Multiple
+                               || importer.filterMode != FilterMode.Point
+                               || importer.textureCompression != TextureImporterCompression.Uncompressed
+                               || importer.spritesheet == null
+                               || importer.spritesheet.Length != frameCount;
+
+            if (!needsChange) return false;
+
+            string baseName = Path.GetFileNameWithoutExtension(importer.assetPath);
+            var meta = new SpriteMetaData[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                meta[i] = new SpriteMetaData
+                {
+                    name = $"{baseName}_{i}",
+                    rect = new Rect(i * frameSize, 0, frameSize, frameSize),
+                    alignment = (int)SpriteAlignment.Center,
+                    pivot = new Vector2(0.5f, 0.5f),
+                };
+            }
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Multiple;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+#pragma warning disable CS0618 // spritesheet 는 레거시 API지만 개별 서브스프라이트를 코드로 지정하는 유일한 방법이다.
+            importer.spritesheet = meta;
+#pragma warning restore CS0618
+
+            importer.SaveAndReimport();
+            return true;
         }
 
         public static int Build()
@@ -110,12 +199,20 @@ namespace DomoNinja.Unity.Editor
             foreach (string png in allPngs)
             {
                 string normalized = png.Replace('\\', '/');
-                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(normalized);
-                if (sprite == null) continue;
 
                 // "Assets/Sprite/Item/statBoost_스탯강화.png" → "Item/statBoost_스탯강화"
                 string key = normalized.Substring(SpriteRoot.Length + 1);
                 key = key.Substring(0, key.Length - ".png".Length);
+
+                if (AnimatedSpriteFrameSize.ContainsKey(key))
+                {
+                    // Multiple 모드라 텍스처 자체는 Sprite 가 아니다 — 프레임마다 따로 색인한다.
+                    AddAnimatedFrameEntries(entries, normalized, key);
+                    continue;
+                }
+
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(normalized);
+                if (sprite == null) continue;
 
                 entries.Add(new SpriteCatalog.Entry { Key = key, Sprite = sprite });
             }
@@ -156,6 +253,24 @@ namespace DomoNinja.Unity.Editor
 
             AssetDatabase.SaveAssets();
             return entries.Count;
+        }
+
+        /// <summary>
+        /// <paramref name="path"/> 를 자른 프레임들을 <c>{key}_0</c>, <c>{key}_1</c>, ... 로 색인한다.
+        /// </summary>
+        /// <remarks>
+        /// 서브스프라이트 순서가 아니라 <b>이름으로</b> 찾는다 — <c>LoadAllAssetRepresentationsAtPath</c> 의
+        /// 반환 순서는 보장되지 않지만, 이름은 <see cref="ApplyAnimatedImport"/> 가 직접 지었으니 확실하다.
+        /// </remarks>
+        private static void AddAnimatedFrameEntries(List<SpriteCatalog.Entry> entries, string path, string key)
+        {
+            var frames = AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
+                                       .OfType<Sprite>()
+                                       .ToDictionary(s => s.name);
+
+            string baseName = Path.GetFileNameWithoutExtension(path);
+            for (int i = 0; frames.TryGetValue($"{baseName}_{i}", out var frame); i++)
+                entries.Add(new SpriteCatalog.Entry { Key = $"{key}_{i}", Sprite = frame });
         }
 
         private static string Pick(string[] pngs)

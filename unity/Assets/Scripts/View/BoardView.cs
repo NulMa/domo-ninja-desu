@@ -54,6 +54,16 @@ namespace DomoNinja.Unity.View
             public bool IsDead;
             public int MaxHp;
             public bool IsAlly;
+
+            // ── 도트 애니메이션(캐릭터·보스 한정, `D-77`). 없으면(몬스터 등) 전부 null 이고
+            //    초상 스프라이트가 그대로 정지 화면으로 남는다 — TickAnimations 가 건드리지 않는다.
+            public Sprite[] IdleFrames;
+            public Sprite[] AttackFrames;
+            public float IdleFrameSeconds;
+            public float AttackFrameSeconds;
+            public int FrameIndex;
+            public float FrameTimer;
+            public bool IsAttacking;
         }
 
         /// <param name="spritePaths">
@@ -168,8 +178,25 @@ namespace DomoNinja.Unity.View
             spriteObject.transform.SetParent(root.transform, false);
 
             var renderer = spriteObject.AddComponent<SpriteRenderer>();
-            renderer.sprite = _catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null;
             renderer.sortingOrder = 0;
+
+            // 애니메이션이 있는 종류(캐릭터·보스)는 Idle 첫 프레임으로 시작한다 — 없으면(몬스터 등)
+            // 기존처럼 초상(Faceset) 정지 화면이다. 전투 재생(Setup)만 이 분기를 타고,
+            // 배치 화면(CreatePlacementUnit)은 계속 초상만 쓴다 — 아직 "전투 중"이 아니라서다.
+            Sprite[] idleFrames = null, attackFrames = null;
+            float idleFrameSeconds = 0f, attackFrameSeconds = 0f;
+            var animSpec = _catalog != null ? AnimSpecOf(spec.TypeId) : null;
+            if (animSpec.HasValue)
+            {
+                idleFrames = LoadFrames(_catalog, animSpec.Value.IdleKey, animSpec.Value.IdleFrames);
+                attackFrames = LoadFrames(_catalog, animSpec.Value.AttackKey, animSpec.Value.AttackFrames);
+                idleFrameSeconds = animSpec.Value.IdleFrameSeconds;
+                attackFrameSeconds = animSpec.Value.AttackFrameSeconds;
+            }
+
+            renderer.sprite = idleFrames != null
+                ? idleFrames[0]
+                : (_catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null);
 
             if (renderer.sprite == null)
             {
@@ -205,7 +232,77 @@ namespace DomoNinja.Unity.View
                 Outline = outline,
                 MaxHp = spec.MaxHp,
                 IsAlly = spec.Team == 0,
+                IdleFrames = idleFrames,
+                AttackFrames = attackFrames,
+                IdleFrameSeconds = idleFrameSeconds,
+                AttackFrameSeconds = attackFrameSeconds,
             };
+        }
+
+        /// <summary>
+        /// 유닛 종류 → 애니메이션 시트 명세. 캐릭터 6 + 보스 2 만 있다 — 몬스터는 방향별 분리 프레임이
+        /// 없어 정지 초상으로 남는다(`D-77` 스코프 결정, "캐릭터 + 보스까지").
+        /// </summary>
+        /// <remarks>
+        /// 키는 <see cref="SpriteCatalogBuilder"/> 가 슬라이싱해 색인한 <c>{경로}_{프레임번호}</c> 의 베이스다.
+        /// 프레임 수를 여기 다시 적는 이유 — 카탈로그는 실제로 잘린 프레임 수만 알고, 런타임에서
+        /// 몇 장을 이어붙일지는 View 의 연출 결정이라 카탈로그에 물어볼 수 없다.
+        /// </remarks>
+        private readonly struct AnimSpec
+        {
+            public readonly string IdleKey;
+            public readonly int IdleFrames;
+            public readonly float IdleFrameSeconds;
+            public readonly string AttackKey;
+            public readonly int AttackFrames;
+            public readonly float AttackFrameSeconds;
+
+            public AnimSpec(string idleKey, int idleFrames, float idleFrameSeconds,
+                            string attackKey, int attackFrames, float attackFrameSeconds)
+            {
+                IdleKey = idleKey;
+                IdleFrames = idleFrames;
+                IdleFrameSeconds = idleFrameSeconds;
+                AttackKey = attackKey;
+                AttackFrames = attackFrames;
+                AttackFrameSeconds = attackFrameSeconds;
+            }
+        }
+
+        private static AnimSpec? AnimSpecOf(string typeId)
+        {
+            switch (typeId)
+            {
+                case "C1": return CharacterAnim("Samurai");
+                case "C2": return CharacterAnim("Monk");
+                case "C3": return CharacterAnim("NinjaRed");
+                case "C4": return CharacterAnim("Hunter");
+                case "C5": return CharacterAnim("NinjaMageBlack");
+                case "C6": return CharacterAnim("Shaman");
+                case "tenguRed":
+                    return new AnimSpec("Actor/Boss/TenguRed/Idle", 6, 0.15f,
+                                        "Actor/Boss/TenguRed/Attack", 15, 0.045f);
+                case "giantFrog":
+                    return new AnimSpec("Actor/Boss/GiantFrog/Idle40x40", 5, 0.15f,
+                                        "Actor/Boss/GiantFrog/Attack", 3, 0.1f);
+                default: return null;
+            }
+        }
+
+        private static AnimSpec CharacterAnim(string folder) => new AnimSpec(
+            $"Actor/Character/{folder}/SeparateAnim/Idle", 4, 0.15f,
+            $"Actor/Character/{folder}/SeparateAnim/Attack", 4, 0.08f);
+
+        /// <summary>프레임을 하나라도 못 찾으면 <c>null</c> — 애니메이션 전체를 포기하고 정지 초상으로 돌아간다.</summary>
+        private static Sprite[] LoadFrames(SpriteCatalog catalog, string baseKey, int count)
+        {
+            var frames = new Sprite[count];
+            for (int i = 0; i < count; i++)
+            {
+                frames[i] = catalog.Find($"{baseKey}_{i}");
+                if (frames[i] == null) return null;
+            }
+            return frames;
         }
 
         /// <summary>
@@ -521,7 +618,28 @@ namespace DomoNinja.Unity.View
         /// 전에는 <c>Attack</c> 도 대상을 붉게 칠했다. 그러면 <c>Damage</c> 와 구분이 없어져
         /// <b>때린 것과 맞은 것이 같은 그림</b>이 된다. 휘두르는 쪽은 노란빛, 맞는 쪽은 붉은빛으로 나눈다.
         /// </remarks>
-        public void FlashAttack(int actorId, int targetId) => Flash(actorId, AttackTint);
+        public void FlashAttack(int actorId, int targetId)
+        {
+            Flash(actorId, AttackTint);
+            PlayAttackAnimation(actorId);
+        }
+
+        /// <summary>
+        /// 공격 프레임으로 잠깐 전환한다. Idle 로는 <see cref="TickAnimations"/> 가 알아서 되돌린다.
+        /// </summary>
+        /// <remarks>
+        /// 애니메이션이 없는 종류(몬스터 등)는 <c>AttackFrames</c> 가 <c>null</c> 이라 아무 일도 안 한다 —
+        /// 이 메서드는 <see cref="FlashAttack"/> 과 짝이라 항상 같이 불리므로, 여기서 갈라야
+        /// <c>BattleReplayer</c> 가 유닛 종류를 알 필요가 없다.
+        /// </remarks>
+        private void PlayAttackAnimation(int unitId)
+        {
+            if (!_units.TryGetValue(unitId, out var unit) || unit.AttackFrames == null) return;
+
+            unit.IsAttacking = true;
+            unit.FrameIndex = 0;
+            unit.FrameTimer = 0f;
+        }
 
         /// <summary>피격.</summary>
         public void FlashDamage(int unitId) => Flash(unitId, DamageTint);
@@ -550,6 +668,46 @@ namespace DomoNinja.Unity.View
                 unit.Sprite.color = Color.Lerp(Color.white, unit.Sprite.color, t);
 
                 if (unit.FlashLeft <= 0f) unit.Sprite.color = Color.white;
+            }
+        }
+
+        /// <summary>
+        /// Idle 루프 · Attack 전환을 시간에 따라 진행한다. 재생기가 매 프레임 부른다(`TickFlashes` 와 짝).
+        /// </summary>
+        /// <remarks>
+        /// 색(<c>Sprite.color</c>, 번쩍임)과 스프라이트(<c>Sprite.sprite</c>, 프레임)는 서로 다른 채널이라
+        /// <see cref="TickFlashes"/> 와 간섭하지 않는다 — 공격 프레임이 도는 동안에도 피격 번쩍임이 같이 보인다.
+        /// </remarks>
+        public void TickAnimations(float deltaTime)
+        {
+            foreach (var unit in _units.Values)
+            {
+                if (unit.IsDead || unit.Sprite == null || unit.IdleFrames == null) continue;
+
+                bool attacking = unit.IsAttacking && unit.AttackFrames != null;
+                var frames = attacking ? unit.AttackFrames : unit.IdleFrames;
+                float frameSeconds = attacking ? unit.AttackFrameSeconds : unit.IdleFrameSeconds;
+
+                unit.FrameTimer += deltaTime;
+                if (unit.FrameTimer >= frameSeconds)
+                {
+                    unit.FrameTimer -= frameSeconds;
+                    unit.FrameIndex++;
+
+                    if (unit.FrameIndex >= frames.Length)
+                    {
+                        unit.FrameIndex = 0;
+                        // 공격 재생이 한 바퀴 끝나면 Idle 로 돌아간다 — 계속 반복하면 "공격 중"이
+                        // 실제 공격 이벤트보다 오래 보여서 재생 로그와 화면이 어긋난다.
+                        if (attacking)
+                        {
+                            unit.IsAttacking = false;
+                            frames = unit.IdleFrames;
+                        }
+                    }
+                }
+
+                unit.Sprite.sprite = frames[unit.FrameIndex];
             }
         }
 

@@ -69,6 +69,7 @@ namespace DomoNinja.Unity.View
             // ★ 전에는 여기서 색을 통째로 지웠다. 그러면 번쩍임이 **그 프레임 안에서만** 살아 있어
             //   60fps 기준 16ms 만 보인다 — 연출이 없는 것과 화면상 같다. 시간으로 되돌린다.
             _board.TickFlashes(Time.deltaTime);
+            _board.TickAnimations(Time.deltaTime);
 
             // 지나간 틱의 이벤트를 순서대로 소비한다.
             while (_cursor < _log.Events.Count && _log.Events[_cursor].Tick <= _playhead)

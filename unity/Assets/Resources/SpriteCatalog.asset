@@ -15,28 +15,78 @@ MonoBehaviour:
   _entries:
   - Key: Actor/Boss/GiantFrog
     Sprite: {fileID: 21300000, guid: 5284d6f69002a6448a274dceb4986c56, type: 3}
-  - Key: Actor/Boss/GiantFrog/Attack
-    Sprite: {fileID: 21300000, guid: a8c9d65292584c0459204d0c0f1953f8, type: 3}
+  - Key: Actor/Boss/GiantFrog/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: a8c9d65292584c0459204d0c0f1953f8, type: 3}
+  - Key: Actor/Boss/GiantFrog/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: a8c9d65292584c0459204d0c0f1953f8, type: 3}
+  - Key: Actor/Boss/GiantFrog/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: a8c9d65292584c0459204d0c0f1953f8, type: 3}
   - Key: Actor/Boss/GiantFrog/Charge
     Sprite: {fileID: 21300000, guid: f2e412ef5f5708442a2309b4cea8e8d6, type: 3}
   - Key: Actor/Boss/GiantFrog/Faceset
     Sprite: {fileID: 21300000, guid: 5284d6f69002a6448a274dceb4986c56, type: 3}
   - Key: Actor/Boss/GiantFrog/Hit
     Sprite: {fileID: 21300000, guid: 140a08a58ce74004397cb78e346f7ad8, type: 3}
-  - Key: Actor/Boss/GiantFrog/Idle40x40
-    Sprite: {fileID: 21300000, guid: 25a20d77d96e5174297115699f387564, type: 3}
+  - Key: Actor/Boss/GiantFrog/Idle40x40_0
+    Sprite: {fileID: 2044930938454195420, guid: 25a20d77d96e5174297115699f387564, type: 3}
+  - Key: Actor/Boss/GiantFrog/Idle40x40_1
+    Sprite: {fileID: 2065925476280198131, guid: 25a20d77d96e5174297115699f387564, type: 3}
+  - Key: Actor/Boss/GiantFrog/Idle40x40_2
+    Sprite: {fileID: 6440445356604735194, guid: 25a20d77d96e5174297115699f387564, type: 3}
+  - Key: Actor/Boss/GiantFrog/Idle40x40_3
+    Sprite: {fileID: -6927315874622710586, guid: 25a20d77d96e5174297115699f387564, type: 3}
+  - Key: Actor/Boss/GiantFrog/Idle40x40_4
+    Sprite: {fileID: 3693424957539914847, guid: 25a20d77d96e5174297115699f387564, type: 3}
   - Key: Actor/Boss/GiantFrog/Jump
     Sprite: {fileID: 21300000, guid: b57a201f89af7034983c970a32c5c445, type: 3}
   - Key: Actor/Boss/TenguRed
     Sprite: {fileID: 21300000, guid: e2430729d1c4fef469b24f9cb229d978, type: 3}
-  - Key: Actor/Boss/TenguRed/Attack
-    Sprite: {fileID: 21300000, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_10
+    Sprite: {fileID: -4098942091326826159, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_11
+    Sprite: {fileID: -9192815492500660022, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_12
+    Sprite: {fileID: -8528791842903838742, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_13
+    Sprite: {fileID: 5714683192730101994, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_14
+    Sprite: {fileID: 967789818437793053, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_4
+    Sprite: {fileID: -910092549403018386, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_5
+    Sprite: {fileID: 221524225039350300, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_6
+    Sprite: {fileID: 1290532464073988732, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_7
+    Sprite: {fileID: 4780903288873104255, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_8
+    Sprite: {fileID: -2238382357930459393, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
+  - Key: Actor/Boss/TenguRed/Attack_9
+    Sprite: {fileID: -297473348006037033, guid: 122cc0a841fb28040a066223de34b10b, type: 3}
   - Key: Actor/Boss/TenguRed/Faceset
     Sprite: {fileID: 21300000, guid: e2430729d1c4fef469b24f9cb229d978, type: 3}
   - Key: Actor/Boss/TenguRed/Hit
     Sprite: {fileID: 21300000, guid: c424cf35cf12e7d4da5fb2cace44522b, type: 3}
-  - Key: Actor/Boss/TenguRed/Idle
-    Sprite: {fileID: 21300000, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle_4
+    Sprite: {fileID: 7264182050183361747, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
+  - Key: Actor/Boss/TenguRed/Idle_5
+    Sprite: {fileID: -2834552850196481573, guid: b8fbd5af46436f24c9396697eb60fe29, type: 3}
   - Key: Actor/Boss/TenguRed/Trans
     Sprite: {fileID: 21300000, guid: d2f511a376e1664418e964e6f5947cea, type: 3}
   - Key: Actor/Boss/TenguRed/Walk
@@ -46,13 +96,25 @@ MonoBehaviour:
   - Key: Actor/Character/Hunter/Faceset
     Sprite: {fileID: 21300000, guid: bfabaa7a14432bc489bf85dc341994f3, type: 3}
   - Key: Actor/Character/Hunter/SeparateAnim
-    Sprite: {fileID: 21300000, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
-  - Key: Actor/Character/Hunter/SeparateAnim/Attack
-    Sprite: {fileID: 21300000, guid: 76f88022e2fa6634cb034a4c4b1219b0, type: 3}
+    Sprite: {fileID: 4723107735738678597, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: 76f88022e2fa6634cb034a4c4b1219b0, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: 76f88022e2fa6634cb034a4c4b1219b0, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: 76f88022e2fa6634cb034a4c4b1219b0, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: 76f88022e2fa6634cb034a4c4b1219b0, type: 3}
   - Key: Actor/Character/Hunter/SeparateAnim/Dead
     Sprite: {fileID: 21300000, guid: 2f5ac6da8119759418c50cb315a0424f, type: 3}
-  - Key: Actor/Character/Hunter/SeparateAnim/Idle
-    Sprite: {fileID: 21300000, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
+  - Key: Actor/Character/Hunter/SeparateAnim/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: baa5a8f96c4679d479f5da04388dd47a, type: 3}
   - Key: Actor/Character/Hunter/SeparateAnim/Item
     Sprite: {fileID: 21300000, guid: 66651a760992976459f89da65f4f7f77, type: 3}
   - Key: Actor/Character/Hunter/SeparateAnim/Jump
@@ -70,13 +132,25 @@ MonoBehaviour:
   - Key: Actor/Character/Monk/Faceset
     Sprite: {fileID: 21300000, guid: 4ae9d789dfeb1e949bef8dd27dd72471, type: 3}
   - Key: Actor/Character/Monk/SeparateAnim
-    Sprite: {fileID: 21300000, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
-  - Key: Actor/Character/Monk/SeparateAnim/Attack
-    Sprite: {fileID: 21300000, guid: 200805173233b4c4dbc85135e45f59e6, type: 3}
+    Sprite: {fileID: 4723107735738678597, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: 200805173233b4c4dbc85135e45f59e6, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: 200805173233b4c4dbc85135e45f59e6, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: 200805173233b4c4dbc85135e45f59e6, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: 200805173233b4c4dbc85135e45f59e6, type: 3}
   - Key: Actor/Character/Monk/SeparateAnim/Dead
     Sprite: {fileID: 21300000, guid: 327ff30558dbc6a459ba03acc02f2ebe, type: 3}
-  - Key: Actor/Character/Monk/SeparateAnim/Idle
-    Sprite: {fileID: 21300000, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
+  - Key: Actor/Character/Monk/SeparateAnim/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: 99d0cc00ac31fc84abf5003370ea5b4b, type: 3}
   - Key: Actor/Character/Monk/SeparateAnim/Item
     Sprite: {fileID: 21300000, guid: dc641708a61ebf14eaa2d152fade5aea, type: 3}
   - Key: Actor/Character/Monk/SeparateAnim/Jump
@@ -94,13 +168,25 @@ MonoBehaviour:
   - Key: Actor/Character/NinjaMageBlack/Faceset
     Sprite: {fileID: 21300000, guid: accd923e2e99abe46a2429eda48ec8d0, type: 3}
   - Key: Actor/Character/NinjaMageBlack/SeparateAnim
-    Sprite: {fileID: 21300000, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
-  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Attack
-    Sprite: {fileID: 21300000, guid: 83a5f61d41384c248b89c5e46e332577, type: 3}
+    Sprite: {fileID: 4723107735738678597, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: 83a5f61d41384c248b89c5e46e332577, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: 83a5f61d41384c248b89c5e46e332577, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: 83a5f61d41384c248b89c5e46e332577, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: 83a5f61d41384c248b89c5e46e332577, type: 3}
   - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Dead
     Sprite: {fileID: 21300000, guid: 10f57be6f8437b94385fd5899803772c, type: 3}
-  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Idle
-    Sprite: {fileID: 21300000, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
+  - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: c5e1662dbd2f2214385b671755a6d782, type: 3}
   - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Item
     Sprite: {fileID: 21300000, guid: 7dca66cfd6c32784b8a821ebf392f593, type: 3}
   - Key: Actor/Character/NinjaMageBlack/SeparateAnim/Jump
@@ -118,13 +204,25 @@ MonoBehaviour:
   - Key: Actor/Character/NinjaRed/Faceset
     Sprite: {fileID: 21300000, guid: ef7208a2ac7186f44b075aa6d332dc39, type: 3}
   - Key: Actor/Character/NinjaRed/SeparateAnim
-    Sprite: {fileID: 21300000, guid: 66f1950521a98f647940e58bda74814c, type: 3}
-  - Key: Actor/Character/NinjaRed/SeparateAnim/Attack
-    Sprite: {fileID: 21300000, guid: 27dca59cee353034e898af268e19b0ce, type: 3}
+    Sprite: {fileID: 4723107735738678597, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: 27dca59cee353034e898af268e19b0ce, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: 27dca59cee353034e898af268e19b0ce, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: 27dca59cee353034e898af268e19b0ce, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: 27dca59cee353034e898af268e19b0ce, type: 3}
   - Key: Actor/Character/NinjaRed/SeparateAnim/Dead
     Sprite: {fileID: 21300000, guid: 9a3539e959521e747875d6b1aa7b97e2, type: 3}
-  - Key: Actor/Character/NinjaRed/SeparateAnim/Idle
-    Sprite: {fileID: 21300000, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: 66f1950521a98f647940e58bda74814c, type: 3}
+  - Key: Actor/Character/NinjaRed/SeparateAnim/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: 66f1950521a98f647940e58bda74814c, type: 3}
   - Key: Actor/Character/NinjaRed/SeparateAnim/Item
     Sprite: {fileID: 21300000, guid: 8d90ed1d0083e1846b54a30f323b1b4c, type: 3}
   - Key: Actor/Character/NinjaRed/SeparateAnim/Jump
@@ -142,13 +240,25 @@ MonoBehaviour:
   - Key: Actor/Character/Samurai/Faceset
     Sprite: {fileID: 21300000, guid: 055c14b6ad4f5134dbad41b4c2a74ae2, type: 3}
   - Key: Actor/Character/Samurai/SeparateAnim
-    Sprite: {fileID: 21300000, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
-  - Key: Actor/Character/Samurai/SeparateAnim/Attack
-    Sprite: {fileID: 21300000, guid: b5a4bfeba502d4a4c807b00818e41a82, type: 3}
+    Sprite: {fileID: 4723107735738678597, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: b5a4bfeba502d4a4c807b00818e41a82, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: b5a4bfeba502d4a4c807b00818e41a82, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: b5a4bfeba502d4a4c807b00818e41a82, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: b5a4bfeba502d4a4c807b00818e41a82, type: 3}
   - Key: Actor/Character/Samurai/SeparateAnim/Dead
     Sprite: {fileID: 21300000, guid: 00d276e5f330e8241a8a78df8936407c, type: 3}
-  - Key: Actor/Character/Samurai/SeparateAnim/Idle
-    Sprite: {fileID: 21300000, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
+  - Key: Actor/Character/Samurai/SeparateAnim/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: 739561e2e02c67249bebe150ba4b9622, type: 3}
   - Key: Actor/Character/Samurai/SeparateAnim/Item
     Sprite: {fileID: 21300000, guid: 364ff9874dadd534f9144c178ad582c4, type: 3}
   - Key: Actor/Character/Samurai/SeparateAnim/Jump
@@ -166,13 +276,25 @@ MonoBehaviour:
   - Key: Actor/Character/Shaman/Faceset
     Sprite: {fileID: 21300000, guid: 96782da577131fa43a86e23131d7ea30, type: 3}
   - Key: Actor/Character/Shaman/SeparateAnim
-    Sprite: {fileID: 21300000, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
-  - Key: Actor/Character/Shaman/SeparateAnim/Attack
-    Sprite: {fileID: 21300000, guid: 7fe4bd626a7812844b5bc3da77080253, type: 3}
+    Sprite: {fileID: 4723107735738678597, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Attack_0
+    Sprite: {fileID: -7008412969330441016, guid: 7fe4bd626a7812844b5bc3da77080253, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Attack_1
+    Sprite: {fileID: -7763475090823894447, guid: 7fe4bd626a7812844b5bc3da77080253, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Attack_2
+    Sprite: {fileID: 302641331129538988, guid: 7fe4bd626a7812844b5bc3da77080253, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Attack_3
+    Sprite: {fileID: -6329420634031446844, guid: 7fe4bd626a7812844b5bc3da77080253, type: 3}
   - Key: Actor/Character/Shaman/SeparateAnim/Dead
     Sprite: {fileID: 21300000, guid: 24a0faf9d7b1b294cad24beb1e00262d, type: 3}
-  - Key: Actor/Character/Shaman/SeparateAnim/Idle
-    Sprite: {fileID: 21300000, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Idle_0
+    Sprite: {fileID: 4723107735738678597, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Idle_1
+    Sprite: {fileID: -7385789195546760866, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Idle_2
+    Sprite: {fileID: 3234629978573100161, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
+  - Key: Actor/Character/Shaman/SeparateAnim/Idle_3
+    Sprite: {fileID: 6373048116405451881, guid: 0f1dea326255efa44b54e77528a1f6b1, type: 3}
   - Key: Actor/Character/Shaman/SeparateAnim/Item
     Sprite: {fileID: 21300000, guid: c2f92b7f7169e694cab9667030181fa7, type: 3}
   - Key: Actor/Character/Shaman/SeparateAnim/Jump
