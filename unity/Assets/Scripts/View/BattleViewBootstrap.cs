@@ -114,20 +114,6 @@ namespace DomoNinja.Unity.View
         /// UI 를 그 위에 얹는 사람에게는 배경색도 프레이밍도 판단 재료라서, 에디터 메뉴가 이 함수를 호출해
         /// 씬 카메라를 같은 값으로 맞춘다. 값을 에디터 쪽에 복사해두면 언젠가 한쪽만 바뀐다.
         /// </remarks>
-        public static void SetupCamera()
-        {
-            var camera = Camera.main;
-            if (camera == null)
-            {
-                camera = new GameObject("Main Camera").AddComponent<Camera>();
-                camera.tag = "MainCamera";
-            }
-
-            camera.orthographic = true;
-            camera.orthographicSize = 4.2f;
-            camera.transform.position = new Vector3(0f, 0f, -10f);
-            camera.backgroundColor = new Color(0.08f, 0.09f, 0.11f);
-            camera.clearFlags = CameraClearFlags.SolidColor;
-        }
+        public static void SetupCamera() => BoardCamera.Frame(Camera.main);
     }
 }
