@@ -17,9 +17,13 @@ namespace DomoNinja.Unity
     /// </para>
     /// <para>
     /// ★ <b>브라우저는 사용자가 한 번 건드리기 전까지 소리를 막는다.</b> 자동재생 정책이라
-    /// 코드로 우회할 수 없다 — 켜자마자 BGM 을 틀면 <b>재생은 실패하고 에러도 안 난다.</b>
-    /// 그래서 요청받은 곡을 기억해뒀다가 <b>첫 입력 때</b> 실제로 튼다.
-    /// 타이틀이 "탭하여 시작"인 게 여기서는 다행이다 — 그 탭이 곧 해금 시점이다.
+    /// 코드로 우회할 수 없다. 다만 <b>우리가 재생을 미룰 필요는 없다</b> —
+    /// Unity WebGL 런타임이 첫 입력에서 오디오 컨텍스트를 스스로 깨우고, 그때 이미 돌고 있던 소리가 들린다.
+    /// </para>
+    /// <para>
+    /// 처음엔 첫 입력까지 <b>재생을 붙잡아 뒀는데, 그러면 타이틀 음악을 아무도 못 듣는다</b> —
+    /// 타이틀에서 누를 수 있는 건 화면 자체뿐이고, 그걸 누르면 타이틀을 <b>떠나기</b> 때문이다.
+    /// 그래서 요청이 오면 바로 튼다. 브라우저가 막는 동안은 조용하고 첫 탭에 소리가 붙는다.
     /// </para>
     /// <para>
     /// 클립은 <see cref="AudioCatalog"/> 에서 이름으로 꺼낸다. 표에 없으면 <b>조용히 건너뛴다</b> —
@@ -33,6 +37,16 @@ namespace DomoNinja.Unity
         private const string BgmMutedKey = "audio.bgmMuted";
         private const string SfxMutedKey = "audio.sfxMuted";
 
+        /// <summary>
+        /// 처음 켰을 때의 볼륨. <b>가득이 아니다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 웹은 심사자가 <b>다른 탭을 열어둔 채</b> 게임을 연다. 1.0 으로 시작하면 첫 소리가 놀랄 만큼 크고,
+        /// 그때 사람이 먼저 하는 일은 볼륨을 줄이는 게 아니라 <b>탭을 닫는 것</b>이다.
+        /// 설정에서 올릴 수는 있어도, 한 번 닫힌 창은 돌아오지 않는다.
+        /// </remarks>
+        private const float DefaultVolume = 0.3f;
+
         /// <summary>같은 효과음이 한 프레임에 여러 번 겹치면 소리가 찢어진다. 이 간격 안에는 한 번만 낸다.</summary>
         private const float SfxRepeatGuardSeconds = 0.04f;
 
@@ -42,15 +56,14 @@ namespace DomoNinja.Unity
         private AudioSource? _bgmSource;
         private AudioSource? _sfxSource;
 
-        private string? _pendingBgmKey;
         private string? _currentBgmKey;
         private bool _unlocked;
 
         private readonly System.Collections.Generic.HashSet<string> _missingLogged = new();
         private readonly System.Collections.Generic.Dictionary<string, float> _lastPlayed = new();
 
-        public float BgmVolume { get; private set; } = 1f;
-        public float SfxVolume { get; private set; } = 1f;
+        public float BgmVolume { get; private set; } = DefaultVolume;
+        public float SfxVolume { get; private set; } = DefaultVolume;
         public bool BgmMuted { get; private set; }
         public bool SfxMuted { get; private set; }
 
@@ -68,8 +81,8 @@ namespace DomoNinja.Unity
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            BgmVolume = PlayerPrefs.GetFloat(BgmVolumeKey, 1f);
-            SfxVolume = PlayerPrefs.GetFloat(SfxVolumeKey, 1f);
+            BgmVolume = PlayerPrefs.GetFloat(BgmVolumeKey, DefaultVolume);
+            SfxVolume = PlayerPrefs.GetFloat(SfxVolumeKey, DefaultVolume);
             BgmMuted = PlayerPrefs.GetInt(BgmMutedKey, 0) == 1;
             SfxMuted = PlayerPrefs.GetInt(SfxMutedKey, 0) == 1;
 
@@ -96,21 +109,12 @@ namespace DomoNinja.Unity
             if (_currentBgmKey == key && _bgmSource != null && _bgmSource.isPlaying) return;
 
             _currentBgmKey = key;
-
-            if (!_unlocked)
-            {
-                // 아직 브라우저가 소리를 막고 있다. 무엇을 틀지만 기억해둔다.
-                _pendingBgmKey = key;
-                return;
-            }
-
             StartBgm(key);
         }
 
         public void StopBgm()
         {
             _currentBgmKey = null;
-            _pendingBgmKey = null;
             if (_bgmSource != null) _bgmSource.Stop();
         }
 
@@ -129,22 +133,20 @@ namespace DomoNinja.Unity
         }
 
         /// <summary>
-        /// 첫 입력이 들어왔다 — 이제 소리를 낼 수 있다.
+        /// 첫 입력이 들어왔다.
         /// </summary>
         /// <remarks>
-        /// 입력을 여기서 직접 읽지 않는 이유 — 입력 방식(마우스·터치·키보드)마다 경로가 다르고,
-        /// 이 클래스가 그걸 다 알 필요가 없다. <b>누군가 눌렀다는 사실</b>만 전달받는다.
+        /// 재생을 미루지 않으므로 여기서 할 일은 <b>끊긴 배경음을 다시 잇는 것</b>뿐이다 —
+        /// 컨텍스트가 잠긴 동안 시작된 재생이 브라우저에 따라 죽어 있을 수 있다.
+        /// 이미 소리가 나고 있으면 아무 것도 하지 않는다(다시 틀면 곡이 처음으로 튄다).
         /// </remarks>
         public void UnlockAudio()
         {
             if (_unlocked) return;
             _unlocked = true;
 
-            if (_pendingBgmKey != null)
-            {
-                StartBgm(_pendingBgmKey);
-                _pendingBgmKey = null;
-            }
+            if (_currentBgmKey != null && (_bgmSource == null || !_bgmSource.isPlaying))
+                StartBgm(_currentBgmKey);
         }
 
         private void StartBgm(string key)
