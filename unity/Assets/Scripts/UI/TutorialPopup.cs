@@ -79,15 +79,18 @@ namespace DomoNinja.Unity
             closeButton.onClick.AddListener(Close);
             AddLabel(closeRt, "Label", "X", 26f, Color.white, Vector2.zero, closeRt.sizeDelta);
 
-            _titleLabel = AddLabel(panel, "TitleLabel", "", 36f,
-                                    new Color(0.85f, 0.68f, 0.30f), new Vector2(0f, -70f), new Vector2(1100f, 60f));
+            // ★ 판(nine_path_panel_2) 안쪽이 **밝은 세이지**다. 밝은 글씨를 얹으면 대비가 사라진다 —
+            //   처음엔 흰빛/회색으로 잡혀 있어서 본문이 배경에 묻히고 쪽 번호는 거의 안 보였다.
+            //   글자 크기도 올렸다: 영상은 30~60초라 한 번에 읽혀야 한다.
+            _titleLabel = AddLabel(panel, "TitleLabel", "", 40f,
+                                    new Color(0.24f, 0.16f, 0.06f), new Vector2(0f, -70f), new Vector2(1100f, 64f));
 
-            _bodyLabel = AddLabel(panel, "BodyLabel", "", 24f,
-                                   new Color(0.88f, 0.88f, 0.88f), new Vector2(60f, -200f), new Vector2(980f, 220f));
+            _bodyLabel = AddLabel(panel, "BodyLabel", "", 28f,
+                                   new Color(0.16f, 0.15f, 0.12f), new Vector2(60f, -200f), new Vector2(980f, 240f));
             _bodyLabel.textWrappingMode = TextWrappingModes.Normal;
 
-            _pageLabel = AddLabel(panel, "PageLabel", "", 20f,
-                                   new Color(0.6f, 0.6f, 0.6f), new Vector2(0f, -560f), new Vector2(1100f, 40f));
+            _pageLabel = AddLabel(panel, "PageLabel", "", 22f,
+                                   new Color(0.38f, 0.35f, 0.29f), new Vector2(0f, -560f), new Vector2(1100f, 40f));
 
             MakeNavButton(panel, "PrevButton", "이전", new Vector2(-280f, 60f), Prev, out _prevButton);
             _nextLabel = MakeNavButton(panel, "NextButton", "다음", new Vector2(280f, 60f), Next, out _);
