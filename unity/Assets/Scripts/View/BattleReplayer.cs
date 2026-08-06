@@ -92,8 +92,11 @@ namespace DomoNinja.Unity.View
                     _board.MoveTo(e.ActorId, e.Value);
                     break;
 
+                // ★ 소리는 **연출이지 규칙이 아니다.** 재생 속도를 바꿔도 로그는 그대로이므로
+                //   여기서 나는 소리도 전투 결과에 영향을 줄 수 없다(`08` §5.5).
                 case EventKind.Attack:
                     _board.FlashAttack(e.ActorId, e.TargetId);
+                    AudioManager.Instance?.PlaySfx(AudioKeys.Attack);
                     break;
 
                 // ★ 맞은 것과 회복한 것을 **다른 그림**으로 낸다.
@@ -102,6 +105,7 @@ namespace DomoNinja.Unity.View
                 case EventKind.Damage:
                     _board.SetHp(e.TargetId, e.Aux);
                     _board.FlashDamage(e.TargetId);
+                    AudioManager.Instance?.PlaySfx(AudioKeys.Hit);
                     break;
 
                 case EventKind.Heal:
@@ -128,6 +132,7 @@ namespace DomoNinja.Unity.View
 
                 case EventKind.Death:
                     _board.SetDead(e.TargetId);
+                    AudioManager.Instance?.PlaySfx(AudioKeys.Death);
                     break;
 
                 // 나머지 상태(약화·도트·무적·재생·둔화·속박)는 아직 아이콘이 없다.

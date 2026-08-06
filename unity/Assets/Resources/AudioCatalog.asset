@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb9612d6f0f91f94f907f5046de5007a, type: 3}
+  m_Name: AudioCatalog
+  m_EditorClassIdentifier: DomoNinja.Unity::DomoNinja.Unity.AudioCatalog
+  _entries:
+  - Key: Bgm/battle
+    Clip: {fileID: 8300000, guid: 2bac11f5f57f09141a33ee4f708d1b86, type: 3}
+  - Key: Bgm/menu
+    Clip: {fileID: 8300000, guid: ddf0320302e934247b07e65f80b2a7eb, type: 3}
+  - Key: Sfx/attack
+    Clip: {fileID: 8300000, guid: 4664ff74fcdff9542994c55da267e1b9, type: 3}
+  - Key: Sfx/cancel
+    Clip: {fileID: 8300000, guid: 5ce13d51630507944af8a034ad1a3e6d, type: 3}
+  - Key: Sfx/click
+    Clip: {fileID: 8300000, guid: 472ee3c73a7c2fc4c8266b785d3879f3, type: 3}
+  - Key: Sfx/death
+    Clip: {fileID: 8300000, guid: a8043d6b6981bd145bbbb7db322c17ee, type: 3}
+  - Key: Sfx/defeat
+    Clip: {fileID: 8300000, guid: 4584dfbe2ed705442bf2a700cf7a9aca, type: 3}
+  - Key: Sfx/hit
+    Clip: {fileID: 8300000, guid: 3e59e91967f79fd40b99622a6fc48f80, type: 3}
+  - Key: Sfx/reward
+    Clip: {fileID: 8300000, guid: 3b97bcf100e95bb40b3d8373dc61d526, type: 3}
+  - Key: Sfx/victory
+    Clip: {fileID: 8300000, guid: 26b0c2b9abeac934e8a314e4f87137b0, type: 3}

@@ -133,6 +133,7 @@ namespace DomoNinja.Unity
             if (img != null) btn.targetGraphic = img;
 
             Apply(btn);
+            UIAudioHooks.Attach(btn);
             return btn;
         }
 
