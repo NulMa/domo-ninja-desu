@@ -51,6 +51,34 @@ namespace DomoNinja.Unity
         public static Sprite Find(string key) => Catalog != null ? Catalog.Find(key) : null;
 
         /// <summary>
+        /// 코드로 세우는 캔버스의 <b>겹침 순서</b>. 숫자를 각자 들고 있지 않게 한 곳에 모은다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 씬의 팝업은 <see cref="UIScreenManager.ShowPopup"/> 이 열 때마다 10 부터 하나씩 올려 발급한다.
+        /// 코드로 세우는 캔버스는 그 경로를 타지 않으므로 여기서 직접 정한다 —
+        /// <b>다만 값을 파일마다 적으면 같은 수가 두 번 나온다.</b>
+        /// </para>
+        /// <para>
+        /// ★ 실제로 그렇게 됐다. <c>BattleVictoryPopup</c>(팀원) 과 <c>UIConfirmPopup</c>(나) 이
+        /// <b>둘 다 8000</b> 이었다. sortingOrder 가 동률이면 어느 캔버스가 클릭을 먼저 받는지
+        /// 화면 계층과 무관하게 정해진다 — <c>b98448d</c> 가 방금 고친 것이 정확히 그 문제다.
+        /// 같은 함정을 코드 캔버스 쪽에서 다시 만들 뻔했다.
+        /// </para>
+        /// </remarks>
+        public static class Layer
+        {
+            /// <summary>일반 팝업. 씬 팝업(10~)보다 위.</summary>
+            public const int Popup = 8000;
+
+            /// <summary>확인창. <b>어떤 팝업보다 위여야 한다</b> — 팝업 위에서 물어보는 창이다.</summary>
+            public const int Confirm = 8500;
+
+            /// <summary>로딩 덮개. 전부 위. 이게 덮여 있으면 아무것도 누르면 안 된다.</summary>
+            public const int Loading = 9000;
+        }
+
+        /// <summary>
         /// 코드로 만드는 전체화면 캔버스를 씬의 다른 캔버스와 같은 방식으로 세운다.
         /// </summary>
         /// <remarks>

@@ -15,7 +15,7 @@ namespace DomoNinja.Unity
     /// </remarks>
     public sealed class BattleVictoryPopup : MonoBehaviour
     {
-        private const int SortingOrder = 8000;
+        private const int SortingOrder = UITheme.Layer.Popup;
         private const string PanelSpriteKey = "UI/Theme/nine_path_panel_2";
         private const string CurrencyIconKey = "Meta/M-GOLD_재화";
 
