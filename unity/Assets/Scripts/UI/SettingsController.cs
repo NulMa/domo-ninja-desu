@@ -73,10 +73,30 @@ namespace DomoNinja.Unity
             RefreshMuteButton(_sfxMuteButton, _sfxMuteLabel, mgr.SfxMuted);
         }
 
+        /// <summary>
+        /// 음소거 상태를 <b>체크 표시</b>로 보여준다.
+        /// </summary>
+        /// <remarks>
+        /// 전에는 버튼 글자("음소거" ↔ "음소거 해제")와 붉은 틴트뿐이었다.
+        /// <b>글자를 읽어야만 지금 상태를 알 수 있고</b>, 게다가 그 글자는 <b>상태가 아니라 다음 동작</b>이라
+        /// "음소거"가 켜졌다는 뜻인지 누르면 꺼진다는 뜻인지가 매번 헷갈린다.
+        /// 팩의 <c>checked</c>/<c>unchecked</c> 를 붙여 <b>상태는 그림이, 동작은 글자가</b> 맡게 나눴다.
+        /// </remarks>
         private static void RefreshMuteButton(Button button, TMP_Text label, bool muted)
         {
             label.text = muted ? "음소거 해제" : "음소거";
+
             var img = button.GetComponent<UImage>();
             if (img != null) img.color = muted ? MutedColor : UnmutedColor;
-        }    }
+
+            var icon = button.transform.Find("CheckIcon");
+            if (icon == null) return;
+
+            var iconImage = icon.GetComponent<UImage>();
+            if (iconImage == null) return;
+
+            var sprite = UITheme.Find(muted ? "UI/Theme/checked" : "UI/Theme/unchecked");
+            if (sprite != null) iconImage.sprite = sprite;
+        }
+    }
 }
