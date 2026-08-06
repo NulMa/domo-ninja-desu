@@ -22,6 +22,9 @@ namespace DomoNinja.Unity
 
         private static readonly Dictionary<string, UIScreen> Screens = new Dictionary<string, UIScreen>();
 
+        /// <summary>팝업을 열 때마다 하나씩 올려 붙이는 Canvas sortingOrder. 풀스크린은 전부 0에 그대로 둔다.</summary>
+        private static int _nextPopupOrder = 10;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Bootstrap()
         {
@@ -59,10 +62,26 @@ namespace DomoNinja.Unity
                     kv.Value.gameObject.SetActive(kv.Key == key);
         }
 
+        /// <summary>
+        /// 팝업을 켜고, 그 팝업의 루트 Canvas를 지금까지 연 팝업 중 가장 위로 올린다.
+        /// </summary>
+        /// <remarks>
+        /// ★ 화면마다 <c>UI_Canvas_*</c> 가 따로 있고(위 remarks) 전부 sortingOrder 0 로 시작한다.
+        /// "팝업이 화면 위에 뜬다"는 건 <b>렌더링에만</b> 보장되지, <b>raycast 우선순위</b>는 별개다 —
+        /// sortingOrder가 같으면 어느 캔버스가 클릭을 먼저 받는지 화면 계층과 무관하게 정해져서,
+        /// 팝업이 눈에는 보여도 그 밑에 깔린 풀스크린(GamePlayScreen 등)이 클릭을 가로챌 수 있다.
+        /// 실제로 <c>MetaUpgrade</c>·<c>Settings</c> 버튼이 이렇게 먹통이었다. 팝업을 열 때마다
+        /// sortingOrder를 새로 발급하면 몇 겹으로 열려도(옵션 → 설정처럼) 항상 최근에 연 게 위에 온다.
+        /// </remarks>
         public static void ShowPopup(string key)
         {
             if (Screens.TryGetValue(key, out var target) && target.Kind == UIScreenKind.Popup)
+            {
                 target.gameObject.SetActive(true);
+
+                var canvas = target.GetComponentInParent<Canvas>();
+                if (canvas != null) canvas.sortingOrder = _nextPopupOrder++;
+            }
             else
                 Debug.LogError($"[UIScreenManager] 팝업 '{key}' 을 찾지 못했다.");
         }
