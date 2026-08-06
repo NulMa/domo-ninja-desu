@@ -402,7 +402,7 @@ MonoBehaviour:
   - Key: "Skill/Shaman/Support/C6-P3_\uAD11\uBA85"
     Sprite: {fileID: 21300000, guid: 5b76b3b047e868247baf222b2d871531, type: 3}
   - Key: UI
-    Sprite: {fileID: 21300000, guid: a39b1b792c9d6f34f969ae4364cf3bf3, type: 3}
+    Sprite: {fileID: 21300000, guid: 6a811b326cc7f6e4fa9d6131b1d2f421, type: 3}
   - Key: UI/Bar
     Sprite: {fileID: 21300000, guid: 82f9ca96d974fc048a34ccec853bdda5, type: 3}
   - Key: UI/Bar/BackgroundWood
@@ -415,6 +415,10 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 92e781483272d094f8b954faa7fe02b1, type: 3}
   - Key: UI/Bar/ProgressWhite
     Sprite: {fileID: 21300000, guid: d5c40294136d39d438799b2855a2a09a, type: 3}
+  - Key: UI/DomoNinjaTitleTEXT
+    Sprite: {fileID: 21300000, guid: 6a811b326cc7f6e4fa9d6131b1d2f421, type: 3}
+  - Key: UI/DomoNinjaTitleTitle
+    Sprite: {fileID: 21300000, guid: 56c85ef8a978c3d4bb12e2eadc51a392, type: 3}
   - Key: "UI/RunCurrency_\uC7AC\uD654"
     Sprite: {fileID: 21300000, guid: a39b1b792c9d6f34f969ae4364cf3bf3, type: 3}
   - Key: UI/Theme
