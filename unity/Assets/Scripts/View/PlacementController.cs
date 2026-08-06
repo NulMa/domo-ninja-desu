@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
+using DomoNinja.Unity;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -86,6 +87,11 @@ namespace DomoNinja.Unity.View
         private void Update()
         {
             if (_board == null || Mouse.current == null) return;
+
+            // 이 컴포넌트는 GamePlay 화면 트리 밖(씬 루트)에 산다 — Shop/StageIntro 가 그 위에 켜져
+            // 있어도 화면 생명주기와 무관하게 계속 입력을 받는다. 배치 단계(GamePlay 활성 ·
+            // StageIntro 팝업 비활성)가 아니면 여기서 막는다.
+            if (!UIScreenManager.IsActive("GamePlay") || UIScreenManager.IsActive("StageIntro")) return;
 
             // UI 버튼 위 클릭은 배치로 새지 않는다. 이미 드래그 중이면 버튼 위에서 놓쳐도 계속 따라간다.
             bool overUi = IsPointerOverInteractiveUi();

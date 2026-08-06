@@ -64,5 +64,10 @@ namespace DomoNinja.Unity
             if (Screens.TryGetValue(key, out var target) && target.Kind == UIScreenKind.Popup)
                 target.gameObject.SetActive(false);
         }
+
+        /// <summary>풀스크린이든 팝업이든 상관없이 현재 켜져 있는지. 화면 트리 밖(씬 루트) 컴포넌트가
+        /// 자기 입력을 켜야 할지 판단할 때 쓴다 — <see cref="View.PlacementController"/> 처럼.</summary>
+        public static bool IsActive(string key) =>
+            Screens.TryGetValue(key, out var screen) && screen.gameObject.activeSelf;
     }
 }
