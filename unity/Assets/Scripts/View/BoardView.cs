@@ -49,6 +49,8 @@ namespace DomoNinja.Unity.View
             public float ShieldFullScaleX;
             /// <summary>도발 대상 표시용. 유닛 스프라이트를 한 장 더 깔아 만든다.</summary>
             public SpriteRenderer Outline;
+            /// <summary>장착 무기 배지(캐릭터 한정). 없으면(몬스터·보스) <c>null</c>.</summary>
+            public SpriteRenderer WeaponBadge;
             /// <summary>번쩍임이 남은 시간(초).</summary>
             public float FlashLeft;
             public bool IsDead;
@@ -233,11 +235,13 @@ namespace DomoNinja.Unity.View
             var fill = CreateHpBar(root.transform, spec.Team == 0);
             var shield = CreateShieldBar(root.transform);
             var outline = CreateOutline(spriteObject.transform, renderer);
+            var weaponBadge = CreateWeaponBadge(root.transform, spec.TypeId);
 
             return new UnitView
             {
                 Root = root,
                 Sprite = renderer,
+                WeaponBadge = weaponBadge,
                 HpFill = fill,
                 FillFullScaleX = fill != null ? fill.localScale.x : 1f,
                 ShieldFill = shield,
@@ -383,6 +387,51 @@ namespace DomoNinja.Unity.View
             outline.sortingOrder = source.sortingOrder - 1;
             go.SetActive(false);
             return outline;
+        }
+
+        /// <summary>배지 한 변의 목표 크기(월드 단위). 칸(<see cref="CellSize"/>) 대비 작게 잡는다.</summary>
+        private const float WeaponBadgeSize = 0.34f;
+
+        /// <summary>
+        /// 장착 무기 배지. 유닛 모서리에 작게 얹는다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 손에 쥔 것처럼 합성하지 않는다 — 팩의 <c>SpriteInHand</c>는 프레임별 손 좌표가 없어
+        /// 우리 캐릭터 시트(자체 제작)에 픽셀 단위로 맞출 근거가 없다. 대신 무기 아이콘을
+        /// 모서리 배지로 고정한다.
+        /// </para>
+        /// <para>
+        /// ★ <b>Root 바로 아래에 둔다</b> — 스프라이트 자식으로 두면 캐릭터마다 다른
+        /// <c>baseSpriteScale</c>(초상 원본 크기가 제각각이라 칸에 맞추며 배율이 갈린다)이
+        /// 배지 크기에도 그대로 곱해져 캐릭터마다 배지 크기가 들쭉날쭉해진다. Root 기준이면
+        /// 항상 칸(<see cref="CellSize"/>) 단위의 같은 크기·같은 위치로 나온다.
+        /// </para>
+        /// <para>
+        /// 무기가 없는 종류(몬스터·보스)는 <c>{경로}/Weapon</c> 키가 애초에 카탈로그에 없어
+        /// <c>null</c> 을 돌려주고 호출부가 그대로 건너뛴다.
+        /// </para>
+        /// </remarks>
+        private SpriteRenderer CreateWeaponBadge(Transform parent, string typeId)
+        {
+            if (_catalog == null) return null;
+
+            var weaponSprite = _catalog.Find(ResolveSpritePath(typeId) + "/Weapon");
+            if (weaponSprite == null) return null;
+
+            var go = new GameObject("WeaponBadge");
+            go.transform.SetParent(parent, false);
+
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = weaponSprite;
+            renderer.sortingOrder = 3;
+
+            var size = weaponSprite.bounds.size;
+            float scale = size.x > 0 ? WeaponBadgeSize / Mathf.Max(size.x, size.y) : 1f;
+            go.transform.localScale = Vector3.one * scale;
+            go.transform.localPosition = new Vector3(CellSize * 0.30f, -CellSize * 0.30f, -0.05f);
+
+            return renderer;
         }
 
         /// <summary>체력 막대의 월드 크기. 칸(1) 안에 들어가야 한다.</summary>
@@ -613,6 +662,7 @@ namespace DomoNinja.Unity.View
             if (unit.HpFill != null) SetFill(unit, 0f);
             if (unit.ShieldFill != null) unit.ShieldFill.parent.gameObject.SetActive(false);
             if (unit.Outline != null) unit.Outline.gameObject.SetActive(false);
+            if (unit.WeaponBadge != null) unit.WeaponBadge.gameObject.SetActive(false);
         }
 
         /// <summary>번쩍임이 눈에 남아 있는 시간(초).</summary>
