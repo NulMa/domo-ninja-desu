@@ -22,6 +22,10 @@ namespace DomoNinja.Unity
         private const string SkullIcon = "Actor/Monster/Skull";
         private const string BossIcon = "Actor/Boss/TenguRed";
 
+        /// <summary>노드 한 칸의 고정 크기 — 더 이상 라운드 수에 맞춰 줄어들지 않는다.</summary>
+        private const float NodeWidth = 260f;
+        private const float NodeGap = 16f;
+
         private static readonly Color CurrentColor = new Color(0.85f, 0.55f, 0.20f);
         private static readonly Color ClearedColor = new Color(0.28f, 0.40f, 0.30f);
         private static readonly Color UpcomingColor = new Color(0.18f, 0.19f, 0.21f);
@@ -30,6 +34,7 @@ namespace DomoNinja.Unity
         private static readonly Color TextDim = new Color(0.72f, 0.72f, 0.72f);
 
         private RectTransform _container;
+        private ScrollRect _scrollRect;
         private Button _startBattleButton;
         private SpriteCatalog _catalog;
         private TMP_FontAsset _fontAsset;
@@ -37,12 +42,50 @@ namespace DomoNinja.Unity
         private void Awake()
         {
             var board = transform.Find("Board");
-            _container = board.Find("NodeContainer").GetComponent<RectTransform>();
+            _container = SetupScrollableContainer(board.Find("NodeContainer").GetComponent<RectTransform>(),
+                                                    out _scrollRect);
             _startBattleButton = EnsureButton(board.Find("StartBattleButton").gameObject);
             _startBattleButton.onClick.AddListener(OnStartBattle);
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
             _fontAsset = TMP_Settings.defaultFontAsset;
+        }
+
+        /// <summary>
+        /// 원래 <c>NodeContainer</c> 자리를 뷰포트로 삼고, 그 안에 콘텐츠를 넣어 <see cref="ScrollRect"/>
+        /// 로 감싼다. 노드가 고정 크기라 라운드가 많아지면 뷰포트 밖으로 넘치는데, 그걸 잘라내지 않고
+        /// 마우스 드래그로 넘겨볼 수 있게 하는 게 목적이다.
+        /// </summary>
+        private static RectTransform SetupScrollableContainer(RectTransform original, out ScrollRect scrollRect)
+        {
+            var viewportGo = new GameObject("NodeViewport", typeof(RectTransform));
+            var viewport = (RectTransform)viewportGo.transform;
+            viewport.SetParent(original.parent, false);
+            viewport.anchorMin = original.anchorMin;
+            viewport.anchorMax = original.anchorMax;
+            viewport.pivot = original.pivot;
+            viewport.anchoredPosition = original.anchoredPosition;
+            viewport.sizeDelta = original.sizeDelta;
+            viewport.SetSiblingIndex(original.GetSiblingIndex());
+            viewportGo.AddComponent<RectMask2D>();
+
+            // 완전 투명이지만 raycast는 받는다 — 노드 사이 빈 공간에서도 드래그가 시작되게.
+            var catcher = viewportGo.AddComponent<UImage>();
+            catcher.color = Color.clear;
+
+            original.SetParent(viewport, false);
+            original.anchorMin = new Vector2(0f, original.anchorMin.y);
+            original.anchorMax = new Vector2(0f, original.anchorMax.y);
+            original.pivot = new Vector2(0f, original.pivot.y);
+            original.anchoredPosition = Vector2.zero;
+
+            scrollRect = viewportGo.AddComponent<ScrollRect>();
+            scrollRect.content = original;
+            scrollRect.horizontal = true;
+            scrollRect.vertical = false;
+            scrollRect.movementType = ScrollRect.MovementType.Clamped;
+
+            return original;
         }
 
         private void OnEnable() => Rebuild();
@@ -65,17 +108,37 @@ namespace DomoNinja.Unity
 
             int currentRound = mgr.CurrentRun != null ? mgr.CurrentRun.Round : 1;
 
-            float totalWidth = _container.sizeDelta.x;
             float nodeHeight = _container.sizeDelta.y;
-            const float gap = 16f;
-            float nodeWidth = (totalWidth - gap * (count - 1)) / count;
+            float contentWidth = count * NodeWidth + (count - 1) * NodeGap;
+            _container.sizeDelta = new Vector2(contentWidth, nodeHeight);
 
             for (int i = 0; i < count; i++)
             {
-                float x = i * (nodeWidth + gap);
-                if (i > 0) BuildConnector(x - gap, nodeHeight, gap);
-                BuildNode(rounds[i], x, nodeWidth, nodeHeight, mgr.Data, i + 1, currentRound);
+                float x = i * (NodeWidth + NodeGap);
+                if (i > 0) BuildConnector(x - NodeGap, nodeHeight, NodeGap);
+                BuildNode(rounds[i], x, NodeWidth, nodeHeight, mgr.Data, i + 1, currentRound);
             }
+
+            ScrollToRound(currentRound, count, contentWidth);
+        }
+
+        /// <summary>현재 라운드 노드가 뷰포트 안에 보이도록 스크롤 위치를 맞춘다.</summary>
+        private void ScrollToRound(int currentRound, int count, float contentWidth)
+        {
+            if (_scrollRect == null) return;
+
+            float viewportWidth = ((RectTransform)_scrollRect.transform).rect.width;
+            float overflow = contentWidth - viewportWidth;
+            if (overflow <= 0f)
+            {
+                _scrollRect.horizontalNormalizedPosition = 0f;
+                return;
+            }
+
+            int index = Mathf.Clamp(currentRound - 1, 0, count - 1);
+            float nodeCenterX = index * (NodeWidth + NodeGap) + NodeWidth / 2f;
+            _scrollRect.horizontalNormalizedPosition =
+                Mathf.Clamp01((nodeCenterX - viewportWidth / 2f) / overflow);
         }
 
         private void BuildConnector(float x, float nodeHeight, float gap)
