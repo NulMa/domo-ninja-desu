@@ -117,22 +117,15 @@ namespace DomoNinja.Unity
             _viewReady = true;
         }
 
-        /// <summary>보드 8×6 이 한 화면에 들어오게. `BattleViewBootstrap` 과 같은 값이다.</summary>
-        private static void SetupCamera()
-        {
-            var camera = Camera.main;
-            if (camera == null)
-            {
-                camera = new GameObject("Main Camera").AddComponent<Camera>();
-                camera.tag = "MainCamera";
-            }
-
-            camera.orthographic = true;
-            camera.orthographicSize = 4.2f;
-            camera.transform.position = new Vector3(0f, 0f, -10f);
-            camera.backgroundColor = new Color(0.08f, 0.09f, 0.11f);
-            camera.clearFlags = CameraClearFlags.SolidColor;
-        }
+        /// <summary>
+        /// 보드 8×6 이 한 화면에 들어오게.
+        /// </summary>
+        /// <remarks>
+        /// 전에는 <c>BattleViewBootstrap</c> 과 <b>같은 값을 여기에도 적어뒀다.</b>
+        /// 한쪽만 고치면 <b>어느 화면에서 들어왔느냐에 따라 프레이밍이 달라지고</b>, 그건 눈으로 못 찾는다.
+        /// 이제 <see cref="BoardCamera"/> 한 벌만 본다.
+        /// </remarks>
+        private static void SetupCamera() => BoardCamera.Frame(Camera.main);
 
         private void OnStartBattle()
         {
