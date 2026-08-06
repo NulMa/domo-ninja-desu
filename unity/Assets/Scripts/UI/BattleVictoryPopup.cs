@@ -17,7 +17,9 @@ namespace DomoNinja.Unity
     {
         private const int SortingOrder = UITheme.Layer.Popup;
         private const string PanelSpriteKey = "UI/Theme/nine_path_panel_2";
-        private const string CurrencyIconKey = "Meta/M-GOLD_재화";
+        /// <summary>라운드 보상은 런 전용 재화(`RunState.Currency`)다 — 메타 재화(`Meta/M-GOLD_재화`)와
+        /// 다른 화폐라 섞지 않는다(`CLAUDE.md` "화폐가 둘이다"). 상점의 런 재화 아이콘과 같은 것을 쓴다.</summary>
+        private const string CurrencyIconKey = "UI/RunCurrency_재화";
 
         private static BattleVictoryPopup _instance;
 

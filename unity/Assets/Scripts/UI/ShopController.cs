@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Economy;
+using Newtonsoft.Json.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,6 +19,9 @@ namespace DomoNinja.Unity
     /// </remarks>
     public sealed class ShopController : MonoBehaviour
     {
+        /// <summary>런 전용 재화 아이콘. 메타 재화(StageSelect, `Meta/M-GOLD_재화`)와 구분되는 별개 그림이다.</summary>
+        private const string RunCurrencyIconKey = "UI/RunCurrency_재화";
+
         /// <summary>아이템 표시명. 데이터에 플레이어용 이름 필드가 없어 여기 하나에 둔다 — InfoPopup 도 이걸 그대로 쓴다.</summary>
         internal static readonly Dictionary<string, string> ItemNames = new Dictionary<string, string>
         {
@@ -65,6 +70,7 @@ namespace DomoNinja.Unity
         private TMP_Text _currencyLabel;
         private Button[] _slotButtons;
         private TMP_Text[] _slotLabels;
+        private UImage[] _slotIcons;
         private Button _buyTab;
         private Button _sellTab;
         private Button _rerollButton;
@@ -82,10 +88,13 @@ namespace DomoNinja.Unity
         private void Awake()
         {
             _board = transform.Find("Board");
-            _currencyLabel = _board.Find("CurrencyDisplay/Label").GetComponent<TMP_Text>();
+            var currencyDisplay = _board.Find("CurrencyDisplay");
+            _currencyLabel = currencyDisplay.Find("Label").GetComponent<TMP_Text>();
+            currencyDisplay.Find("Icon").GetComponent<UImage>().sprite = UITheme.Find(RunCurrencyIconKey);
 
             _slotButtons = new Button[5];
             _slotLabels = new TMP_Text[5];
+            _slotIcons = new UImage[5];
 
             for (int i = 0; i < 3; i++) BindSlot(i, "SkillSlot" + (i + 1));
             for (int i = 0; i < 2; i++) BindSlot(3 + i, "ItemSlot" + (i + 1));
@@ -136,6 +145,7 @@ namespace DomoNinja.Unity
             var button = UITheme.EnsureButton(slot.gameObject);
             _slotButtons[index] = button;
             _slotLabels[index] = slot.Find("Label").GetComponent<TMP_Text>();
+            _slotIcons[index] = slot.Find("Icon")?.GetComponent<UImage>();
             button.onClick.AddListener(() => OnSlotClicked(index));
         }
 
@@ -180,7 +190,7 @@ namespace DomoNinja.Unity
             var run = mgr != null ? mgr.CurrentRun : null;
             if (mgr == null || run == null) return;
 
-            _currencyLabel.text = $"재화 {run.Currency}";
+            _currencyLabel.text = run.Currency.ToString();
 
             if (_sellMode) RefreshSellSlots(run);
             else RefreshBuySlots(mgr, run);
@@ -196,12 +206,14 @@ namespace DomoNinja.Unity
                 {
                     _slotLabels[i].text = "-";
                     _slotButtons[i].interactable = false;
+                    SetIcon(i, null);
                     continue;
                 }
 
                 var offer = offers[i];
                 _slotLabels[i].text = $"{OfferLabel(offer, mgr)}\n{offer.Price}";
                 _slotButtons[i].interactable = run.Currency >= offer.Price;
+                SetIcon(i, IconFor(offer, mgr.Data));
             }
         }
 
@@ -222,6 +234,7 @@ namespace DomoNinja.Unity
                 {
                     _slotLabels[i].text = "-";
                     _slotButtons[i].interactable = false;
+                    SetIcon(i, null);
                     continue;
                 }
 
@@ -229,7 +242,40 @@ namespace DomoNinja.Unity
                 string name = ItemNames.TryGetValue(item.ItemKey, out string label) ? label : item.ItemKey;
                 _slotLabels[i].text = $"{name}\n판매";
                 _slotButtons[i].interactable = true;
+                SetIcon(i, IconForItemKey(item.ItemKey));
             }
+        }
+
+        private void SetIcon(int slotIndex, Sprite sprite)
+        {
+            var icon = _slotIcons[slotIndex];
+            if (icon == null) return;
+
+            icon.sprite = sprite;
+            icon.enabled = sprite != null;
+        }
+
+        /// <summary>스킬은 <see cref="DomoNinja.Core.Data.SkillDef.Icon"/>, 아이템은 `economy.json`의
+        /// 원시 <c>items.{id}.icon</c> 필드에서 읽는다 — 아이템은 전용 클래스가 없어 `Raw`로 조회한다.</summary>
+        private Sprite IconFor(ShopOffer offer, GameData data)
+        {
+            switch (offer.Kind)
+            {
+                case OfferKind.ActiveSkill:
+                case OfferKind.SupportSkill:
+                    var skill = data.FindSkill(offer.Id);
+                    return skill?.Icon != null ? _catalog?.Find(skill.Icon) : null;
+
+                default:
+                    return IconForItemKey(offer.Id);
+            }
+        }
+
+        private Sprite IconForItemKey(string itemKey)
+        {
+            var data = RunManager.Instance?.Data;
+            string iconKey = data?.Economy.Raw["items"]?[itemKey]?["icon"]?.Value<string>();
+            return iconKey != null ? _catalog?.Find(iconKey) : null;
         }
 
         private void OnSlotClicked(int slotIndex)
