@@ -66,7 +66,14 @@ namespace DomoNinja.Unity
 
             var selected = system.currentSelectedGameObject;
 
-            if (selected != null && (!selected.activeInHierarchy || selected.GetComponent<Selectable>() == null))
+            if (selected != null && (!selected.activeInHierarchy || !IsRingable(selected.GetComponent<Selectable>())))
+                selected = null;
+
+            // ★ 위에 새 캔버스가 뜨면 초점도 따라 올라가야 한다.
+            //   전에는 "선택이 비었을 때"만 다시 골라서, 팝업이 떠도 초점은 **뒤 화면에 남아 있었다** —
+            //   눈에는 팝업이 떠 있는데 방향키는 아래를 돌아다닌다. 마우스 쪽에서 같은 문제를
+            //   `b98448d` 가 고쳤고, 타이틀 → 튜토리얼 흐름에서 실제로 재현됐다.
+            if (selected != null && OrderOf(selected.transform) < TopOrder())
                 selected = null;
 
             // ★ 아무것도 선택돼 있지 않으면 방향키가 **아무 일도 하지 않는다.**
@@ -112,10 +119,9 @@ namespace DomoNinja.Unity
 
             foreach (var s in Object.FindObjectsByType<Selectable>(FindObjectsInactive.Exclude))
             {
-                if (!s.IsInteractable() || s.navigation.mode == Navigation.Mode.None) continue;
+                if (!IsRingable(s)) continue;
 
-                var canvas = s.GetComponentInParent<Canvas>();
-                int order = canvas != null ? canvas.rootCanvas.sortingOrder : 0;
+                int order = OrderOf(s.transform);
 
                 if (order > bestOrder ||
                     (order == bestOrder && best != null &&
@@ -126,6 +132,48 @@ namespace DomoNinja.Unity
                 }
             }
             return best;
+        }
+
+        /// <summary>
+        /// 링을 두를 만한 대상인가.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>화면 전체가 하나의 버튼</b>인 경우가 있다 — 타이틀의 "탭하여 시작" 처럼.
+        /// 거기에 링을 두르면 <b>화면 테두리에 주황 액자가 생긴다.</b> 실제로 그렇게 나왔다.
+        /// 두 가지로 거른다 —
+        /// <c>transition == None</c> 은 <b>보이는 버튼이 아니라는 선언</b>이고(전면 탭 대상이 그렇게 만들어져 있다),
+        /// 캔버스를 거의 다 덮는 것도 초점을 표시할 대상이 아니다.
+        /// </remarks>
+        private static bool IsRingable(Selectable s)
+        {
+            if (s == null || !s.IsInteractable() || s.navigation.mode == Navigation.Mode.None) return false;
+            if (s.transition == Selectable.Transition.None) return false;
+
+            var rt = s.transform as RectTransform;
+            var canvas = s.GetComponentInParent<Canvas>();
+            if (rt == null || canvas == null) return true;
+
+            var canvasSize = ((RectTransform)canvas.rootCanvas.transform).rect.size;
+            return rt.rect.width < canvasSize.x * 0.9f || rt.rect.height < canvasSize.y * 0.9f;
+        }
+
+        private static int OrderOf(Transform t)
+        {
+            var canvas = t.GetComponentInParent<Canvas>();
+            return canvas != null ? canvas.rootCanvas.sortingOrder : 0;
+        }
+
+        /// <summary>지금 켜져 있는 캔버스 중 가장 위. 링을 둘 대상이 있는 것만 센다.</summary>
+        private static int TopOrder()
+        {
+            int top = int.MinValue;
+            foreach (var s in Object.FindObjectsByType<Selectable>(FindObjectsInactive.Exclude))
+            {
+                if (!IsRingable(s)) continue;
+                int order = OrderOf(s.transform);
+                if (order > top) top = order;
+            }
+            return top;
         }
 
         private void Attach(GameObject target)

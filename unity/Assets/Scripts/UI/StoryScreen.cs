@@ -65,7 +65,7 @@ namespace DomoNinja.Unity
 
         private void Build()
         {
-            UITheme.SetupFullScreenCanvas(gameObject, UITheme.Layer.Popup);
+            UITheme.SetupFullScreenCanvas(gameObject, UITheme.Layer.Story);
 
             // 배경 전체가 곧 "탭하여 계속" 버튼이다 — 서사는 화면 아무 곳이나 눌러 넘긴다.
             var bg = NewChild("Background", transform);
