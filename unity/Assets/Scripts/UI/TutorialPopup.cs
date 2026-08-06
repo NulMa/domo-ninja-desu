@@ -89,8 +89,8 @@ namespace DomoNinja.Unity
             _pageLabel = AddLabel(panel, "PageLabel", "", 20f,
                                    new Color(0.6f, 0.6f, 0.6f), new Vector2(0f, -560f), new Vector2(1100f, 40f));
 
-            MakeNavButton(panel, "PrevButton", "이전", new Vector2(300f, 60f), Prev, out _prevButton);
-            _nextLabel = MakeNavButton(panel, "NextButton", "다음", new Vector2(800f, 60f), Next, out _);
+            MakeNavButton(panel, "PrevButton", "이전", new Vector2(-280f, 60f), Prev, out _prevButton);
+            _nextLabel = MakeNavButton(panel, "NextButton", "다음", new Vector2(280f, 60f), Next, out _);
         }
 
         private void Refresh()
