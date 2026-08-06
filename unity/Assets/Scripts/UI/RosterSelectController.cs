@@ -13,10 +13,13 @@ namespace DomoNinja.Unity
         private const int DeployCount = 3;
         private const string PortraitPrefix = "Portrait_";
 
-        private static readonly Color SelectedColor = new Color(0.85f, 0.55f, 0.20f);
-        private static readonly Color UnselectedColor = new Color(0.18f, 0.19f, 0.21f);
-        private static readonly Color TrayFilledColor = new Color(0.25f, 0.48f, 0.78f);
-        private static readonly Color TrayEmptyColor = new Color(0.18f, 0.19f, 0.21f);
+        // ★ 이 값들은 이제 **틴트**다. 예전엔 스프라이트가 흰 사각형이라 색이 곧 칠이었지만,
+        //    지금은 그림이 깔려 있어서 색을 그대로 곱하면 그림이 사라진다.
+        //    그래서 기본이 흰색(=원본 그대로)이고, 상태 구분은 밝기·색조를 살짝 얹어서 낸다.
+        private static readonly Color SelectedColor = new Color(1.00f, 0.82f, 0.45f);
+        private static readonly Color UnselectedColor = Color.white;
+        private static readonly Color TrayFilledColor = Color.white;
+        private static readonly Color TrayEmptyColor = new Color(0.55f, 0.55f, 0.55f);
 
         private Transform _portraitGrid;
         private Transform _confirmedTray;

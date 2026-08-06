@@ -8,8 +8,9 @@ namespace DomoNinja.Unity
     /// <summary>설정 팝업. BGM/SFX 볼륨 슬라이더 + 음소거를 <see cref="AudioManager"/>에 그대로 반영한다.</summary>
     public sealed class SettingsController : MonoBehaviour
     {
-        private static readonly Color MutedColor = new Color(0.85f, 0.35f, 0.25f);
-        private static readonly Color UnmutedColor = new Color(0.22f, 0.23f, 0.25f);
+        // 스프라이트 위에 곱해지는 틴트다. 흰색이 원본 그대로다.
+        private static readonly Color MutedColor = new Color(1.00f, 0.45f, 0.35f);
+        private static readonly Color UnmutedColor = Color.white;
 
         private Slider _bgmSlider;
         private TMP_Text _bgmValueLabel;

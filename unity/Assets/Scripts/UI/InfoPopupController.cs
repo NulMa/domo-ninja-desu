@@ -43,9 +43,10 @@ namespace DomoNinja.Unity
             }
         }
 
-        private static readonly Color SelectedColor = new Color(0.85f, 0.55f, 0.20f);
-        private static readonly Color UnselectedColor = new Color(0.22f, 0.23f, 0.25f);
-        private static readonly Color EmptyColor = new Color(0.14f, 0.14f, 0.15f);
+        // 스프라이트 위에 곱해지는 틴트다. 흰색이 원본 그대로다.
+        private static readonly Color SelectedColor = new Color(1.00f, 0.82f, 0.45f);
+        private static readonly Color UnselectedColor = Color.white;
+        private static readonly Color EmptyColor = new Color(0.50f, 0.50f, 0.50f);
 
         private GameObject _characterTab;
         private GameObject _itemTab;
