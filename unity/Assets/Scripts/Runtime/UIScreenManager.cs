@@ -60,7 +60,20 @@ namespace DomoNinja.Unity
             foreach (var kv in Screens)
                 if (kv.Value.Kind == UIScreenKind.FullScreen)
                     kv.Value.gameObject.SetActive(kv.Key == key);
+
+            AudioManager.Instance?.PlayBgm(BgmFor(key));
         }
+
+        /// <summary>
+        /// 화면별 배경음. <b>전투만 다른 곡</b>이고 나머지는 하나로 묶는다.
+        /// </summary>
+        /// <remarks>
+        /// 화면마다 곡을 따로 두면 <b>로스터 → 상점 → 전투</b>를 오가는 동안 음악이 계속 끊긴다.
+        /// 1런이 3~5분인데 그 안에서 화면 전환이 수십 번이라, 곡이 바뀌는 지점은 <b>긴장이 바뀌는 곳</b>
+        /// 하나면 충분하다. 곡을 늘리는 건 용량 문제이기도 하다 — 웹 빌드는 다운로드 시간이 곧 이탈이다.
+        /// </remarks>
+        private static string BgmFor(string screenKey) =>
+            screenKey == "GamePlay" ? AudioKeys.BgmBattle : AudioKeys.BgmMenu;
 
         /// <summary>
         /// 팝업을 켜고, 그 팝업의 루트 Canvas를 지금까지 연 팝업 중 가장 위로 올린다.
