@@ -297,18 +297,43 @@ namespace DomoNinja.Unity
             var offer = offers[offerIndex];
             if (!NeedsTarget(offer))
             {
-                mgr.TryBuy(offerIndex, null);
+                ConfirmPurchase(mgr, offerIndex, null);
                 return;
             }
 
             // 대상 선택 UI가 씬에 없으면(구버전 씬 등) 생존한 첫 캐릭터로 자동 지정해 폴백한다.
             if (_targetPicker == null)
             {
-                mgr.TryBuy(offerIndex, FirstAliveCharacterId(mgr));
+                ConfirmPurchase(mgr, offerIndex, FirstAliveCharacterId(mgr));
                 return;
             }
 
             OpenTargetPicker(mgr, offerIndex);
+        }
+
+        /// <summary>
+        /// 구매를 바로 실행하지 않고 확인창을 먼저 띄운다 — 실수로 누른 슬롯 하나로
+        /// 재화가 곧장 빠져나가지 않게. "확인"을 눌러야 <see cref="RunManager.TryBuy"/> 가 실행된다.
+        /// </summary>
+        private void ConfirmPurchase(RunManager mgr, int offerIndex, string targetCharacterId)
+        {
+            var offers = mgr.CurrentShop?.Offers;
+            if (offers == null || offerIndex >= offers.Count) return;
+
+            var offer = offers[offerIndex];
+            string name = OfferLabel(offer, mgr);
+            string targetSuffix = "";
+            if (targetCharacterId != null)
+            {
+                var targetDef = mgr.Data.FindCharacter(targetCharacterId);
+                if (targetDef != null) targetSuffix = $" ({targetDef.Name})";
+            }
+
+            UIConfirmPopup.Show($"{name}{targetSuffix}을(를) {offer.Price} 재화에 구매하시겠습니까?", "구매", () =>
+            {
+                mgr.TryBuy(offerIndex, targetCharacterId);
+                RefreshUI();
+            });
         }
 
         /// <summary>대상 지정이 필요한 품목(`statBoost`·`conditionalBoost`·`healItem`). `teamBoost`는 전체 대상이라 제외.</summary>
@@ -359,9 +384,11 @@ namespace DomoNinja.Unity
             var deployed = mgr.CurrentRun.Deployed;
             if (slotIndex >= deployed.Count || !deployed[slotIndex].IsAlive) return;
 
-            mgr.TryBuy(_pendingOfferIndex, deployed[slotIndex].CharacterId);
+            int offerIndex = _pendingOfferIndex;
+            string targetCharacterId = deployed[slotIndex].CharacterId;
+
             CloseTargetPicker();
-            RefreshUI();
+            ConfirmPurchase(mgr, offerIndex, targetCharacterId);
         }
 
         private void CloseTargetPicker()
