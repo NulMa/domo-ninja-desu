@@ -26,12 +26,17 @@ namespace DomoNinja.Unity
         private const float NodeWidth = 260f;
         private const float NodeGap = 16f;
 
-        private static readonly Color CurrentColor = new Color(0.85f, 0.55f, 0.20f);
-        private static readonly Color ClearedColor = new Color(0.28f, 0.40f, 0.30f);
-        private static readonly Color UpcomingColor = new Color(0.18f, 0.19f, 0.21f);
-        private static readonly Color ConnectorColor = new Color(0.45f, 0.45f, 0.48f);
-        private static readonly Color TextMain = new Color(0.95f, 0.95f, 0.95f);
-        private static readonly Color TextDim = new Color(0.72f, 0.72f, 0.72f);
+        // ★ 이 화면만 **단색 사각형**으로 그려져 있어서 나머지 UI 와 톤이 어긋났다.
+        //   여기 값들은 이제 나무 테마 스프라이트 **위에 곱해지는 틴트**다.
+        //   `Upcoming` 을 0.18 짜리 검정으로 두면 그림이 그냥 사라진다 — 밝기만 낮춘다.
+        private static readonly Color CurrentColor = new Color(1.00f, 0.85f, 0.55f);
+        private static readonly Color ClearedColor = new Color(0.72f, 0.82f, 0.72f);
+        private static readonly Color UpcomingColor = new Color(0.62f, 0.60f, 0.56f);
+        private static readonly Color ConnectorColor = new Color(0.52f, 0.44f, 0.36f);
+        private static readonly Color TextMain = new Color(0.95f, 0.93f, 0.88f);
+        private static readonly Color TextDim = new Color(0.74f, 0.71f, 0.66f);
+
+        private const string NodeSpriteKey = "UI/Theme/inventory_cell";
 
         private RectTransform _container;
         private ScrollRect _scrollRect;
@@ -144,8 +149,12 @@ namespace DomoNinja.Unity
         private void BuildConnector(float x, float nodeHeight, float gap)
         {
             var rt = MakeRT("Connector", _container);
-            SetRect(rt, x, nodeHeight / 2f - 2.5f, gap, 5f);
-            rt.gameObject.AddComponent<UImage>().color = ConnectorColor;
+            SetRect(rt, x, nodeHeight / 2f - 4f, gap, 8f);
+            var img = rt.gameObject.AddComponent<UImage>();
+            img.sprite = UITheme.Find("UI/Theme/nine_path_bg");
+            img.type = UImage.Type.Sliced;
+            img.pixelsPerUnitMultiplier = 1f;
+            img.color = ConnectorColor;
         }
 
         private void BuildNode(RoundDef round, float x, float width, float height, GameData data,
@@ -157,7 +166,12 @@ namespace DomoNinja.Unity
 
             var node = MakeRT("Node" + roundNumber, _container);
             SetRect(node, x, 0, width, height);
-            node.gameObject.AddComponent<UImage>().color = current ? CurrentColor : cleared ? ClearedColor : UpcomingColor;
+
+            var nodeImage = node.gameObject.AddComponent<UImage>();
+            nodeImage.sprite = UITheme.Find(NodeSpriteKey);
+            nodeImage.type = UImage.Type.Sliced;
+            nodeImage.pixelsPerUnitMultiplier = 1f;
+            nodeImage.color = current ? CurrentColor : cleared ? ClearedColor : UpcomingColor;
 
             // 아이콘 — 중앙 기준 상단.
             var icon = MakeRT("Icon", node);

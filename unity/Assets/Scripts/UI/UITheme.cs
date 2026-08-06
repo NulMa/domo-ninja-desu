@@ -153,7 +153,11 @@ namespace DomoNinja.Unity
                     {
                         highlightedSprite = hover,
                         pressedSprite = pressed,
-                        selectedSprite = hover,
+                        // ★ selected 에는 hover 를 넣지 않는다.
+                        //   `UIFocusRing` 이 화면이 바뀔 때마다 첫 버튼을 자동으로 선택하는데,
+                        //   selected 를 hover 로 두면 **손도 안 댄 버튼 하나가 늘 눌린 것처럼 보인다.**
+                        //   초점은 링이 이미 그리고 있으므로 그림까지 바꿀 이유가 없다.
+                        selectedSprite = null,
                         disabledSprite = disabled,
                     };
                     return;
@@ -176,7 +180,9 @@ namespace DomoNinja.Unity
             normalColor = Color.white,
             highlightedColor = new Color(1.00f, 0.94f, 0.82f),
             pressedColor = new Color(0.72f, 0.68f, 0.62f),
-            selectedColor = new Color(1.00f, 0.94f, 0.82f),
+            // 선택은 기본과 같게. 초점 표시는 링이 맡는다 — 여기서 밝히면
+            // 자동 선택된 칸 하나가 이유 없이 밝아 보인다.
+            selectedColor = Color.white,
             disabledColor = new Color(0.48f, 0.46f, 0.44f, 1f),
             colorMultiplier = 1f,
             fadeDuration = 0.08f,
