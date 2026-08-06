@@ -18,7 +18,7 @@ namespace DomoNinja.Unity
         /// 문자열을 양쪽에 각각 적으면 첫 화면을 바꿨을 때 한쪽만 따라오고,
         /// 그 어긋남은 <b>에디터에서 보던 화면과 실제 첫 화면이 다르다</b>는 형태로만 드러난다.
         /// </remarks>
-        public const string FirstScreenKey = "StageSelect";
+        public const string FirstScreenKey = "Title";
 
         private static readonly Dictionary<string, UIScreen> Screens = new Dictionary<string, UIScreen>();
 
