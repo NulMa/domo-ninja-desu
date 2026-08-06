@@ -142,14 +142,31 @@ namespace DomoNinja.Unity
             _ringRect.gameObject.SetActive(true);
         }
 
+        /// <summary>
+        /// 대상 <b>사각형의 한가운데</b>에 링을 맞춘다.
+        /// </summary>
+        /// <remarks>
+        /// ★ 처음에는 대상의 앵커·피벗·위치를 그대로 베끼고 <c>sizeDelta</c> 만 키웠다.
+        /// 그러면 <b>피벗이 가운데가 아닌 요소에서 링이 한쪽으로 쏠린다</b> —
+        /// 크기는 피벗 반대쪽으로만 자라기 때문이다. 이 프로젝트의 UI 는 대부분 피벗이
+        /// 좌상단(0,1)이라 링이 오른쪽·아래로 여백만큼 밀려 있었다.
+        /// <para>
+        /// 그래서 피벗을 베끼지 않고 <b>가운데를 직접 계산해</b> 놓는다.
+        /// <c>rect.center</c> 는 피벗 기준 오프셋이므로 <c>localPosition</c> 에 더하면
+        /// 부모 좌표계에서의 실제 중심이 나온다 — 앵커가 늘어난(stretch) 요소에도 그대로 성립한다.
+        /// </para>
+        /// </remarks>
         private void Fit(RectTransform target)
         {
-            _ringRect.anchorMin = target.anchorMin;
-            _ringRect.anchorMax = target.anchorMax;
-            _ringRect.pivot = target.pivot;
-            _ringRect.anchoredPosition = target.anchoredPosition;
-            _ringRect.sizeDelta = target.sizeDelta + new Vector2(Padding * 2f, Padding * 2f);
+            var parent = target.parent as RectTransform;
+            if (parent == null) return;
+
+            _ringRect.anchorMin = _ringRect.anchorMax = _ringRect.pivot = new Vector2(0.5f, 0.5f);
             _ringRect.localScale = target.localScale;
+            _ringRect.sizeDelta = target.rect.size + new Vector2(Padding * 2f, Padding * 2f);
+
+            Vector2 centerInParent = (Vector2)target.localPosition + target.rect.center;
+            _ringRect.anchoredPosition = centerInParent - parent.rect.center;
         }
     }
 }
