@@ -14,7 +14,6 @@ namespace DomoNinja.Unity
     /// </remarks>
     public sealed class TutorialPopup : MonoBehaviour
     {
-        private const int SortingOrder = 8000;
         private const string PanelSpriteKey = "UI/Theme/nine_path_panel_2";
 
         private static readonly (string Title, string Body)[] Pages =
@@ -51,7 +50,7 @@ namespace DomoNinja.Unity
 
         private void Build()
         {
-            UITheme.SetupFullScreenCanvas(gameObject, SortingOrder);
+            UITheme.SetupFullScreenCanvas(gameObject, UITheme.Layer.Popup);
 
             // 스크림은 뒤 클릭만 막는다 — 여기서는 아무 곳 터치로 안 닫는다.
             // 카드를 넘겨보는 도중 실수로 배경을 눌러 통째로 닫히면 안 되기 때문이다.
