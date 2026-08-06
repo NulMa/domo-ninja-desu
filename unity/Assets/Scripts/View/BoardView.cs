@@ -64,6 +64,12 @@ namespace DomoNinja.Unity.View
             public int FrameIndex;
             public float FrameTimer;
             public bool IsAttacking;
+
+            // ── 절차적 공격 연출(몬스터 등, 분리 프레임이 없는 종류). `IdleFrames == null` 일 때만 쓴다 —
+            //    프레임 애니메이션이 있으면 그쪽이 우선이고 이 값들은 항상 기본값(0)으로 남는다.
+            public float BaseSpriteScale = 1f;
+            public Vector3 PunchDirection;
+            public float PunchLeft;
         }
 
         /// <param name="spritePaths">
@@ -194,10 +200,17 @@ namespace DomoNinja.Unity.View
                 attackFrameSeconds = animSpec.Value.AttackFrameSeconds;
             }
 
+            // 프레임 애니메이션이 없는 종류(몬스터 등)는 초상(Faceset) 대신 "몸통" 그림을 우선 쓴다 —
+            // 절차적 공격 연출(확대+돌진)이 이 그림 위에서 돈다. 없으면(Body 색인이 안 된 종류) 기존 초상으로.
+            Sprite bodySprite = idleFrames == null && _catalog != null
+                ? _catalog.Find(ResolveSpritePath(spec.TypeId) + "/Body")
+                : null;
+
             renderer.sprite = idleFrames != null
                 ? idleFrames[0]
-                : (_catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null);
+                : (bodySprite != null ? bodySprite : (_catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null));
 
+            float baseSpriteScale = 1f;
             if (renderer.sprite == null)
             {
                 // ★ 안 보이게 두면 "스프라이트가 없는 것"과 "유닛이 안 만들어진 것"이 구분되지 않는다.
@@ -213,8 +226,8 @@ namespace DomoNinja.Unity.View
             {
                 // 초상 크기가 제각각이라 칸에 맞춘다.
                 var size = renderer.sprite.bounds.size;
-                float scale = size.x > 0 ? CellSize * 0.8f / Mathf.Max(size.x, size.y) : 1f;
-                spriteObject.transform.localScale = Vector3.one * scale;
+                baseSpriteScale = size.x > 0 ? CellSize * 0.8f / Mathf.Max(size.x, size.y) : 1f;
+                spriteObject.transform.localScale = Vector3.one * baseSpriteScale;
             }
 
             var fill = CreateHpBar(root.transform, spec.Team == 0);
@@ -236,6 +249,7 @@ namespace DomoNinja.Unity.View
                 AttackFrames = attackFrames,
                 IdleFrameSeconds = idleFrameSeconds,
                 AttackFrameSeconds = attackFrameSeconds,
+                BaseSpriteScale = baseSpriteScale,
             };
         }
 
@@ -621,25 +635,47 @@ namespace DomoNinja.Unity.View
         public void FlashAttack(int actorId, int targetId)
         {
             Flash(actorId, AttackTint);
-            PlayAttackAnimation(actorId);
+            PlayAttackAnimation(actorId, targetId);
         }
 
         /// <summary>
-        /// 공격 프레임으로 잠깐 전환한다. Idle 로는 <see cref="TickAnimations"/> 가 알아서 되돌린다.
+        /// 공격을 짧게 연출한다. Idle 로는 <see cref="TickAnimations"/> 가 알아서 되돌린다.
         /// </summary>
         /// <remarks>
-        /// 애니메이션이 없는 종류(몬스터 등)는 <c>AttackFrames</c> 가 <c>null</c> 이라 아무 일도 안 한다 —
-        /// 이 메서드는 <see cref="FlashAttack"/> 과 짝이라 항상 같이 불리므로, 여기서 갈라야
+        /// 분리 프레임이 있는 종류(캐릭터·보스)는 Attack 프레임으로 전환하고,
+        /// 없는 종류(몬스터 등)는 대상 방향으로 확대+돌진하는 절차적 펀치로 대신한다 —
+        /// 이 메서드가 <see cref="FlashAttack"/> 과 짝이라 항상 같이 불리므로, 여기서 갈라야
         /// <c>BattleReplayer</c> 가 유닛 종류를 알 필요가 없다.
         /// </remarks>
-        private void PlayAttackAnimation(int unitId)
+        private void PlayAttackAnimation(int actorId, int targetId)
         {
-            if (!_units.TryGetValue(unitId, out var unit) || unit.AttackFrames == null) return;
+            if (!_units.TryGetValue(actorId, out var unit) || unit.IsDead) return;
 
-            unit.IsAttacking = true;
-            unit.FrameIndex = 0;
-            unit.FrameTimer = 0f;
+            if (unit.AttackFrames != null)
+            {
+                unit.IsAttacking = true;
+                unit.FrameIndex = 0;
+                unit.FrameTimer = 0f;
+                return;
+            }
+
+            var direction = unit.IsAlly ? Vector3.right : Vector3.left;
+            if (_units.TryGetValue(targetId, out var target) && target.Root != null)
+            {
+                var delta = target.Root.transform.position - unit.Root.transform.position;
+                if (delta.sqrMagnitude > 0.0001f) direction = delta.normalized;
+            }
+
+            unit.PunchDirection = direction;
+            unit.PunchLeft = PunchSeconds;
         }
+
+        /// <summary>절차적 펀치(확대+돌진)의 지속 시간(초).</summary>
+        private const float PunchSeconds = 0.22f;
+        private const float PunchScaleAmount = 0.22f;
+        /// <summary>돌진 거리(월드 단위). 칸 크기(<see cref="CellSize"/>=1)에 비해 작게 잡는다 —
+        /// 옆 칸까지 넘어가면 "이동"으로 읽혀서 <see cref="MoveTo"/> 이벤트와 헷갈린다.</summary>
+        private const float PunchLungeDistance = 0.14f;
 
         /// <summary>피격.</summary>
         public void FlashDamage(int unitId) => Flash(unitId, DamageTint);
@@ -682,32 +718,53 @@ namespace DomoNinja.Unity.View
         {
             foreach (var unit in _units.Values)
             {
-                if (unit.IsDead || unit.Sprite == null || unit.IdleFrames == null) continue;
+                if (unit.IsDead || unit.Sprite == null) continue;
 
-                bool attacking = unit.IsAttacking && unit.AttackFrames != null;
-                var frames = attacking ? unit.AttackFrames : unit.IdleFrames;
-                float frameSeconds = attacking ? unit.AttackFrameSeconds : unit.IdleFrameSeconds;
-
-                unit.FrameTimer += deltaTime;
-                if (unit.FrameTimer >= frameSeconds)
+                if (unit.IdleFrames != null)
                 {
-                    unit.FrameTimer -= frameSeconds;
-                    unit.FrameIndex++;
+                    bool attacking = unit.IsAttacking && unit.AttackFrames != null;
+                    var frames = attacking ? unit.AttackFrames : unit.IdleFrames;
+                    float frameSeconds = attacking ? unit.AttackFrameSeconds : unit.IdleFrameSeconds;
 
-                    if (unit.FrameIndex >= frames.Length)
+                    unit.FrameTimer += deltaTime;
+                    if (unit.FrameTimer >= frameSeconds)
                     {
-                        unit.FrameIndex = 0;
-                        // 공격 재생이 한 바퀴 끝나면 Idle 로 돌아간다 — 계속 반복하면 "공격 중"이
-                        // 실제 공격 이벤트보다 오래 보여서 재생 로그와 화면이 어긋난다.
-                        if (attacking)
+                        unit.FrameTimer -= frameSeconds;
+                        unit.FrameIndex++;
+
+                        if (unit.FrameIndex >= frames.Length)
                         {
-                            unit.IsAttacking = false;
-                            frames = unit.IdleFrames;
+                            unit.FrameIndex = 0;
+                            // 공격 재생이 한 바퀴 끝나면 Idle 로 돌아간다 — 계속 반복하면 "공격 중"이
+                            // 실제 공격 이벤트보다 오래 보여서 재생 로그와 화면이 어긋난다.
+                            if (attacking)
+                            {
+                                unit.IsAttacking = false;
+                                frames = unit.IdleFrames;
+                            }
                         }
                     }
+
+                    unit.Sprite.sprite = frames[unit.FrameIndex];
+                    continue;
                 }
 
-                unit.Sprite.sprite = frames[unit.FrameIndex];
+                if (unit.PunchLeft <= 0f) continue;
+
+                unit.PunchLeft -= deltaTime;
+                float t = Mathf.Clamp01(unit.PunchLeft / PunchSeconds);
+                // 0 → 1 → 0 종 모양 곡선. 확대와 돌진이 같은 박자로 커졌다 줄어든다.
+                float envelope = Mathf.Sin((1f - t) * Mathf.PI);
+
+                var spriteTransform = unit.Sprite.transform;
+                spriteTransform.localScale = Vector3.one * unit.BaseSpriteScale * (1f + PunchScaleAmount * envelope);
+                spriteTransform.localPosition = unit.PunchDirection * (PunchLungeDistance * envelope);
+
+                if (unit.PunchLeft <= 0f)
+                {
+                    spriteTransform.localScale = Vector3.one * unit.BaseSpriteScale;
+                    spriteTransform.localPosition = Vector3.zero;
+                }
             }
         }
 

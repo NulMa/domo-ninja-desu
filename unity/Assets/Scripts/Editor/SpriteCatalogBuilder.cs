@@ -232,6 +232,22 @@ namespace DomoNinja.Unity.Editor
                 // "Assets/Sprite/Actor/Character/Samurai" → "Actor/Character/Samurai"
                 string key = normalized.Substring(SpriteRoot.Length + 1);
                 entries.Add(new SpriteCatalog.Entry { Key = key, Sprite = sprite });
+
+                // ★ 몬스터는 Idle/Attack 분리 프레임이 없다 — 대신 Faceset(초상) 말고
+                //   "몸통 전체" 그림도 따로 색인해둔다. 절차적 공격 연출(확대+돌진, `D-77` 후속)이
+                //   보드에서 이 그림을 쓴다. 캐릭터·보스는 이미 프레임 애니메이션이 있어 필요 없으니
+                //   몬스터 폴더로 한정한다 — 파일명이 폴더마다 다르다(SpriteSheet·Eye·Slime...)
+                //   그래서 "Faceset 이 아닌 파일"로 찾는다.
+                if (normalized.StartsWith("Assets/Sprite/Actor/Monster/"))
+                {
+                    string body = pngs.FirstOrDefault(p => Path.GetFileNameWithoutExtension(p) != "Faceset");
+                    if (body != null)
+                    {
+                        var bodySprite = AssetDatabase.LoadAssetAtPath<Sprite>(body.Replace('\\', '/'));
+                        if (bodySprite != null)
+                            entries.Add(new SpriteCatalog.Entry { Key = key + "/Body", Sprite = bodySprite });
+                    }
+                }
             }
 
             entries.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
