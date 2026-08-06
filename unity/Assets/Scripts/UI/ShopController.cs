@@ -57,8 +57,9 @@ namespace DomoNinja.Unity
             }
         }
 
-        private static readonly Color AliveSlotColor = new Color(0.180f, 0.190f, 0.210f, 1f);
-        private static readonly Color DeadSlotColor = new Color(0.120f, 0.100f, 0.100f, 1f);
+        // 스프라이트 위에 곱해지는 틴트다. 흰색이 원본 그대로다.
+        private static readonly Color AliveSlotColor = Color.white;
+        private static readonly Color DeadSlotColor = new Color(0.55f, 0.42f, 0.42f, 1f);
 
         private Transform _board;
         private TMP_Text _currencyLabel;

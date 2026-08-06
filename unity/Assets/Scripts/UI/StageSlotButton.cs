@@ -16,9 +16,10 @@ namespace DomoNinja.Unity
     {
         public string StageId = "";
 
-        private static readonly Color LockedColor = new Color(0.11f, 0.12f, 0.13f);
-        private static readonly Color UnlockedColor = new Color(0.18f, 0.19f, 0.21f);
-        private static readonly Color SelectedColor = new Color(0.25f, 0.48f, 0.78f);
+        // 스프라이트(나무 버튼) 위에 곱해지는 틴트다. 흰색이 원본 그대로다.
+        private static readonly Color LockedColor = new Color(0.45f, 0.45f, 0.45f);
+        private static readonly Color UnlockedColor = Color.white;
+        private static readonly Color SelectedColor = new Color(1.00f, 0.85f, 0.55f);
 
         private UImage _image;
         private Button _button;
