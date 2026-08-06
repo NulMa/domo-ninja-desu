@@ -106,7 +106,15 @@ namespace DomoNinja.Unity.View
         }
 
         /// <summary>보드 8×6 이 한 화면에 들어오게. 세로 대치가 아니라 좌우 대치라 가로가 길다.</summary>
-        private static void SetupCamera()
+        /// <remarks>
+        /// ★ <c>public</c> 인 이유는 <b>에디터가 같은 값을 쓰기 위해서</b>다.
+        /// 이 값들은 실행할 때 카메라에 덮어씌워지므로, 씬에 저장된 카메라가 무엇이든 게임은 이렇게 돈다.
+        /// 그 말은 <b>편집 모드에서 보는 화면이 실제 화면과 다를 수 있다</b>는 뜻이다 —
+        /// 실제로 씬 카메라는 원근(perspective)에 스카이박스였고 게임은 직교(orthographic)에 어두운 단색이다.
+        /// UI 를 그 위에 얹는 사람에게는 배경색도 프레이밍도 판단 재료라서, 에디터 메뉴가 이 함수를 호출해
+        /// 씬 카메라를 같은 값으로 맞춘다. 값을 에디터 쪽에 복사해두면 언젠가 한쪽만 바뀐다.
+        /// </remarks>
+        public static void SetupCamera()
         {
             var camera = Camera.main;
             if (camera == null)

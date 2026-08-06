@@ -104,7 +104,12 @@ namespace DomoNinja.Unity.View
                     cell.transform.position = ToWorld(new Coord(x, y)) + new Vector3(0, 0, 1f);
                     cell.transform.localScale = Vector3.one * (CellSize * 0.96f);
 
-                    Object.Destroy(cell.GetComponent<Collider>());
+                    // 에디터에서도 격자를 그릴 수 있어야 해서 Destroy 를 갈랐다.
+                    // 편집 모드의 Object.Destroy 는 그 자리에서 실패하므로, 이 한 줄 때문에
+                    // 보드 미리보기(BoardPreview) 가 통째로 못 돈다. 규칙은 아무것도 안 바뀐다.
+                    var collider = cell.GetComponent<Collider>();
+                    if (Application.isPlaying) Object.Destroy(collider);
+                    else Object.DestroyImmediate(collider);
 
                     // 아군 진영(x <= AllyMaxX)과 적 진영을 눈으로 구분한다.
                     // 배치 규칙이 화면에 안 보이면 "왜 여기 못 놓지"가 버그처럼 보인다.

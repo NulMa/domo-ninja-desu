@@ -12,6 +12,14 @@ namespace DomoNinja.Unity
     /// </remarks>
     public static class UIScreenManager
     {
+        /// <summary>게임을 켰을 때 처음 뜨는 풀스크린.</summary>
+        /// <remarks>
+        /// 에디터의 화면 미리보기 도구가 "기준 상태"로 되돌릴 때도 이 값을 쓴다.
+        /// 문자열을 양쪽에 각각 적으면 첫 화면을 바꿨을 때 한쪽만 따라오고,
+        /// 그 어긋남은 <b>에디터에서 보던 화면과 실제 첫 화면이 다르다</b>는 형태로만 드러난다.
+        /// </remarks>
+        public const string FirstScreenKey = "StageSelect";
+
         private static readonly Dictionary<string, UIScreen> Screens = new Dictionary<string, UIScreen>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -34,7 +42,7 @@ namespace DomoNinja.Unity
                 screen.gameObject.SetActive(false);
             }
 
-            ShowScreen("StageSelect");
+            ShowScreen(FirstScreenKey);
         }
 
         /// <summary>풀스크린 하나를 켜고 나머지 풀스크린은 전부 끈다. 팝업 상태는 안 건드린다.</summary>
