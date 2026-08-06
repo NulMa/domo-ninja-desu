@@ -50,6 +50,45 @@ namespace DomoNinja.Unity
 
         public static Sprite Find(string key) => Catalog != null ? Catalog.Find(key) : null;
 
+        /// <summary>
+        /// 코드로 만드는 전체화면 캔버스를 씬의 다른 캔버스와 같은 방식으로 세운다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <c>ScreenSpaceOverlay</c> 가 아니라 <c>ScreenSpaceCamera</c> 를 쓴다.
+        /// Overlay 는 <b>카메라 렌더에 안 잡혀서</b> 우리가 쓰는 확인 방법(카메라를 RenderTexture 로 찍기)에
+        /// 걸리지 않는다. 실제로 확인창을 Overlay 로 만들었다가 <b>화면에 떠 있는데 캡처는 비어 있는</b>
+        /// 상태를 겪었다. <b>확인할 수 없는 화면은 결국 확인하지 않게 된다.</b>
+        /// 씬의 캔버스가 전부 ScreenSpaceCamera 라 방식도 이쪽이 일관된다.
+        /// </remarks>
+        public static void SetupFullScreenCanvas(GameObject host, int sortingOrder)
+        {
+            var canvas = host.GetComponent<Canvas>();
+            if (canvas == null) canvas = host.AddComponent<Canvas>();
+
+            var camera = Camera.main;
+            if (camera != null)
+            {
+                canvas.renderMode = RenderMode.ScreenSpaceCamera;
+                canvas.worldCamera = camera;
+                canvas.planeDistance = 0.5f;
+            }
+            else
+            {
+                // 카메라가 없으면 그려지지 않는 것보다 Overlay 로라도 뜨는 편이 낫다.
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            }
+
+            canvas.sortingOrder = sortingOrder;
+
+            var scaler = host.GetComponent<CanvasScaler>();
+            if (scaler == null) scaler = host.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            if (host.GetComponent<GraphicRaycaster>() == null) host.AddComponent<GraphicRaycaster>();
+        }
+
         /// <summary>버튼 컴포넌트를 붙이고 연출을 입힌다. 이미 있으면 그대로 쓴다.</summary>
         public static Button EnsureButton(GameObject go)
         {
