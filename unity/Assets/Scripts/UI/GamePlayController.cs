@@ -124,13 +124,26 @@ namespace DomoNinja.Unity
         /// 뷰는 "무엇에 올려져 있는가"까지만 안다 — 무엇을 보여줄지는 런 상태를 아는 이쪽이 정한다.
         /// 같은 유닛에 계속 올려둔 동안에도 매 프레임 다시 만든다: <b>전투 중 체력이 변한다.</b>
         /// </remarks>
+        /// <remarks>
+        /// ★ <b>전투 화면이 실제로 앞에 있을 때만 짚는다.</b> <c>StageIntro</c>·<c>Shop</c> 은
+        /// <c>GamePlay</c> <b>위에</b> 뜨는데, 그동안에도 <c>BoardView</c> 는 뒤에서 배치 유닛을
+        /// 계속 짚고 있었다. 그 결과 <b>스테이지 인트로 화면에서 있지도 않은 용병 스펙이 떴고</b>,
+        /// 적 초상화에 올려 뜬 툴팁도 여기서 매 프레임 지워졌다.
+        /// <c>PlacementController</c> 가 입력을 막을 때 쓰는 것과 같은 조건이다.
+        /// </remarks>
         private void Update()
         {
             if (_boardView == null) return;
 
+            if (!UIScreenManager.IsActive("GamePlay") || UIScreenManager.IsActive("StageIntro"))
+            {
+                UnitTooltip.Hide(this);
+                return;
+            }
+
             string text = DescribeHovered(_boardView.Hovered);
-            if (string.IsNullOrEmpty(text)) UnitTooltip.Hide();
-            else UnitTooltip.Show(text);
+            if (string.IsNullOrEmpty(text)) UnitTooltip.Hide(this);
+            else UnitTooltip.Show(this, text);
         }
 
         /// <summary>

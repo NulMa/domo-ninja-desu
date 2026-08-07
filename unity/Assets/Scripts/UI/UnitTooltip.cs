@@ -40,6 +40,25 @@ namespace DomoNinja.Unity
 
         private static UnitTooltip _instance;
 
+        /// <summary>
+        /// 지금 이 툴팁을 <b>쥐고 있는 쪽</b>. 남이 띄운 걸 다른 쪽이 끄지 못하게 한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>주인이 없으면 서로를 지운다.</b> 실제로 그렇게 됐다 —
+        /// <c>StageIntro</c> 는 <c>GamePlay</c> <b>위에 뜨는 팝업</b>이라, 그 뒤에서
+        /// <c>BoardView</c> 가 배치 유닛을 계속 짚고 <c>GamePlayController.Update</c> 가
+        /// <b>매 프레임</b> <see cref="Show"/>/<see cref="Hide"/> 를 불렀다.
+        /// 그 결과 ⑴ 적 초상화에 올려 뜬 툴팁이 <b>같은 프레임에 지워지고</b>,
+        /// ⑵ 커서가 팝업 뒤 유닛 자리와 겹치면 <b>화면에 있지도 않은 용병 스펙</b>이 떴다.
+        /// </para>
+        /// <para>
+        /// 그래서 <b>띄운 쪽만 끌 수 있게</b> 한다. 화면 하나가 조건을 빠뜨려도
+        /// 남의 툴팁을 조용히 지우는 일은 안 생긴다.
+        /// </para>
+        /// </remarks>
+        private static object _owner;
+
         private RectTransform _panel;
         private TMP_Text _label;
         private Canvas _canvas;
@@ -54,20 +73,39 @@ namespace DomoNinja.Unity
             }
         }
 
-        /// <summary>내용을 채우고 띄운다. 빈 문자열이면 <see cref="Hide"/> 와 같다.</summary>
-        public static void Show(string richText)
+        /// <summary>
+        /// 내용을 채우고 띄운다. 빈 문자열이면 <paramref name="owner"/> 가 놓는 것과 같다.
+        /// </summary>
+        /// <param name="owner">띄우는 주체. <see cref="Hide"/> 에 같은 것을 넘겨야 꺼진다.</param>
+        public static void Show(object owner, string richText)
         {
-            if (string.IsNullOrEmpty(richText)) { Hide(); return; }
+            if (string.IsNullOrEmpty(richText)) { Hide(owner); return; }
 
             var t = Instance;
             t._label.text = richText;
             t._panel.gameObject.SetActive(true);
             t._visible = true;
+            _owner = owner;
             t.Reposition();
         }
 
-        public static void Hide()
+        /// <summary>
+        /// 자기가 띄운 것만 끈다. 남이 쥐고 있으면 <b>아무 일도 안 한다.</b>
+        /// </summary>
+        public static void Hide(object owner)
         {
+            if (_instance == null) return;
+            if (_owner != null && !ReferenceEquals(_owner, owner)) return;
+
+            _owner = null;
+            _instance._visible = false;
+            _instance._panel.gameObject.SetActive(false);
+        }
+
+        /// <summary>주인과 무관하게 끈다. 화면이 통째로 바뀔 때만 쓴다.</summary>
+        public static void ForceHide()
+        {
+            _owner = null;
             if (_instance == null) return;
             _instance._visible = false;
             _instance._panel.gameObject.SetActive(false);
@@ -97,16 +135,37 @@ namespace DomoNinja.Unity
                 _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera,
                 out local);
 
-            // 레이아웃이 아직 안 돌았으면 크기가 0 이라 접기 판정이 틀린다 — 강제로 한 번 돌린다.
-            LayoutRebuilder.ForceRebuildLayoutImmediate(_panel);
-            var size = _panel.rect.size;
+            // ★ 판 크기를 <b>직접</b> 잰다. 전에는 ContentSizeFitter + VerticalLayoutGroup 에 맡겼는데
+            //   글자 메시가 갱신되기 전에 크기를 읽어 **판이 글자보다 작게 잡히고 아래가 잘렸다**
+            //   (실측 스크린샷에서 액티브/보조/강화 세 줄이 판 밖으로 나갔다).
+            //   TMP 에 직접 물어보면 그 프레임의 글자 그대로다.
+            var textSize = _label.GetPreferredValues(_label.text, MaxWidth, 0f);
+            textSize.x = Mathf.Min(textSize.x, MaxWidth);
+            _label.rectTransform.sizeDelta = textSize;
+
+            var size = new Vector2(textSize.x + Padding * 2f, textSize.y + Padding * 2f);
+            _panel.sizeDelta = size;
+
             var half = canvasRect.rect.size * 0.5f;
+
+            // ★ 커서가 화면 밖이면(에디터에서 게임 뷰를 벗어나면 좌표가 음수로 나온다) 아래 접기
+            //   판정이 엉뚱한 값을 내놓는다 — 실측에서 판이 local y = −786 까지 날아갔다.
+            //   캔버스는 ±540 이므로 화면 밖이다. 먼저 커서를 캔버스 안으로 가둔다.
+            local.x = Mathf.Clamp(local.x, -half.x, half.x);
+            local.y = Mathf.Clamp(local.y, -half.y, half.y);
 
             float x = local.x + CursorOffset.x;
             float y = local.y + CursorOffset.y;
 
+            // 오른쪽/아래로 넘치면 커서 반대편으로 접는다.
             if (x + size.x > half.x) x = local.x - CursorOffset.x - size.x;
             if (y - size.y < -half.y) y = local.y - CursorOffset.y + size.y;
+
+            // ★ 접고 나서도 넘칠 수 있다 — 판이 화면보다 크거나 커서가 구석에 있을 때다.
+            //   마지막으로 캔버스 안에 가둔다. 글자가 잘린 채 뜨는 것보다 커서에서 조금 떨어지는 게 낫다.
+            //   (pivot 이 좌상단이라 x 는 왼쪽 끝, y 는 위쪽 끝이다)
+            x = Mathf.Clamp(x, -half.x, half.x - size.x);
+            y = Mathf.Clamp(y, -half.y + size.y, half.y);
 
             _panel.anchoredPosition = new Vector2(x, y);
         }
@@ -136,26 +195,24 @@ namespace DomoNinja.Unity
             bg.type = UImage.Type.Sliced;
             bg.pixelsPerUnitMultiplier = 1f;
             bg.raycastTarget = false;
-
-            var fitter = panelGo.AddComponent<ContentSizeFitter>();
-            fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-            var layout = panelGo.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset((int)Padding, (int)Padding, (int)Padding, (int)Padding);
-            layout.childForceExpandWidth = false;
-            layout.childForceExpandHeight = false;
+            // ★ 판을 어둡게 깐다. 원본 나무 패널은 주황이라 밝은 글자가 위에서 안 읽힌다 —
+            //   실제로 주황 판에 흰 글자가 떠서 스펙이 거의 안 보였다.
+            bg.color = new Color(0.20f, 0.19f, 0.18f, 0.96f);
 
             var labelGo = new GameObject("Label", typeof(RectTransform));
             labelGo.transform.SetParent(panelGo.transform, false);
+            var labelRt = (RectTransform)labelGo.transform;
+            labelRt.anchorMin = new Vector2(0f, 1f);
+            labelRt.anchorMax = new Vector2(0f, 1f);
+            labelRt.pivot = new Vector2(0f, 1f);
+            labelRt.anchoredPosition = new Vector2(Padding, -Padding);
+
             self._label = labelGo.AddComponent<TextMeshProUGUI>();
             self._label.fontSize = 20f;
             self._label.color = new Color(0.95f, 0.93f, 0.88f);
             self._label.raycastTarget = false;
             self._label.textWrappingMode = TextWrappingModes.Normal;
-
-            var element = labelGo.AddComponent<LayoutElement>();
-            element.preferredWidth = MaxWidth;
+            self._label.overflowMode = TextOverflowModes.Overflow;
 
             panelGo.SetActive(false);
             return self;
@@ -176,12 +233,12 @@ namespace DomoNinja.Unity
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            if (Describe != null) UnitTooltip.Show(Describe());
+            if (Describe != null) UnitTooltip.Show(this, Describe());
         }
 
-        public void OnPointerExit(PointerEventData eventData) => UnitTooltip.Hide();
+        public void OnPointerExit(PointerEventData eventData) => UnitTooltip.Hide(this);
 
-        private void OnDisable() => UnitTooltip.Hide();
+        private void OnDisable() => UnitTooltip.Hide(this);
     }
 
     /// <summary>

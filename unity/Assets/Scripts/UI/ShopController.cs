@@ -201,10 +201,18 @@ namespace DomoNinja.Unity
                 hp.offsetMin = new Vector2(96f, 6f);
                 hp.offsetMax = new Vector2(-8f, -6f);
                 var hpLabel = hp.gameObject.AddComponent<TextMeshProUGUI>();
-                hpLabel.fontSize = 20f;
+                hpLabel.fontSize = 17f;
                 hpLabel.alignment = TextAlignmentOptions.Left;
                 hpLabel.color = Color.white;
                 hpLabel.raycastTarget = false;
+                // ★ 줄바꿈을 끈다. `HP 153 / 153` 이 폭에 안 맞아 접히면서 두 줄이 세 줄이 되고,
+                //   칸 높이를 넘겨 **뒷사람 이름이 잘렸다**(적영이 그랬다).
+                //   접는 대신 폭에 맞춰 줄여 쓴다 — 숫자는 작아도 읽히지만 잘리면 못 읽는다.
+                hpLabel.textWrappingMode = TextWrappingModes.NoWrap;
+                hpLabel.overflowMode = TextOverflowModes.Overflow;
+                hpLabel.enableAutoSizing = true;
+                hpLabel.fontSizeMin = 12f;
+                hpLabel.fontSizeMax = 17f;
                 _rosterHpLabels[i] = hpLabel;
 
                 _rosterHovers[i] = cell.gameObject.AddComponent<HoverTooltipTrigger>();
@@ -231,8 +239,8 @@ namespace DomoNinja.Unity
                 _rosterFaces[i].color = entry.IsAlive ? AliveSlotColor : DeadSlotColor;
 
                 _rosterHpLabels[i].text = entry.IsAlive
-                    ? $"{(def != null ? def.Name : entry.CharacterId)}\n<size=17>HP {entry.Hp} / {entry.MaxHp}</size>"
-                    : $"{(def != null ? def.Name : entry.CharacterId)}\n<size=17><color=#9A948C>사망</color></size>";
+                    ? $"{(def != null ? def.Name : entry.CharacterId)}\n<size=15>HP {entry.Hp}/{entry.MaxHp}</size>"
+                    : $"{(def != null ? def.Name : entry.CharacterId)}\n<size=15><color=#9A948C>사망</color></size>";
 
                 // ★ 문자열을 미리 굽지 않고 대리자로 넘긴다 — 이 띠는 구매 직후에도 갱신되는데,
                 //   그때 캡처한 값을 들고 있으면 툴팁만 옛 스펙을 계속 보여준다.
