@@ -1249,7 +1249,8 @@ namespace DomoNinja.Unity.View
                 unit.Sprite.color = Color.white;   // TickDeathFade 가 여기서부터 흐리게 한다
                 unit.Sprite.transform.localScale = Vector3.one * unit.BaseSpriteScale;
             }
-            // 빈 트랙은 남긴다 — 막대가 통째로 사라지면 "죽었다"와 "막대를 못 그렸다"가 같아 보인다.
+            // 흩어지는 0.45초 동안만 빈 트랙이 보인다 — 그 뒤엔 <see cref="TickDeathFade"/> 가
+            // 유닛을 통째로 끈다. 트랙만 남겨두면 시체 없이 막대가 혼자 떠 있게 된다.
             if (unit.HpFill != null) SetFill(unit, 0f);
             if (unit.ShieldFill != null) unit.ShieldFill.parent.gameObject.SetActive(false);
             if (unit.Outline != null) unit.Outline.gameObject.SetActive(false);
@@ -2354,11 +2355,28 @@ namespace DomoNinja.Unity.View
             }
         }
 
-        /// <summary>죽은 유닛이 위로 튀며 돌아 사라진다.</summary>
+        /// <summary>죽은 유닛이 위로 튀며 돌아 <b>완전히</b> 사라진다.</summary>
         /// <remarks>
-        /// 전에는 <b>그 자리에서 반투명해지기만</b> 했다 — 판이 붐빌 때 누가 죽었는지가 안 읽힌다.
-        /// 시체를 완전히 없애지는 않는다: 칸 점유는 core 가 정하고, 화면이 유닛을 지우면
-        /// <b>"죽었다"와 "화면에서 사라졌다"가 같아져</b> 재생 로그와 대조할 수 없게 된다.
+        /// <para>
+        /// 지시(사용자): *"몹 잡았을 때 시체 안사라지고 반투명처리했던데, 남겨둘거면
+        /// 용병보다 아래 레이어로 내리고, 아니면 없에는게 맞다고 생각함."*
+        /// </para>
+        /// <para>
+        /// ★ <b>내가 시체를 남긴 근거가 화면의 근거가 아니었다.</b>
+        /// *"화면이 유닛을 지우면 「죽었다」와 「화면에서 사라졌다」가 같아져 로그와 대조할 수 없다"* 고
+        /// 적었는데, 그건 <b>내가 디버깅할 때의 편의</b>지 플레이어가 볼 이유가 아니다.
+        /// 대조할 것이 필요하면 <b>로그를 보면 된다</b> — 그러라고 로그가 있다.
+        /// </para>
+        /// <para>
+        /// 판이 8×6 이고 한 전투에 적이 여럿 죽는다. 반투명 시체는 <c>sortingOrder</c> 가
+        /// 산 유닛과 같아서 <b>같은 칸에 두 겹으로 겹친다</b> — core 는 시체를 칸에서 빼므로
+        /// 그 자리에 산 유닛이 바로 들어온다. 층을 내려도 겹침은 남고 잡음만 는다.
+        /// </para>
+        /// <para>
+        /// <see cref="UnitView.Root"/> 를 통째로 끈다 — 스프라이트만 끄면 <b>빈 체력바 트랙이
+        /// 혼자 떠 있는다.</b> (<see cref="SetDead"/> 가 트랙을 남기는 이유는 시체가 남는다는
+        /// 전제 위에 있었고, 통째로 사라지면 그 모호함 자체가 없어진다.)
+        /// </para>
         /// </remarks>
         private void TickDeathFade(float deltaTime)
         {
@@ -2374,15 +2392,10 @@ namespace DomoNinja.Unity.View
                 st.localRotation = Quaternion.Euler(0f, 0f, (unit.IsAlly ? 1f : -1f) * DeathSpinDegrees * t);
 
                 var c = unit.Sprite.color;
-                c.a = Mathf.Lerp(1f, 0.25f, t);
+                c.a = 1f - t;
                 unit.Sprite.color = c;
 
-                if (unit.DeathFadeLeft <= 0f)
-                {
-                    st.localPosition = Vector3.zero;
-                    unit.Sprite.color = new Color(1f, 1f, 1f, 0.25f);
-                    // 회전은 남긴다 — 쓰러진 채로 두는 편이 "죽었다"로 읽힌다.
-                }
+                if (unit.DeathFadeLeft <= 0f && unit.Root != null) unit.Root.SetActive(false);
             }
         }
 
