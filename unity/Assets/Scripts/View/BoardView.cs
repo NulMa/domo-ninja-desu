@@ -4,6 +4,7 @@ using DomoNinja.Core.Domain;
 using DomoNinja.Core.Events;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Tilemaps;
 
 namespace DomoNinja.Unity.View
 {
@@ -215,7 +216,7 @@ namespace DomoNinja.Unity.View
             _fieldRoot = null;
 
             var prefab = FindFieldPrefab(stageId, bossRound);
-            if (prefab != null)
+            if (prefab != null && HasAnyTile(prefab))
             {
                 var field = Object.Instantiate(prefab, transform);
                 field.name = prefab.name;
@@ -226,6 +227,24 @@ namespace DomoNinja.Unity.View
             }
 
             BuildGround();
+        }
+
+        /// <summary>
+        /// 그 전장에 <b>한 칸이라도 칠해져 있는가.</b>
+        /// </summary>
+        /// <remarks>
+        /// ★ 빈 전장을 그대로 쓰면 <b>판이 맨바닥으로 나온다.</b> 준비 메뉴가 스테이지·보스별
+        /// 빈 프리팹을 미리 깔아두기 때문에(칠할 자리를 보여주려고), 이 검사가 없으면
+        /// <b>아직 안 칠한 스테이지가 기본 전장보다 우선</b>해서 배경이 사라진다 —
+        /// 파일을 만들어둔 것이 오히려 화면을 망가뜨리는 셈이다.
+        /// 비어 있으면 없는 것으로 치고 다음 단계로 떨어진다.
+        /// </remarks>
+        private static bool HasAnyTile(GameObject fieldPrefab)
+        {
+            foreach (var map in fieldPrefab.GetComponentsInChildren<Tilemap>(true))
+                if (map.GetUsedTilesCount() > 0) return true;
+
+            return false;
         }
 
         private static GameObject FindFieldPrefab(string stageId, bool bossRound)
@@ -252,6 +271,10 @@ namespace DomoNinja.Unity.View
 
             var root = new GameObject("Ground").transform;
             root.SetParent(transform, false);
+
+            // ★ 이것도 "지금 깔린 전장"이다. 안 맡겨두면 `SetField` 가 다음에 지울 대상을 못 찾아
+            //   라운드마다 흙바닥이 80장씩 쌓인다 — 실제로 첫 실측에서 Ground 가 둘이었다.
+            _fieldRoot = root;
 
             // 칸 하나를 꽉 채우도록 배율을 맞춘다. 16px 타일이라 원본 월드 크기는 1 이 아니다.
             var size = tile.bounds.size;
