@@ -19,6 +19,14 @@ MonoBehaviour:
     Clip: {fileID: 8300000, guid: ddf0320302e934247b07e65f80b2a7eb, type: 3}
   - Key: Sfx/attack
     Clip: {fileID: 8300000, guid: 4664ff74fcdff9542994c55da267e1b9, type: 3}
+  - Key: Sfx/attack_blade
+    Clip: {fileID: 8300000, guid: f4ebaf097d64a86408098af3b7ffe9b3, type: 3}
+  - Key: Sfx/attack_blunt
+    Clip: {fileID: 8300000, guid: c3757737e3a754f4b8b5f87c1cc97e94, type: 3}
+  - Key: Sfx/attack_bow
+    Clip: {fileID: 8300000, guid: 6c6a17bf49ddea343849a5a439220dea, type: 3}
+  - Key: Sfx/attack_magic
+    Clip: {fileID: 8300000, guid: f56b1055cf8c4b1488c2fa06e524c19c, type: 3}
   - Key: Sfx/cancel
     Clip: {fileID: 8300000, guid: 5ce13d51630507944af8a034ad1a3e6d, type: 3}
   - Key: Sfx/click

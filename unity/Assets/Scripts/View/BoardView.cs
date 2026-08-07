@@ -436,6 +436,19 @@ namespace DomoNinja.Unity.View
                 if (fx.Transform != null) Object.Destroy(fx.Transform.gameObject);
             }
             _hitFxInstances.Clear();
+
+            // 무기·피해 숫자도 같이 치운다 — 유닛 트리 밖에 있어서 안 지우면 다음 라운드까지 남는다.
+            foreach (var fx in _weaponFx)
+            {
+                if (fx.Transform != null) Object.Destroy(fx.Transform.gameObject);
+            }
+            _weaponFx.Clear();
+
+            foreach (var p in _damagePopups)
+            {
+                if (p.Transform != null) Object.Destroy(p.Transform.gameObject);
+            }
+            _damagePopups.Clear();
         }
 
         private UnitView CreateUnit(UnitSpec spec)
@@ -997,6 +1010,13 @@ namespace DomoNinja.Unity.View
         {
             Hovered = FindHovered();
             TickCheer();
+
+            // ★ 무기·피해 숫자는 <b>스스로</b> 돈다. 재생기에 맡겼더니 재생이 끝나는 순간
+            //   Tick 이 멈춰서 **마지막 연출이 그 자리에 얼어붙은 채 안 사라졌다** —
+            //   실측에서 전투 뒤에도 Katana·Bow·EnergyBall 이 (0,0,0) 에 남아 있었다.
+            //   승리 연출 0.9초 동안에도 재생기는 멈춰 있으므로 여기서 도는 편이 맞다.
+            TickWeaponFx(Time.deltaTime);
+            TickDamagePopups(Time.deltaTime);
         }
 
         private void OnDisable() => Hovered = default;
@@ -1168,6 +1188,76 @@ namespace DomoNinja.Unity.View
         {
             Flash(actorId, AttackTint);
             PlayAttackAnimation(actorId, targetId);
+            PlayWeaponFx(actorId, targetId);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  무기 연출 — 가까우면 휘두르고, 멀면 날린다
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 캐릭터별 무기와 투사체. 없는 종류(몬스터)는 <c>null</c> 이라 연출을 건너뛴다.
+        /// </summary>
+        /// <remarks>
+        /// 팀원이 <c>5e77e32</c> 에서 정한 테마를 그대로 쓴다 —
+        /// 사무라이→카타나 · 수도승→봉 · 적영→사이 · 사냥꾼→활 · 주술사→마법봉 · 무녀→책.
+        /// 한 번 정한 짝을 다시 정하면 <b>화면마다 무기가 달라진다.</b>
+        /// </remarks>
+        private static (string Weapon, string Projectile, string Sound)? WeaponOf(string typeId)
+        {
+            switch (typeId)
+            {
+                case "C1": return ("Weapon/Katana", "FX/Projectile/Shuriken", AudioKeys.AttackBlade);
+                case "C2": return ("Weapon/Stick", "FX/Projectile/EnergyBall", AudioKeys.AttackBlunt);
+                case "C3": return ("Weapon/Sai", "FX/Projectile/Shuriken", AudioKeys.AttackBlade);
+                case "C4": return ("Weapon/Bow", "FX/Projectile/Arrow", AudioKeys.AttackBow);
+                case "C5": return ("Weapon/MagicWand", "FX/Projectile/EnergyBall", AudioKeys.AttackMagic);
+                case "C6": return ("Weapon/Book", "FX/Projectile/EnergyBall", AudioKeys.AttackMagic);
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// 이 공격자가 낼 소리. 무기가 없는 종류(몬스터)면 <c>null</c> — 부른 쪽이 기본음을 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// 소리를 <see cref="BoardView"/> 가 직접 재생하지 않고 이름만 돌려주는 이유 —
+        /// 전투 소리는 <c>BattleReplayer</c> 가 한 곳에서 낸다. 두 곳에서 내면
+        /// <b>배속을 바꿨을 때 한쪽만 반영되는</b> 종류의 어긋남이 생긴다.
+        /// </remarks>
+        public string AttackSoundKey(int actorId)
+        {
+            if (!_units.TryGetValue(actorId, out var actor)) return null;
+            return WeaponOf(actor.TypeId)?.Sound;
+        }
+
+        /// <summary>이 거리를 넘으면 투사체를 날린다. 붙어 있으면 휘두른다.</summary>
+        /// <remarks>
+        /// ★ <b>사거리를 데이터에서 읽지 않고 실제 거리로 판단한다.</b> 로그의 <c>UnitSpec</c> 에는
+        /// 사거리가 없고, 있더라도 <b>스킬이 사거리를 바꾼다</b> — 적영의 `표창` 은 1을 4로 늘린다.
+        /// 지금 두 유닛이 얼마나 떨어져 있는지가 그 모든 경우를 이미 반영한 값이다.
+        /// </remarks>
+        private const float ThrowDistance = 1.6f;
+
+        private void PlayWeaponFx(int actorId, int targetId)
+        {
+            if (!_units.TryGetValue(actorId, out var actor) || actor.Root == null) return;
+
+            var spec = WeaponOf(actor.TypeId);
+            if (spec == null || _catalog == null) return;
+
+            var from = actor.Root.transform.position;
+            bool hasTarget = _units.TryGetValue(targetId, out var target) && target.Root != null;
+
+            // 표적이 없는 광역 공격은 진영 방향으로 짧게 휘두른다.
+            var to = hasTarget
+                ? target.Root.transform.position
+                : from + new Vector3(actor.IsAlly ? 1f : -1f, 0f, 0f);
+
+            if (Vector3.Distance(from, to) > ThrowDistance)
+                SpawnProjectile(spec.Value.Projectile, from, to);
+            else
+                SpawnSwing(spec.Value.Weapon, from, to);
         }
 
         /// <summary>
@@ -1435,6 +1525,151 @@ namespace DomoNinja.Unity.View
                 var c = p.Text.color;
                 c.a = t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f;
                 p.Text.color = c;
+            }
+        }
+
+        /// <summary>휘두르거나 날아가는 것 하나. 유닛에 안 매인다 — 끝나면 스스로 사라진다.</summary>
+        private sealed class WeaponFx
+        {
+            public Transform Transform;
+            public float Left;
+            public float Total;
+            public Vector3 From;
+            public Vector3 To;
+            /// <summary>참이면 호를 그리며 휘두르고, 거짓이면 직선으로 날아간다.</summary>
+            public bool IsSwing;
+            public float BaseAngle;
+        }
+
+        private readonly List<WeaponFx> _weaponFx = new List<WeaponFx>();
+
+        private const float SwingSeconds = 0.22f;
+        private const float ProjectileSeconds = 0.16f;
+
+        /// <summary>휘두르는 호의 각도(도). 너무 크면 팔이 한 바퀴 도는 것처럼 보인다.</summary>
+        private const float SwingArcDegrees = 110f;
+
+        /// <summary>무기가 유닛 중심에서 떨어져 도는 반지름.</summary>
+        private const float SwingRadius = 0.34f;
+
+        /// <summary>
+        /// 무기를 <b>캐릭터 뒤에서</b> 휘두른다.
+        /// </summary>
+        /// <remarks>
+        /// 지시(사용자): "근접 캐릭터들은 주먹이나 어울리는 무기를 휘두르게, 플레이어보다 레이어는 아래로."
+        /// <para>
+        /// ★ <c>sortingOrder</c> 를 유닛(0)보다 <b>낮게</b> 둔다. 앞에 그리면 무기가 얼굴을 가려
+        /// <b>누가 때리는지</b>가 안 보인다 — 이 게임에서 읽어야 하는 건 무기가 아니라 유닛이다.
+        /// </para>
+        /// </remarks>
+        private void SpawnSwing(string weaponKey, Vector3 from, Vector3 to)
+        {
+            var sprite = _catalog.Find(weaponKey);
+            if (sprite == null) return;
+
+            var go = new GameObject("SwingFx");
+            go.transform.SetParent(transform, false);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = -2;   // 유닛(0)보다 뒤
+
+            var size = sprite.bounds.size;
+            float scale = size.y > 0f ? 0.55f / size.y : 1f;
+            go.transform.localScale = Vector3.one * scale;
+
+            var dir = to - from;
+            float baseAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+
+            // ★ 첫 프레임 자리를 여기서 잡는다. Tick 에만 맡기면 생성된 프레임 동안
+            //   판 원점(0,0)에 한 번 찍혔다가 제자리로 튄다.
+            float startRad = (baseAngle + SwingArcDegrees * 0.5f) * Mathf.Deg2Rad;
+            go.transform.position = from
+                + new Vector3(Mathf.Cos(startRad), Mathf.Sin(startRad), 0f) * SwingRadius
+                + new Vector3(0f, 0f, 0.05f);
+
+            _weaponFx.Add(new WeaponFx
+            {
+                Transform = go.transform,
+                Left = SwingSeconds,
+                Total = SwingSeconds,
+                From = from,
+                To = to,
+                IsSwing = true,
+                BaseAngle = baseAngle,
+            });
+        }
+
+        /// <summary>
+        /// 투사체를 표적 쪽으로 날린다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>도착을 기다렸다가 피해를 적용하지 않는다.</b> 피해는 이미 로그에 적혀 있고
+        /// 재생이 전투 진행을 늦추면 <c>sim</c> 결과와 게임 결과가 갈라진다(`08` §5.5).
+        /// 비행 시간을 0.16초로 짧게 잡아 "맞았는데 화살이 늦게 온다" 가 눈에 안 띄게 한다.
+        /// </remarks>
+        private void SpawnProjectile(string projectileKey, Vector3 from, Vector3 to)
+        {
+            var sprite = _catalog.Find(projectileKey);
+            if (sprite == null) return;
+
+            var go = new GameObject("ProjectileFx");
+            go.transform.SetParent(transform, false);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            sr.sortingOrder = -2;   // 유닛보다 뒤 — 휘두르기와 같은 층
+
+            var size = sprite.bounds.size;
+            float scale = size.x > 0f ? 0.42f / Mathf.Max(size.x, size.y) : 1f;
+            go.transform.localScale = Vector3.one * scale;
+
+            var dir = to - from;
+            go.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            go.transform.position = from + new Vector3(0f, 0f, 0.05f);   // 휘두르기와 같은 이유
+
+            _weaponFx.Add(new WeaponFx
+            {
+                Transform = go.transform,
+                Left = ProjectileSeconds,
+                Total = ProjectileSeconds,
+                From = from,
+                To = to,
+                IsSwing = false,
+            });
+        }
+
+        /// <summary>휘두르기·투사체를 진행하고 끝난 것을 없앤다. 재생기가 매 프레임 부른다.</summary>
+        public void TickWeaponFx(float deltaTime)
+        {
+            for (int i = _weaponFx.Count - 1; i >= 0; i--)
+            {
+                var fx = _weaponFx[i];
+                fx.Left -= deltaTime;
+
+                if (fx.Left <= 0f || fx.Transform == null)
+                {
+                    if (fx.Transform != null) Object.Destroy(fx.Transform.gameObject);
+                    _weaponFx.RemoveAt(i);
+                    continue;
+                }
+
+                float t = 1f - fx.Left / fx.Total;
+
+                if (fx.IsSwing)
+                {
+                    // 표적 쪽을 향해 호를 그린다 — 뒤에서 앞으로 베어 나가는 느낌.
+                    float angle = fx.BaseAngle + Mathf.Lerp(SwingArcDegrees * 0.5f, -SwingArcDegrees * 0.5f, t);
+                    float rad = angle * Mathf.Deg2Rad;
+                    fx.Transform.position = fx.From
+                        + new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f) * SwingRadius
+                        + new Vector3(0f, 0f, 0.05f);
+                    fx.Transform.rotation = Quaternion.Euler(0f, 0f, angle - 90f);
+                }
+                else
+                {
+                    fx.Transform.position = Vector3.Lerp(fx.From, fx.To, t) + new Vector3(0f, 0f, 0.05f);
+                }
             }
         }
 

@@ -72,7 +72,6 @@ namespace DomoNinja.Unity.View
             _board.TickAnimations(Time.deltaTime);
             _board.TickHitFx(Time.deltaTime);
             _board.TickMovement(Time.deltaTime);
-            _board.TickDamagePopups(Time.deltaTime);
 
             // 지나간 틱의 이벤트를 순서대로 소비한다.
             while (_cursor < _log.Events.Count && _log.Events[_cursor].Tick <= _playhead)
@@ -100,7 +99,8 @@ namespace DomoNinja.Unity.View
                 //   여기서 나는 소리도 전투 결과에 영향을 줄 수 없다(`08` §5.5).
                 case EventKind.Attack:
                     _board.FlashAttack(e.ActorId, e.TargetId);
-                    AudioManager.Instance?.PlaySfx(AudioKeys.Attack);
+                    // 무기 갈래별 소리. 무기가 없는 종류(몬스터)는 기본 공격음으로 떨어진다.
+                    AudioManager.Instance?.PlaySfx(_board.AttackSoundKey(e.ActorId) ?? AudioKeys.Attack);
                     break;
 
                 // ★ 맞은 것과 회복한 것을 **다른 그림**으로 낸다.
