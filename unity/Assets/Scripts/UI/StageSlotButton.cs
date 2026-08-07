@@ -23,14 +23,58 @@ namespace DomoNinja.Unity
         private static readonly Color UnlockedColor = Color.white;
         private static readonly Color SelectedColor = new Color(1.00f, 0.85f, 0.55f);
 
+        /// <summary>잠긴 슬롯 위에 얹는 자물쇠. 씬을 건드리지 않고 코드로 만든다(`19` §5.1).</summary>
+        private const string LockIconKey = "UI/StageLock";
+
         private UImage _image;
         private Button _button;
+        private UImage _lockIcon;
 
         private void Awake()
         {
             _image = GetComponent<UImage>();
             _button = GetComponent<Button>();
             _button.onClick.AddListener(OnClick);
+            _lockIcon = BuildLockIcon();
+        }
+
+        /// <summary>
+        /// 잠금 표시를 <b>그림으로</b> 단다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "3~6 스테이지 버튼엔 자물쇠 모양 아이콘이나 비슷한 무언가라도 달아둬,
+        /// 안 만들고 제출할 건가 봄."
+        /// </para>
+        /// <para>
+        /// ★ 전에는 <c>interactable=false</c> 로 <b>회색 버튼</b>이 되는 게 전부였다.
+        /// 그건 "잠겼다"와 <b>"고장났다"가 구분되지 않는다</b> — 심사자가 3분 안에 이해해야 하는
+        /// 화면에서 눌리지 않는 버튼이 이유 없이 넷이면 미완성으로 읽힌다.
+        /// 자물쇠는 <b>"의도적으로 닫아둔 것"</b>이라는 신호다.
+        /// </para>
+        /// </remarks>
+        private UImage BuildLockIcon()
+        {
+            var go = new GameObject("LockIcon", typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+
+            // ★ 가운데가 아니라 <b>오른쪽 끝</b>이다. 처음엔 버튼 중앙에 뒀는데
+            //   "2스[자물쇠]이지" 처럼 글자 한가운데를 덮었다 — 잠금을 알리려다 이름을 지운 꼴이다.
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(1f, 0.5f);
+            rt.anchorMax = new Vector2(1f, 0.5f);
+            rt.pivot = new Vector2(1f, 0.5f);
+            rt.anchoredPosition = new Vector2(-10f, 0f);
+            rt.sizeDelta = new Vector2(34f, 34f);
+
+            var img = go.AddComponent<UImage>();
+            img.sprite = UITheme.Find(LockIconKey);
+            img.preserveAspect = true;
+            // 버튼이 이미 클릭을 받는다 — 아이콘이 또 받으면 잠긴 칸에서 클릭이 여기서 먹힌다.
+            img.raycastTarget = false;
+
+            go.SetActive(false);
+            return img;
         }
 
         private void OnEnable()
@@ -68,6 +112,8 @@ namespace DomoNinja.Unity
 
             _button.interactable = unlocked;
             _image.color = selected ? SelectedColor : (unlocked ? UnlockedColor : LockedColor);
+
+            if (_lockIcon != null) _lockIcon.gameObject.SetActive(!unlocked);
         }
     }
 }

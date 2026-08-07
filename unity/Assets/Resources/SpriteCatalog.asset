@@ -653,6 +653,8 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 56c85ef8a978c3d4bb12e2eadc51a392, type: 3}
   - Key: "UI/RunCurrency_\uC7AC\uD654"
     Sprite: {fileID: 21300000, guid: a39b1b792c9d6f34f969ae4364cf3bf3, type: 3}
+  - Key: UI/StageLock
+    Sprite: {fileID: 21300000, guid: f9d962c9772665c40b47496a7500c37b, type: 3}
   - Key: UI/Theme
     Sprite: {fileID: 21300000, guid: b7bb33ab9b6a96b4ea1787a92582f8e5, type: 3}
   - Key: UI/Theme/arrow_left

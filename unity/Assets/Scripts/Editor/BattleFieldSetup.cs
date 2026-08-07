@@ -209,10 +209,32 @@ namespace DomoNinja.Unity.Editor
         /// "아군 진영에 칠했는데 적 진영에 나온다"가 된다.
         /// </para>
         /// </remarks>
+        /// <summary>
+        /// 전장 레이어 — <b>배경과 오브젝트를 나눈다</b>(사용자 지시).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 한 장에 다 그리면 <b>바닥을 갈아엎을 때 위에 얹은 장식까지 같이 지워진다.</b>
+        /// 배경은 넓게 칠하고 오브젝트는 드문드문 놓는 성질이라, 고치는 리듬이 서로 다르다.
+        /// </para>
+        /// <para>
+        /// 둘 다 <b>유닛보다 뒤</b>다. 오브젝트가 유닛 앞에 오면 바위 뒤에 캐릭터가 숨어
+        /// <b>누가 어디 있는지</b>가 안 보인다 — 이 게임은 그걸 읽는 게 판단의 전부다.
+        /// </para>
+        /// </remarks>
+        private static readonly (string Name, int SortingOrder)[] Layers =
+        {
+            ("Ground", -20),    // 배경 — 절차적 흙바닥과 같은 값
+            ("Objects", -15),   // 오브젝트 — 배경 위, 격자·유닛보다는 뒤
+        };
+
         private static bool EnsureFieldPrefab(string fieldName)
         {
             string path = $"{ResourceRoot}/{fieldName}.prefab";
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null) return false;
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
+            // 이미 있으면 <b>모자란 레이어만</b> 채운다 — 통째로 다시 만들면 칠해둔 게 날아간다.
+            if (existing != null) return AddMissingLayers(path);
 
             var root = new GameObject(fieldName);
             var grid = root.AddComponent<Grid>();
@@ -224,18 +246,38 @@ namespace DomoNinja.Unity.Editor
                 -Coord.BoardHeight * 0.5f,
                 1.5f);
 
-            var layerGo = new GameObject("Ground");
-            layerGo.transform.SetParent(root.transform, false);
-            layerGo.AddComponent<Tilemap>();
-
-            var renderer = layerGo.AddComponent<TilemapRenderer>();
-            // 유닛(0)·격자(−10 근처)보다 뒤. 절차적 바닥과 같은 값을 쓴다.
-            renderer.sortingOrder = -20;
+            foreach (var layer in Layers) AddLayer(root, layer.Name, layer.SortingOrder);
 
             Directory.CreateDirectory(ResourceRoot);
             PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);
             return true;
+        }
+
+        /// <summary>이미 있는 전장에 빠진 레이어를 더한다. 칠해둔 타일은 건드리지 않는다.</summary>
+        private static bool AddMissingLayers(string path)
+        {
+            var contents = PrefabUtility.LoadPrefabContents(path);
+            bool changed = false;
+
+            foreach (var layer in Layers)
+            {
+                if (contents.transform.Find(layer.Name) != null) continue;
+                AddLayer(contents, layer.Name, layer.SortingOrder);
+                changed = true;
+            }
+
+            if (changed) PrefabUtility.SaveAsPrefabAsset(contents, path);
+            PrefabUtility.UnloadPrefabContents(contents);
+            return changed;
+        }
+
+        private static void AddLayer(GameObject root, string name, int sortingOrder)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(root.transform, false);
+            go.AddComponent<Tilemap>();
+            go.AddComponent<TilemapRenderer>().sortingOrder = sortingOrder;
         }
     }
 }
