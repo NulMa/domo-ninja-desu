@@ -68,30 +68,31 @@ namespace DomoNinja.Unity.Editor
         /// </para>
         /// </remarks>
         /// <summary>
-        /// 스테이지 선택 화면의 슬롯 수. 데이터엔 <c>S1</c>·<c>S2</c> 뿐이지만
-        /// 씬에는 칸이 <b>6개</b> 있어서, 나중에 채울 스테이지의 전장도 미리 만들어 둔다.
+        /// 만들어 둘 전장 — <b>데이터에 실제로 있는 스테이지만.</b>
         /// </summary>
         /// <remarks>
-        /// 빈 전장은 <c>BoardView.SetField</c> 가 <b>없는 것으로 치고 건너뛴다</b>(타일이 0장이면).
-        /// 그래서 미리 만들어 둬도 화면이 안 망가지고, 스테이지가 늘 때 파일을 새로
-        /// 만들 필요가 없다 — 이름 규칙을 다시 찾아보지 않아도 된다.
+        /// <para>
+        /// ★ 한 번 <c>S1</c>~<c>S6</c> 를 앞질러 만들었다가 되돌렸다. 스테이지 선택 화면에
+        /// 슬롯이 6칸 있길래 맞춘 것인데, <c>StageId</c> 가 채워진 건 <c>S1</c>·<c>S2</c> 뿐이라
+        /// <b>나머지 8개는 아무 데서도 안 불렸다.</b> 화면의 칸 수는 "만들 자리"지 "있는 것"이 아니다.
+        /// </para>
+        /// <para>
+        /// 스테이지가 늘면 여기에 이름을 더하고 메뉴를 다시 돌리면 된다. 미리 만들어 두는 것이
+        /// 아끼는 건 <b>그때의 몇 초</b>뿐이고, 대신 저장소에 안 쓰는 파일이 남는다 —
+        /// 커밋 히스토리가 심사 대상이라 그쪽이 더 비싸다.
+        /// </para>
+        /// <para>
+        /// 보스 전장은 각 스테이지 <b>R8</b> 에서 쓰인다(D+7 실측 — S1·S2 모두 8라운드가 보스).
+        /// </para>
         /// </remarks>
-        private const int StageSlots = 6;
-
-        private static string[] BuildFieldNames()
+        private static readonly string[] FieldNames =
         {
-            var names = new List<string> { "BattleField" };   // 전 스테이지 기본 (다른 게 없을 때)
-
-            for (int i = 1; i <= StageSlots; i++)
-            {
-                names.Add($"BattleField_S{i}");
-                names.Add($"BattleField_S{i}_Boss");
-            }
-
-            return names.ToArray();
-        }
-
-        private static readonly string[] FieldNames = BuildFieldNames();
+            "BattleField",           // 전 스테이지 기본 (다른 게 없을 때)
+            "BattleField_S1",
+            "BattleField_S1_Boss",
+            "BattleField_S2",
+            "BattleField_S2_Boss",
+        };
 
         /// <summary>타일 한 변(px). 팩 전체가 16 이다.</summary>
         private const int TileSize = 16;
