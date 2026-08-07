@@ -70,11 +70,21 @@ namespace DomoNinja.Unity.View
             public float FrameTimer;
             public bool IsAttacking;
 
+            /// <summary>true면 Idle 두 프레임을 순환 대신 <see cref="FacingAway"/> 로 골라 쓴다(`AnimSpec.HasDirectionalIdle`).</summary>
+            public bool HasDirectionalIdle;
+            /// <summary>위(뒤)를 보고 있으면 true — Idle의 1번(뒤통수) 프레임을 쓴다. 기본 false(정면).</summary>
+            public bool FacingAway;
+
             // ── 절차적 공격 연출(몬스터 등, 분리 프레임이 없는 종류). `IdleFrames == null` 일 때만 쓴다 —
             //    프레임 애니메이션이 있으면 그쪽이 우선이고 이 값들은 항상 기본값(0)으로 남는다.
             public float BaseSpriteScale = 1f;
             public Vector3 PunchDirection;
             public float PunchLeft;
+
+            // ── 칸 이동 슬라이드(`MoveTo`). 텔레포트 대신 짧게 미끄러지듯 보여준다.
+            public Vector3 MoveFrom;
+            public Vector3 MoveTarget;
+            public float MoveLeft;
         }
 
         /// <summary>화면에 재생 중인 범용 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
@@ -230,6 +240,11 @@ namespace DomoNinja.Unity.View
                 ? idleFrames[0]
                 : (bodySprite != null ? bodySprite : (_catalog != null ? _catalog.Find(ResolveSpritePath(spec.TypeId)) : null));
 
+            // 진영 쪽을 보게 좌우 반전한다. 보드가 x축으로 진영이 갈려 있어(`Coord.AllyMaxX`) 아군은
+            // 오른쪽(적 방향), 적은 왼쪽(아군 방향)을 보면 서로 마주보는 것으로 읽힌다. `flipX` 는
+            // scale 과 별개 채널이라 절차적 펀치(확대+돌진)·타격 시 스케일 변화와 안 부딪힌다.
+            renderer.flipX = spec.Team != 0;
+
             float baseSpriteScale = 1f;
             if (renderer.sprite == null)
             {
@@ -269,6 +284,7 @@ namespace DomoNinja.Unity.View
                 AttackFrames = attackFrames,
                 IdleFrameSeconds = idleFrameSeconds,
                 AttackFrameSeconds = attackFrameSeconds,
+                HasDirectionalIdle = animSpec?.HasDirectionalIdle ?? false,
                 BaseSpriteScale = baseSpriteScale,
             };
         }
@@ -291,8 +307,17 @@ namespace DomoNinja.Unity.View
             public readonly int AttackFrames;
             public readonly float AttackFrameSeconds;
 
+            /// <summary>
+            /// true면 Idle의 두 프레임을 <b>애니메이션이 아니라 방향 포즈</b>로 쓴다 —
+            /// 0번=정면(아래), 1번=뒤통수(위)를 <see cref="UnitView.FacingAway"/> 에 따라 골라 보여줄 뿐
+            /// 시간에 따라 순환하지 않는다. 보스처럼 진짜 숨쉬기·깜빡임 루프가 있는 쪽은 false로 두고
+            /// 기존 프레임 순환을 그대로 쓴다.
+            /// </summary>
+            public readonly bool HasDirectionalIdle;
+
             public AnimSpec(string idleKey, int idleFrames, float idleFrameSeconds,
-                            string attackKey, int attackFrames, float attackFrameSeconds)
+                            string attackKey, int attackFrames, float attackFrameSeconds,
+                            bool hasDirectionalIdle = false)
             {
                 IdleKey = idleKey;
                 IdleFrames = idleFrames;
@@ -300,6 +325,7 @@ namespace DomoNinja.Unity.View
                 AttackKey = attackKey;
                 AttackFrames = attackFrames;
                 AttackFrameSeconds = attackFrameSeconds;
+                HasDirectionalIdle = hasDirectionalIdle;
             }
         }
 
@@ -323,9 +349,21 @@ namespace DomoNinja.Unity.View
             }
         }
 
+        /// <remarks>
+        /// Attack은 프레임 1장만 쓴다. 원본 4프레임은 <c>정면 → 뒤통수 → 옆모습 → 정면</c> 순으로
+        /// 캐릭터가 한 바퀴 돌아보는 원화다(6종 전수 확인, `D-77` 후속) — 이 게임은 옆에서 본 전신이
+        /// 아니라 고정 카메라의 흉상 초상이라 그 턴이 "동작"이 아니라 "제자리에서 도는 것"으로 읽힌다.
+        /// <para>
+        /// Idle은 프레임 2장(정면·뒤통수)을 <b>순환이 아니라 방향 포즈</b>로 재활용한다 — 이 팩엔
+        /// 상하좌우 전용 그림이 없어서(`D-77` 후속 조사, `SpriteSheet.png` 통합 시트도 방향이 아니라
+        /// 동작별 행이었다) 새로 그릴 게 아니면 이미 슬라이스된 두 장이 유일한 재료다. 뒤통수 프레임을
+        /// "위(뒤)를 본다"로, 정면 프레임을 "아래(정면)"로 쓴다. 좌우는 이 두 프레임에 flipX 를 얹어 낸다.
+        /// </para>
+        /// </remarks>
         private static AnimSpec CharacterAnim(string folder) => new AnimSpec(
-            $"Actor/Character/{folder}/SeparateAnim/Idle", 4, 0.15f,
-            $"Actor/Character/{folder}/SeparateAnim/Attack", 4, 0.08f);
+            $"Actor/Character/{folder}/SeparateAnim/Idle", 2, 0.18f,
+            $"Actor/Character/{folder}/SeparateAnim/Attack", 1, 0.18f,
+            hasDirectionalIdle: true);
 
         /// <summary>프레임을 하나라도 못 찾으면 <c>null</c> — 애니메이션 전체를 포기하고 정지 초상으로 돌아간다.</summary>
         private static Sprite[] LoadFrames(SpriteCatalog catalog, string baseKey, int count)
@@ -399,6 +437,7 @@ namespace DomoNinja.Unity.View
 
             var outline = go.AddComponent<SpriteRenderer>();
             outline.sprite = source.sprite;
+            outline.flipX = source.flipX; // 본체와 반전이 어긋나면 뒤집힌 실루엣이 삐져나와 보인다.
             outline.color = new Color(1f, 0.75f, 0.2f);
             outline.sortingOrder = source.sortingOrder - 1;
             go.SetActive(false);
@@ -590,10 +629,43 @@ namespace DomoNinja.Unity.View
 
         // ────────────────────────────── 이벤트 반영
 
+        /// <summary>슬라이드 지속 시간(초). <see cref="TickMovement"/> 가 재생 배속과 무관하게 이 시간 동안 미끄러진다
+        /// — <see cref="FlashSeconds"/>·<see cref="PunchSeconds"/> 와 같은 실시간 연출값이다.</summary>
+        private const float MoveSeconds = 0.12f;
+
+        /// <summary>
+        /// 칸을 옮긴다. <b>텔레포트가 아니라 슬라이드다</b> — 순간이동이면 보드 위에서 "누가 움직였는지"를
+        /// 놓치기 쉽다(`23` 재생 로그를 눈으로 따라가려면 이동이 눈에 보여야 한다).
+        /// </summary>
+        /// <remarks>
+        /// 이전 슬라이드가 끝나기 전에 다음 <c>Move</c> 이벤트가 오면(배속을 올렸을 때 흔하다)
+        /// <b>그 순간의 실제 화면 위치</b>에서 새로 출발한다 — 저장해둔 이전 목적지에서 다시 시작하면
+        /// 그 사이 화면에 없던 구간을 순간이동으로 메우게 된다.
+        /// </remarks>
         public void MoveTo(int unitId, int coordKey)
         {
-            if (_units.TryGetValue(unitId, out var unit) && unit.Root != null)
-                unit.Root.transform.position = ToWorld(FromKey(coordKey));
+            if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null) return;
+
+            unit.MoveFrom = unit.Root.transform.position;
+            unit.MoveTarget = ToWorld(FromKey(coordKey));
+            unit.MoveLeft = MoveSeconds;
+            UpdateFacing(unit, unit.MoveTarget);
+        }
+
+        /// <summary>이동 슬라이드를 시간에 따라 진행한다. 재생기가 매 프레임 부른다.</summary>
+        public void TickMovement(float deltaTime)
+        {
+            foreach (var unit in _units.Values)
+            {
+                if (unit.MoveLeft <= 0f || unit.Root == null) continue;
+
+                unit.MoveLeft -= deltaTime;
+                float t = 1f - Mathf.Clamp01(unit.MoveLeft / MoveSeconds);
+                float eased = 1f - (1f - t) * (1f - t); // ease-out — 도착 직전에 멈칫하며 안착한다.
+                unit.Root.transform.position = Vector3.Lerp(unit.MoveFrom, unit.MoveTarget, eased);
+
+                if (unit.MoveLeft <= 0f) unit.Root.transform.position = unit.MoveTarget;
+            }
         }
 
         /// <summary><paramref name="hp"/> 는 <b>core 가 계산해 보낸 적용 후 값</b>이다. 여기서 빼지 않는다.</summary>
@@ -671,6 +743,9 @@ namespace DomoNinja.Unity.View
         {
             if (!_units.TryGetValue(actorId, out var unit) || unit.IsDead) return;
 
+            _units.TryGetValue(targetId, out var target);
+            if (target?.Root != null) UpdateFacing(unit, target.Root.transform.position);
+
             if (unit.AttackFrames != null)
             {
                 unit.IsAttacking = true;
@@ -680,7 +755,7 @@ namespace DomoNinja.Unity.View
             }
 
             var direction = unit.IsAlly ? Vector3.right : Vector3.left;
-            if (_units.TryGetValue(targetId, out var target) && target.Root != null)
+            if (target?.Root != null)
             {
                 var delta = target.Root.transform.position - unit.Root.transform.position;
                 if (delta.sqrMagnitude > 0.0001f) direction = delta.normalized;
@@ -688,6 +763,35 @@ namespace DomoNinja.Unity.View
 
             unit.PunchDirection = direction;
             unit.PunchLeft = PunchSeconds;
+        }
+
+        /// <summary>
+        /// 좌우만 뒤집는다(<see cref="SpriteRenderer.flipX"/>) — 이 팩엔 위아래를 볼 수 있는 그림이 없어
+        /// 상하 성분은 무시한다. 대상이 정확히 같은 열(<c>dx≈0</c>)이면 방향을 정할 근거가 없으니
+        /// <b>이전 방향을 그대로 둔다</b> — 매번 억지로 정하면 세로로 마주 선 상대를 칠 때마다
+        /// 좌우가 튀어서 더 어색해진다.
+        /// </summary>
+        private static void UpdateFacing(UnitView unit, Vector3 towardWorldPos)
+        {
+            if (unit.Sprite == null || unit.Root == null) return;
+
+            var delta = towardWorldPos - unit.Root.transform.position;
+            if (delta.sqrMagnitude < 0.0001f) return; // 방향을 정할 근거가 없으면 이전 방향을 유지한다.
+
+            if (Mathf.Abs(delta.y) > Mathf.Abs(delta.x))
+            {
+                // 세로 성분이 더 크면 위(뒤통수)·아래(정면) 포즈를 고른다. 좌우 반전은 손대지 않는다 —
+                // 뒤통수는 좌우가 거의 대칭이라 이전 값을 그대로 둬도 티가 안 난다.
+                unit.FacingAway = delta.y > 0f;
+                return;
+            }
+
+            // 가로 성분이 더 크거나 같으면 정면(아래) 포즈로 되돌리고 좌우만 반전한다 — 이 팩엔 옆모습
+            // 전용 그림이 없어서, 정면 포즈를 뒤집는 것 자체가 "옆"의 유일한 표현이다.
+            unit.FacingAway = false;
+            bool flipX = delta.x < 0f;
+            unit.Sprite.flipX = flipX;
+            if (unit.Outline != null) unit.Outline.flipX = flipX;
         }
 
         /// <summary>절차적 펀치(확대+돌진)의 지속 시간(초).</summary>
@@ -811,6 +915,37 @@ namespace DomoNinja.Unity.View
                 if (unit.IdleFrames != null)
                 {
                     bool attacking = unit.IsAttacking && unit.AttackFrames != null;
+
+                    // 방향 포즈 유닛(캐릭터)은 시간으로 순환하지 않는다 — UpdateFacing이 정한 방향을
+                    // 그대로 고정해서 보여준다. 순환하면 정면↔뒤통수를 계속 오가는 "회전"으로 보인다
+                    // (`D-77` 후속) — 이 분기가 그 재발을 막는다. Idle뿐 아니라 Attack도 마찬가지다 —
+                    // 위(뒤)를 보던 중에 공격이라고 정면 공격 프레임으로 튀면 "공격할 때만 갑자기
+                    // 정면을 본다"로 보인다. 뒤를 본 채 때리는 전용 그림은 없으니, 그럴 땐 윈드업
+                    // 프레임 대신 뒤통수 Idle 포즈를 그대로 들고 있는다 — 번쩍임·타격 이펙트가
+                    // "공격했다"는 신호를 이미 맡고 있어 포즈 자체는 방향 일관성을 더 우선한다.
+                    if (unit.HasDirectionalIdle)
+                    {
+                        bool facingAwayNow = unit.FacingAway && unit.IdleFrames.Length > 1;
+
+                        if (attacking)
+                        {
+                            unit.FrameTimer += deltaTime;
+                            if (unit.FrameTimer >= unit.AttackFrameSeconds)
+                            {
+                                unit.FrameTimer -= unit.AttackFrameSeconds;
+                                unit.IsAttacking = false;
+                            }
+                        }
+
+                        // 방금 위에서 되돌렸을 수 있으니(같은 틱 안에서) attacking을 다시 읽는다 —
+                        // 아니면 되돌린 그 틱에 공격 프레임이 한 틱 더 남아 보인다.
+                        bool stillAttacking = unit.IsAttacking && unit.AttackFrames != null;
+                        unit.Sprite.sprite = (stillAttacking && !facingAwayNow)
+                            ? unit.AttackFrames[0]
+                            : unit.IdleFrames[facingAwayNow ? 1 : 0];
+                        continue;
+                    }
+
                     var frames = attacking ? unit.AttackFrames : unit.IdleFrames;
                     float frameSeconds = attacking ? unit.AttackFrameSeconds : unit.IdleFrameSeconds;
 

@@ -71,6 +71,7 @@ namespace DomoNinja.Unity.View
             _board.TickFlashes(Time.deltaTime);
             _board.TickAnimations(Time.deltaTime);
             _board.TickHitFx(Time.deltaTime);
+            _board.TickMovement(Time.deltaTime);
 
             // 지나간 틱의 이벤트를 순서대로 소비한다.
             while (_cursor < _log.Events.Count && _log.Events[_cursor].Tick <= _playhead)
