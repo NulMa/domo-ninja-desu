@@ -291,6 +291,10 @@ namespace DomoNinja.Unity.Editor
                                 EditorStyles.miniLabel);
 
                 GUILayout.Space(8);
+                if (GUILayout.Button("다른 전장에서 복사", EditorStyles.toolbarButton))
+                    ShowCopyFromMenu();
+
+                GUILayout.Space(4);
                 if (GUILayout.Button("이 층 지우기", EditorStyles.toolbarButton))
                 {
                     // 층 이름을 물음에 넣는다 — "전부 지울까?"만 뜨면 전장 통째로 지우는 줄 안다.
@@ -309,6 +313,93 @@ namespace DomoNinja.Unity.Editor
                         Save();
                 }
             }
+        }
+
+        // ─────────────────────────────────────────────── 다른 전장에서 복사
+
+        /// <summary>
+        /// 다른 전장의 타일을 <b>통째로 가져온다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): *"보스는 같은 테마를 이용하는 맵이긴 하니 기존 맵을 복사해서
+        /// 가져올 수 있는 기능이 있다면 편하겠는데."*
+        /// </para>
+        /// <para>
+        /// 보스 전장은 그 스테이지와 같은 테마라 <b>바닥은 거의 같고 장식만 다르다.</b>
+        /// 처음부터 다시 칠하면 같은 그림을 두 번 그리게 되고, 나중에 바닥을 고칠 때
+        /// <b>두 곳을 같이 고쳐야 한다는 걸 잊는다.</b>
+        /// </para>
+        /// </remarks>
+        private void ShowCopyFromMenu()
+        {
+            var menu = new GenericMenu();
+
+            var others = Directory.Exists(FieldFolder)
+                ? Directory.GetFiles(FieldFolder, FieldPrefix + "*.prefab")
+                    .Select(p => p.Replace('\\', '/'))
+                    .Where(p => p != _fieldPath)
+                    .OrderBy(p => p).ToArray()
+                : new string[0];
+
+            if (others.Length == 0)
+                menu.AddDisabledItem(new GUIContent("가져올 다른 전장이 없다"));
+
+            foreach (string path in others)
+            {
+                string name = Path.GetFileNameWithoutExtension(path);
+                var src = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                int tiles = src == null ? 0
+                    : src.GetComponentsInChildren<Tilemap>(true).Sum(m => m.GetUsedTilesCount());
+
+                // 빈 전장은 고를 수 있게 두되 비었다고 알린다 — 골랐는데 아무 일도 안 일어나면
+                // "기능이 고장났나" 로 읽힌다.
+                var label = new GUIContent(tiles > 0 ? name : $"{name}  (비어 있음)");
+                if (tiles > 0) menu.AddItem(label, false, () => CopyFrom(path));
+                else menu.AddDisabledItem(label);
+            }
+
+            menu.ShowAsContext();
+        }
+
+        /// <remarks>
+        /// ★ 층은 <b>이름으로</b> 짝짓는다(<c>Ground</c>→<c>Ground</c>). 순서로 짝지으면
+        /// 층 구성이 다른 전장에서 <b>배경이 오브젝트 층으로 들어간다</b> — 그러면 유닛 앞뒤가 바뀐다.
+        /// 짝이 없는 층은 건드리지 않고 그대로 둔다.
+        /// </remarks>
+        private void CopyFrom(string sourcePath)
+        {
+            var src = AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath);
+            if (src == null || _layers.Length == 0) return;
+
+            string srcName = Path.GetFileNameWithoutExtension(sourcePath);
+            string dstName = Path.GetFileNameWithoutExtension(_fieldPath);
+            if (!EditorUtility.DisplayDialog("전장 편집기",
+                    $"'{srcName}' 의 타일로 '{dstName}' 을 덮어쓸까?\n지금 칠해둔 것은 사라진다.",
+                    "덮어쓰기", "취소"))
+                return;
+
+            var srcLayers = CollectLayers(src);
+            int copied = 0;
+
+            foreach (var dst in _layers)
+            {
+                var from = srcLayers.FirstOrDefault(m => m.gameObject.name == dst.gameObject.name);
+                if (from == null) continue;
+
+                dst.ClearAllTiles();
+                foreach (var pos in from.cellBounds.allPositionsWithin)
+                {
+                    var tile = from.GetTile(pos);
+                    if (tile == null) continue;
+                    dst.SetTile(pos, tile);
+                    copied++;
+                }
+            }
+
+            _dirty = true;
+            Repaint();
+            Debug.Log($"[전장 편집기] {srcName} → {dstName} : 타일 {copied}칸 복사. 저장해야 반영된다.");
         }
 
         private void DrawPalette()
