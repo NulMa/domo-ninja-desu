@@ -88,6 +88,10 @@ namespace DomoNinja.Unity
             // 지난 라운드 전투 잔해(사망 이펙트 등)가 배치 화면까지 남아있지 않게.
             _boardView.Clear();
 
+            // ★ 전장은 **이번 라운드 편성이 정해진 뒤에** 고른다 — 보스가 나오는 라운드인지를
+            //   알아야 보스 전용 전장을 쓸 수 있고, 그건 변형을 뽑아봐야 안다.
+            _boardView.SetField(mgr.CurrentRun.StageId, HasBoss(mgr.Data, _pendingVariant));
+
             var aliveIds = new List<string>();
             foreach (var entry in mgr.CurrentRun.Deployed)
                 if (entry.IsAlive) aliveIds.Add(entry.CharacterId);
@@ -96,6 +100,22 @@ namespace DomoNinja.Unity
                 _placementController = _boardView.gameObject.AddComponent<PlacementController>();
 
             _placementController.Setup(_boardView, aliveIds, _lastPlacement, _pendingVariant.Units);
+        }
+
+        /// <summary>이번에 뽑힌 편성에 보스가 있는가. <b>저작된 변형 전체가 아니라 뽑힌 것</b>만 본다.</summary>
+        /// <remarks>
+        /// 라운드 단위로 "보스 라운드인가"를 물으면(<c>RoundDef.Variants</c> 전수 검사) 보스가 안 뽑힌
+        /// 변형에서도 보스 전장이 깔린다 — 판은 보스인데 나오는 건 슬라임이 된다.
+        /// </remarks>
+        private static bool HasBoss(GameData data, VariantDef variant)
+        {
+            if (variant == null) return false;
+
+            foreach (var unit in variant.Units)
+                if (data.EnemyTypes.TryGetValue(unit.Type, out var def) && def.IsBoss)
+                    return true;
+
+            return false;
         }
 
         private void EnsureView()
