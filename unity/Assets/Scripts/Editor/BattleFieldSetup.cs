@@ -67,14 +67,31 @@ namespace DomoNinja.Unity.Editor
         /// 이 표가 그대로 돈다.
         /// </para>
         /// </remarks>
-        private static readonly string[] FieldNames =
+        /// <summary>
+        /// 스테이지 선택 화면의 슬롯 수. 데이터엔 <c>S1</c>·<c>S2</c> 뿐이지만
+        /// 씬에는 칸이 <b>6개</b> 있어서, 나중에 채울 스테이지의 전장도 미리 만들어 둔다.
+        /// </summary>
+        /// <remarks>
+        /// 빈 전장은 <c>BoardView.SetField</c> 가 <b>없는 것으로 치고 건너뛴다</b>(타일이 0장이면).
+        /// 그래서 미리 만들어 둬도 화면이 안 망가지고, 스테이지가 늘 때 파일을 새로
+        /// 만들 필요가 없다 — 이름 규칙을 다시 찾아보지 않아도 된다.
+        /// </remarks>
+        private const int StageSlots = 6;
+
+        private static string[] BuildFieldNames()
         {
-            "BattleField",           // 전 스테이지 기본 (다른 게 없을 때)
-            "BattleField_S1",
-            "BattleField_S1_Boss",
-            "BattleField_S2",
-            "BattleField_S2_Boss",
-        };
+            var names = new List<string> { "BattleField" };   // 전 스테이지 기본 (다른 게 없을 때)
+
+            for (int i = 1; i <= StageSlots; i++)
+            {
+                names.Add($"BattleField_S{i}");
+                names.Add($"BattleField_S{i}_Boss");
+            }
+
+            return names.ToArray();
+        }
+
+        private static readonly string[] FieldNames = BuildFieldNames();
 
         /// <summary>타일 한 변(px). 팩 전체가 16 이다.</summary>
         private const int TileSize = 16;
