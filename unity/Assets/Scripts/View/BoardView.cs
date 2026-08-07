@@ -32,6 +32,11 @@ namespace DomoNinja.Unity.View
         private SpriteCatalog _catalog;
         private Transform _unitRoot;
 
+        /// <summary>범용 타격 이펙트 프레임(4장, "FX/Hit/SpriteSheet_0.."). 첫 사용 때 카탈로그에서 찾아 캐싱한다.</summary>
+        private Sprite[] _hitFxFrames;
+        private bool _hitFxFramesLoaded;
+        private readonly List<HitFx> _hitFxInstances = new List<HitFx>();
+
         /// <summary>
         /// 유닛 종류 → 스프라이트 경로. <b>데이터가 준 그대로다</b> — View 가 추측하지 않는다.
         /// </summary>
@@ -49,8 +54,6 @@ namespace DomoNinja.Unity.View
             public float ShieldFullScaleX;
             /// <summary>도발 대상 표시용. 유닛 스프라이트를 한 장 더 깔아 만든다.</summary>
             public SpriteRenderer Outline;
-            /// <summary>장착 무기 배지(캐릭터 한정). 없으면(몬스터·보스) <c>null</c>.</summary>
-            public SpriteRenderer WeaponBadge;
             /// <summary>번쩍임이 남은 시간(초).</summary>
             public float FlashLeft;
             public bool IsDead;
@@ -72,6 +75,15 @@ namespace DomoNinja.Unity.View
             public float BaseSpriteScale = 1f;
             public Vector3 PunchDirection;
             public float PunchLeft;
+        }
+
+        /// <summary>화면에 재생 중인 범용 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
+        private sealed class HitFx
+        {
+            public Transform Transform;
+            public SpriteRenderer Renderer;
+            public int FrameIndex;
+            public float FrameTimer;
         }
 
         /// <param name="spritePaths">
@@ -174,6 +186,12 @@ namespace DomoNinja.Unity.View
                 if (unit.Root != null) Object.Destroy(unit.Root);
             }
             _units.Clear();
+
+            foreach (var fx in _hitFxInstances)
+            {
+                if (fx.Transform != null) Object.Destroy(fx.Transform.gameObject);
+            }
+            _hitFxInstances.Clear();
         }
 
         private UnitView CreateUnit(UnitSpec spec)
@@ -235,13 +253,11 @@ namespace DomoNinja.Unity.View
             var fill = CreateHpBar(root.transform, spec.Team == 0);
             var shield = CreateShieldBar(root.transform);
             var outline = CreateOutline(spriteObject.transform, renderer);
-            var weaponBadge = CreateWeaponBadge(root.transform, spec.TypeId);
 
             return new UnitView
             {
                 Root = root,
                 Sprite = renderer,
-                WeaponBadge = weaponBadge,
                 HpFill = fill,
                 FillFullScaleX = fill != null ? fill.localScale.x : 1f,
                 ShieldFill = shield,
@@ -387,51 +403,6 @@ namespace DomoNinja.Unity.View
             outline.sortingOrder = source.sortingOrder - 1;
             go.SetActive(false);
             return outline;
-        }
-
-        /// <summary>배지 한 변의 목표 크기(월드 단위). 칸(<see cref="CellSize"/>) 대비 작게 잡는다.</summary>
-        private const float WeaponBadgeSize = 0.34f;
-
-        /// <summary>
-        /// 장착 무기 배지. 유닛 모서리에 작게 얹는다.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// 손에 쥔 것처럼 합성하지 않는다 — 팩의 <c>SpriteInHand</c>는 프레임별 손 좌표가 없어
-        /// 우리 캐릭터 시트(자체 제작)에 픽셀 단위로 맞출 근거가 없다. 대신 무기 아이콘을
-        /// 모서리 배지로 고정한다.
-        /// </para>
-        /// <para>
-        /// ★ <b>Root 바로 아래에 둔다</b> — 스프라이트 자식으로 두면 캐릭터마다 다른
-        /// <c>baseSpriteScale</c>(초상 원본 크기가 제각각이라 칸에 맞추며 배율이 갈린다)이
-        /// 배지 크기에도 그대로 곱해져 캐릭터마다 배지 크기가 들쭉날쭉해진다. Root 기준이면
-        /// 항상 칸(<see cref="CellSize"/>) 단위의 같은 크기·같은 위치로 나온다.
-        /// </para>
-        /// <para>
-        /// 무기가 없는 종류(몬스터·보스)는 <c>{경로}/Weapon</c> 키가 애초에 카탈로그에 없어
-        /// <c>null</c> 을 돌려주고 호출부가 그대로 건너뛴다.
-        /// </para>
-        /// </remarks>
-        private SpriteRenderer CreateWeaponBadge(Transform parent, string typeId)
-        {
-            if (_catalog == null) return null;
-
-            var weaponSprite = _catalog.Find(ResolveSpritePath(typeId) + "/Weapon");
-            if (weaponSprite == null) return null;
-
-            var go = new GameObject("WeaponBadge");
-            go.transform.SetParent(parent, false);
-
-            var renderer = go.AddComponent<SpriteRenderer>();
-            renderer.sprite = weaponSprite;
-            renderer.sortingOrder = 3;
-
-            var size = weaponSprite.bounds.size;
-            float scale = size.x > 0 ? WeaponBadgeSize / Mathf.Max(size.x, size.y) : 1f;
-            go.transform.localScale = Vector3.one * scale;
-            go.transform.localPosition = new Vector3(CellSize * 0.30f, -CellSize * 0.30f, -0.05f);
-
-            return renderer;
         }
 
         /// <summary>체력 막대의 월드 크기. 칸(1) 안에 들어가야 한다.</summary>
@@ -662,7 +633,6 @@ namespace DomoNinja.Unity.View
             if (unit.HpFill != null) SetFill(unit, 0f);
             if (unit.ShieldFill != null) unit.ShieldFill.parent.gameObject.SetActive(false);
             if (unit.Outline != null) unit.Outline.gameObject.SetActive(false);
-            if (unit.WeaponBadge != null) unit.WeaponBadge.gameObject.SetActive(false);
         }
 
         /// <summary>번쩍임이 눈에 남아 있는 시간(초).</summary>
@@ -728,7 +698,11 @@ namespace DomoNinja.Unity.View
         private const float PunchLungeDistance = 0.14f;
 
         /// <summary>피격.</summary>
-        public void FlashDamage(int unitId) => Flash(unitId, DamageTint);
+        public void FlashDamage(int unitId)
+        {
+            Flash(unitId, DamageTint);
+            SpawnHitFx(unitId);
+        }
 
         /// <summary>회복. <b>피격과 반드시 달라야 한다</b> — 둘 다 체력 숫자만 바꾸면 화면에서 같은 사건이 된다.</summary>
         public void FlashHeal(int unitId) => Flash(unitId, HealTint);
@@ -754,6 +728,70 @@ namespace DomoNinja.Unity.View
                 unit.Sprite.color = Color.Lerp(Color.white, unit.Sprite.color, t);
 
                 if (unit.FlashLeft <= 0f) unit.Sprite.color = Color.white;
+            }
+        }
+
+        /// <summary>이펙트 한 프레임이 화면에 머무는 시간(초). 4프레임 × 0.05초 = 0.2초.</summary>
+        private const float HitFxFrameSeconds = 0.05f;
+
+        /// <summary>이펙트 한 변의 목표 크기(월드 단위). 칸(<see cref="CellSize"/>)을 거의 채운다 — 무기별 배지를
+        /// 없앤 대신, 어떤 무기인지보다 "맞았다"는 순간 자체가 눈에 띄어야 한다.</summary>
+        private const float HitFxSize = 0.9f;
+
+        /// <summary>
+        /// 대상이 맞는 순간 범용 타격 이펙트를 잠깐 띄운다. 무기 종류를 구분하지 않는다 — 캐릭터
+        /// 모서리에 무기 아이콘을 상시로 붙였던 이전 방식은 자리를 너무 차지해 뺐다(D+6).
+        /// </summary>
+        /// <remarks>
+        /// 유닛에 안 매인 독립 오브젝트다. 대상이 죽어 사라져도 이펙트는 재생을 끝까지 마친다 —
+        /// 죽인 마지막 타격이 화면에서 잘려 보이면 "왜 안 맞았지"로 읽힌다.
+        /// </remarks>
+        private void SpawnHitFx(int unitId)
+        {
+            if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null) return;
+
+            if (!_hitFxFramesLoaded)
+            {
+                _hitFxFrames = _catalog != null ? LoadFrames(_catalog, "FX/Hit/SpriteSheet", 4) : null;
+                _hitFxFramesLoaded = true;
+            }
+            if (_hitFxFrames == null) return;
+
+            var go = new GameObject("HitFx");
+            go.transform.SetParent(_unitRoot, false);
+            go.transform.position = unit.Root.transform.position;
+
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = _hitFxFrames[0];
+            renderer.sortingOrder = 5;
+
+            var size = renderer.sprite.bounds.size;
+            float scale = size.x > 0 ? HitFxSize / Mathf.Max(size.x, size.y) : 1f;
+            go.transform.localScale = Vector3.one * scale;
+
+            _hitFxInstances.Add(new HitFx { Transform = go.transform, Renderer = renderer });
+        }
+
+        /// <summary>타격 이펙트를 시간에 따라 진행하고, 다 돌면 스스로 없앤다. 재생기가 매 프레임 부른다.</summary>
+        public void TickHitFx(float deltaTime)
+        {
+            for (int i = _hitFxInstances.Count - 1; i >= 0; i--)
+            {
+                var fx = _hitFxInstances[i];
+                fx.FrameTimer += deltaTime;
+                if (fx.FrameTimer < HitFxFrameSeconds) continue;
+
+                fx.FrameTimer -= HitFxFrameSeconds;
+                fx.FrameIndex++;
+
+                if (fx.FrameIndex >= _hitFxFrames.Length)
+                {
+                    Object.Destroy(fx.Transform.gameObject);
+                    _hitFxInstances.RemoveAt(i);
+                    continue;
+                }
+
+                fx.Renderer.sprite = _hitFxFrames[fx.FrameIndex];
             }
         }
 

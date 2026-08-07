@@ -127,8 +127,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 43d5ec6c61c8c6d4d993abfcac827bfc, type: 3}
   - Key: Actor/Character/Hunter/SpriteSheet
     Sprite: {fileID: 21300000, guid: 4d3e899ceb7772a4399dc8c18f141f3e, type: 3}
-  - Key: Actor/Character/Hunter/Weapon
-    Sprite: {fileID: 21300000, guid: 3fd3907d920ca754cbfbfc6cb671e539, type: 3}
   - Key: Actor/Character/Monk
     Sprite: {fileID: 21300000, guid: 4ae9d789dfeb1e949bef8dd27dd72471, type: 3}
   - Key: Actor/Character/Monk/Faceset
@@ -165,8 +163,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 3d0e54d7cf305e947adb46ee43543c2d, type: 3}
   - Key: Actor/Character/Monk/SpriteSheet
     Sprite: {fileID: 21300000, guid: 86b3e472f6b6a1d4bbb8a75da1db0775, type: 3}
-  - Key: Actor/Character/Monk/Weapon
-    Sprite: {fileID: 21300000, guid: 0dc7405bf88f5cb4c832bee0954696df, type: 3}
   - Key: Actor/Character/NinjaMageBlack
     Sprite: {fileID: 21300000, guid: accd923e2e99abe46a2429eda48ec8d0, type: 3}
   - Key: Actor/Character/NinjaMageBlack/Faceset
@@ -203,8 +199,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 2e1f7577c00b0bf4da341ff71a11b2f6, type: 3}
   - Key: Actor/Character/NinjaMageBlack/SpriteSheet
     Sprite: {fileID: 21300000, guid: aac018b2afaae9b4194d74abf9b4fd2a, type: 3}
-  - Key: Actor/Character/NinjaMageBlack/Weapon
-    Sprite: {fileID: 21300000, guid: 3921e0ee4a0bfa341b68a177b7fe607b, type: 3}
   - Key: Actor/Character/NinjaRed
     Sprite: {fileID: 21300000, guid: ef7208a2ac7186f44b075aa6d332dc39, type: 3}
   - Key: Actor/Character/NinjaRed/Faceset
@@ -241,8 +235,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: c5de9ccfd386dc14e9ca1cf1a01fd1bd, type: 3}
   - Key: Actor/Character/NinjaRed/SpriteSheet
     Sprite: {fileID: 21300000, guid: 0b65318c1a79b004fac3b0a314db410e, type: 3}
-  - Key: Actor/Character/NinjaRed/Weapon
-    Sprite: {fileID: 21300000, guid: 80fcdf59a9c9a6441bb83d92296fdf86, type: 3}
   - Key: Actor/Character/Samurai
     Sprite: {fileID: 21300000, guid: 055c14b6ad4f5134dbad41b4c2a74ae2, type: 3}
   - Key: Actor/Character/Samurai/Faceset
@@ -279,8 +271,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: f12400ed21e279d4d91d32f31887c2ce, type: 3}
   - Key: Actor/Character/Samurai/SpriteSheet
     Sprite: {fileID: 21300000, guid: 06856ff28f9c06e45a357b987f7bba40, type: 3}
-  - Key: Actor/Character/Samurai/Weapon
-    Sprite: {fileID: 21300000, guid: af654f4167e74534bac2cf2bd8137ae0, type: 3}
   - Key: Actor/Character/Shaman
     Sprite: {fileID: 21300000, guid: 96782da577131fa43a86e23131d7ea30, type: 3}
   - Key: Actor/Character/Shaman/Faceset
@@ -317,8 +307,6 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 48c85dd156c71be48a3a1c30bcc8b3d0, type: 3}
   - Key: Actor/Character/Shaman/SpriteSheet
     Sprite: {fileID: 21300000, guid: 299119966394efc41a04a3faf883132d, type: 3}
-  - Key: Actor/Character/Shaman/Weapon
-    Sprite: {fileID: 21300000, guid: 3822ea726425f0a4ca28b5d7c39708f5, type: 3}
   - Key: Actor/Monster/Bear
     Sprite: {fileID: 21300000, guid: 400e925c6a2b20d47989084a82b8f4ad, type: 3}
   - Key: Actor/Monster/Bear/Body
@@ -457,6 +445,16 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: edfbf18f4a83de14e9597b23b29a77cc, type: 3}
   - Key: Actor/Monster/TRex/SpriteSheet
     Sprite: {fileID: 244629415248885162, guid: 1e980aab9e9b592449f430bc3d9d5385, type: 3}
+  - Key: FX/Hit
+    Sprite: {fileID: 5546671543968653177, guid: f92758126ef70bc458bf5876d1986209, type: 3}
+  - Key: FX/Hit/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: f92758126ef70bc458bf5876d1986209, type: 3}
+  - Key: FX/Hit/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: f92758126ef70bc458bf5876d1986209, type: 3}
+  - Key: FX/Hit/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: f92758126ef70bc458bf5876d1986209, type: 3}
+  - Key: FX/Hit/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: f92758126ef70bc458bf5876d1986209, type: 3}
   - Key: Item
     Sprite: {fileID: 21300000, guid: dc44540e4df2c2744a096ed7072924ec, type: 3}
   - Key: "Item/conditionalBoost_\uC870\uAC74\uBD80\uAC15\uD654"
