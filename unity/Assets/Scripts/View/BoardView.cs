@@ -148,9 +148,69 @@ namespace DomoNinja.Unity.View
             return map;
         }
 
+        /// <summary>바닥 타일 한 장(16×16). 팩의 <c>TilesetFloor</c> 에서 흙 타일만 잘라 별도 에셋으로 뒀다.</summary>
+        private const string GroundTileKey = "Backgrounds/Ground";
+
+        /// <summary>
+        /// 판 뒤에 <b>흙바닥</b>을 깐다. 칸마다 한 장씩 놓아 타일이 이어지게 한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "배틀씬은 가지고 있는 에셋들에서 배경으로 배치 가능한 타일맵들을
+        /// 장식으로 쓰면 좋을 것 같음."
+        /// </para>
+        /// <para>
+        /// ★ <b>타일셋을 통째로 잘라 색인하지 않았다.</b> <c>TilesetFloor.png</c> 는 352×417 이라
+        /// 세로가 16 의 배수가 아니고(26칸 + 1px), 그대로 슬라이스하면 <b>칸 번호가 한 줄씩 밀린다</b> —
+        /// 그러면 "몇 번이 흙인가"가 임포트 설정에 매달린 값이 된다.
+        /// 필요한 타일 한 장만 잘라 <c>Backgrounds/Ground.png</c> 로 뒀다.
+        /// </para>
+        /// <para>
+        /// 격자 칸(<see cref="_gridCells"/>)은 <b>그대로 위에 남는다.</b> 진영 구분 색이 사라지면
+        /// "왜 여기 못 놓지"가 다시 버그처럼 보인다 — 바닥은 그 아래에 깔릴 뿐이다.
+        /// </para>
+        /// </remarks>
+        private void BuildGround()
+        {
+            var tile = _catalog != null ? _catalog.Find(GroundTileKey) : null;
+            if (tile == null) return;
+
+            var root = new GameObject("Ground").transform;
+            root.SetParent(transform, false);
+
+            // 칸 하나를 꽉 채우도록 배율을 맞춘다. 16px 타일이라 원본 월드 크기는 1 이 아니다.
+            var size = tile.bounds.size;
+            float scale = size.x > 0f ? CellSize / size.x : 1f;
+
+            for (int y = -1; y <= Coord.BoardHeight; y++)
+            {
+                for (int x = -1; x <= Coord.BoardWidth; x++)
+                {
+                    var go = new GameObject($"Ground_{x}_{y}");
+                    go.transform.SetParent(root, false);
+                    // 격자(z=1)보다 뒤. 유닛은 z=0 이라 바닥이 유닛을 가리지 않는다.
+                    go.transform.position = ToWorld(new Coord(Mathf.Clamp(x, 0, Coord.BoardWidth - 1),
+                                                              Mathf.Clamp(y, 0, Coord.BoardHeight - 1)))
+                                            + new Vector3((x - Mathf.Clamp(x, 0, Coord.BoardWidth - 1)) * CellSize,
+                                                          (y - Mathf.Clamp(y, 0, Coord.BoardHeight - 1)) * CellSize,
+                                                          1.5f);
+                    go.transform.localScale = Vector3.one * scale;
+
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sprite = tile;
+                    sr.sortingOrder = -20;
+                    // 판 밖으로 한 줄 더 깔되 가장자리는 어둡게 — 바닥이 뚝 끊기면 판이 떠 보인다.
+                    bool border = x < 0 || y < 0 || x >= Coord.BoardWidth || y >= Coord.BoardHeight;
+                    sr.color = border ? new Color(0.45f, 0.45f, 0.45f) : new Color(0.72f, 0.72f, 0.72f);
+                }
+            }
+        }
+
         /// <summary>격자. 아군 진영과 적 진영을 색으로 나눈다.</summary>
         private void BuildGrid()
         {
+            BuildGround();
+
             var root = new GameObject("Grid").transform;
             root.SetParent(transform, false);
 
@@ -175,10 +235,14 @@ namespace DomoNinja.Unity.View
                     // 배치 규칙이 화면에 안 보이면 "왜 여기 못 놓지"가 버그처럼 보인다.
                     bool ally = x <= Coord.AllyMaxX;
                     bool dark = (x + y) % 2 == 0;
+                    // ★ 반투명이다. 전에는 불투명 사각형이라 그 자체가 배경이었는데, 이제 뒤에
+                    //   흙바닥(`BuildGround`)이 깔려 있어 불투명하게 두면 바닥이 아예 안 보인다.
+                    //   진영 구분은 남기고 바닥이 비쳐 보일 만큼만 덮는다.
                     var color = ally
                         ? new Color(0.16f, 0.20f, 0.28f)
                         : new Color(0.26f, 0.17f, 0.19f);
                     if (dark) color *= 0.82f;
+                    color.a = 0.55f;
 
                     var renderer = cell.GetComponent<MeshRenderer>();
                     renderer.material = new Material(Shader.Find("Sprites/Default")) { color = color };
