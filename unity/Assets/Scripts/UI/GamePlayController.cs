@@ -118,6 +118,65 @@ namespace DomoNinja.Unity
         }
 
         /// <summary>
+        /// 보드가 짚어준 유닛(<see cref="BoardView.HoveredUnitId"/>)을 툴팁으로 옮긴다.
+        /// </summary>
+        /// <remarks>
+        /// 뷰는 "무엇에 올려져 있는가"까지만 안다 — 무엇을 보여줄지는 런 상태를 아는 이쪽이 정한다.
+        /// 같은 유닛에 계속 올려둔 동안에도 매 프레임 다시 만든다: <b>전투 중 체력이 변한다.</b>
+        /// </remarks>
+        private void Update()
+        {
+            if (_boardView == null) return;
+
+            string text = DescribeHovered(_boardView.Hovered);
+            if (string.IsNullOrEmpty(text)) UnitTooltip.Hide();
+            else UnitTooltip.Show(text);
+        }
+
+        /// <summary>
+        /// 마우스를 올린 유닛의 스펙. 아군이면 <b>산 것까지</b> 붙는다.
+        /// </summary>
+        /// <remarks>
+        /// <c>TypeId</c> 는 아군이면 캐릭터 id(<c>C1</c>..), 적이면 적 타입 키다 —
+        /// <c>BattleSetup</c> 과 배치 미리보기가 둘 다 그렇게 넣는다. 값 하나로 양쪽을 가른다.
+        /// <para>
+        /// 배치 화면에는 아직 전투 체력이 없다(<c>HasLiveHp == false</c>). 그때는 로스터의
+        /// 누적 체력(<see cref="RosterEntry.Hp"/>)이 맞는 값이다 — 체력은 라운드를 넘어 누적된다(`A-6`).
+        /// </para>
+        /// </remarks>
+        private string DescribeHovered(BoardView.HoverTarget target)
+        {
+            if (target.TypeId == null) return null;
+
+            var mgr = RunManager.Instance;
+            if (mgr == null || mgr.Data == null) return null;
+
+            if (!target.IsAlly)
+            {
+                return mgr.Data.EnemyTypes.TryGetValue(target.TypeId, out var enemy)
+                    ? UnitStatText.ForEnemy(enemy, target.HasLiveHp ? target.Hp : (int?)null)
+                    : null;
+            }
+
+            var def = mgr.Data.FindCharacter(target.TypeId);
+            if (def == null) return null;
+
+            // 런이 없으면(관전 뷰) 기본 스펙까지만 — 산 것을 물어볼 곳이 없다.
+            var run = mgr.CurrentRun;
+            if (run == null) return UnitStatText.ForCharacter(def, target.HasLiveHp ? target.Hp : (int?)null);
+
+            RosterEntry entry = null;
+            foreach (var e in run.Deployed)
+                if (e.CharacterId == target.TypeId) { entry = e; break; }
+
+            if (entry == null)
+                return UnitStatText.ForCharacter(def, target.HasLiveHp ? target.Hp : (int?)null);
+
+            return UnitStatText.ForDeployedAlly(def, entry, mgr.Data,
+                                                target.HasLiveHp ? target.Hp : (int?)null);
+        }
+
+        /// <summary>
         /// 보드 8×6 이 한 화면에 들어오게.
         /// </summary>
         /// <remarks>

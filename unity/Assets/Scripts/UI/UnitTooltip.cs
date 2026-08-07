@@ -1,8 +1,10 @@
 using System.Text;
 using DomoNinja.Core.Data;
+using DomoNinja.Core.Domain;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
 
@@ -85,10 +87,13 @@ namespace DomoNinja.Unity
         /// </remarks>
         private void Reposition()
         {
+            // 이 프로젝트는 입력 처리를 Input System 패키지로 바꿔놨다 — 옛 `UnityEngine.Input` 은 예외를 던진다.
+            if (Mouse.current == null) return;
+
             var canvasRect = (RectTransform)_canvas.transform;
             Vector2 local;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                canvasRect, Input.mousePosition,
+                canvasRect, Mouse.current.position.ReadValue(),
                 _canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : _canvas.worldCamera,
                 out local);
 
@@ -209,6 +214,57 @@ namespace DomoNinja.Unity
             var sb = new StringBuilder();
             sb.Append("<b>").Append(def.Name).Append("</b>\n");
             AppendStats(sb, currentHp, def.Hp, def.Attack, def.AttackInterval, def.Range, def.MoveInterval);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// 출전 중인 아군 — 스펙에 <b>지금까지 산 것</b>을 붙인다.
+        /// </summary>
+        /// <remarks>
+        /// 적과 달리 아군은 <b>런 도중 변한다.</b> 액티브 스킬·보조 스킬·아이템이 붙은 뒤에도
+        /// 기본 스탯만 보여주면 "왜 이 캐릭터가 세졌는지"가 화면 어디에도 안 남는다.
+        /// <para>
+        /// ⚠️ 스탯 숫자는 <b>데이터 원본값</b>이다 — 아이템 배율이 곱해진 실제 전투값이 아니다.
+        /// 그 계산은 <c>BattleSetup</c> 이 전투 시작 시점에 하고 뷰까지 안 내려온다.
+        /// 그래서 산 것을 <b>목록으로</b> 같이 보여준다 — 곱해진 값을 흉내내면 실제와 어긋난다.
+        /// </para>
+        /// </remarks>
+        public static string ForDeployedAlly(CharacterDef def, RosterEntry entry, GameData data,
+                                             int? currentHp = null)
+        {
+            var sb = new StringBuilder();
+            sb.Append("<b>").Append(def.Name).Append("</b>\n");
+            AppendStats(sb, currentHp ?? entry.Hp, entry.MaxHp, def.Attack,
+                        def.AttackInterval, def.Range, def.MoveInterval);
+
+            var active = entry.ActiveSkillId != null ? data.FindSkill(entry.ActiveSkillId) : null;
+            sb.Append("\n\n<color=#C8BFAE>액티브</color> ")
+              .Append(active != null ? active.Name : "<color=#9A948C>아직 없음</color>");
+
+            sb.Append("\n<color=#C8BFAE>보조</color> ");
+            if (entry.SupportSkillIds.Count == 0) sb.Append("<color=#9A948C>없음</color>");
+            else
+            {
+                for (int i = 0; i < entry.SupportSkillIds.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    var s = data.FindSkill(entry.SupportSkillIds[i]);
+                    sb.Append(s != null ? s.Name : entry.SupportSkillIds[i]);
+                }
+            }
+
+            sb.Append("\n<color=#C8BFAE>강화</color> ");
+            if (entry.Items.Count == 0) sb.Append("<color=#9A948C>없음</color>");
+            else
+            {
+                for (int i = 0; i < entry.Items.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    sb.Append(ShopController.ItemNames.TryGetValue(entry.Items[i].Key, out string n)
+                        ? n : entry.Items[i].Key);
+                }
+            }
+
             return sb.ToString();
         }
 

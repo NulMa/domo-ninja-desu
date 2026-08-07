@@ -3,6 +3,7 @@ using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Events;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace DomoNinja.Unity.View
 {
@@ -58,6 +59,10 @@ namespace DomoNinja.Unity.View
             public float FlashLeft;
             public bool IsDead;
             public int MaxHp;
+
+            /// <summary>현재 체력. <see cref="SetHp"/> 가 받은 값을 그대로 둔다 — 툴팁이 읽는다.</summary>
+            public int Hp;
+
             public bool IsAlly;
             /// <summary>유닛 종류(`C1`.. · 몬스터/보스 typeId). 공격자별 타격 이펙트를 고를 때 쓴다.</summary>
             public string TypeId;
@@ -283,6 +288,7 @@ namespace DomoNinja.Unity.View
                 ShieldFullScaleX = shield != null ? shield.localScale.x : 1f,
                 Outline = outline,
                 MaxHp = spec.MaxHp,
+                Hp = spec.MaxHp,
                 IsAlly = spec.Team == 0,
                 TypeId = spec.TypeId,
                 IdleFrames = idleFrames,
@@ -701,8 +707,110 @@ namespace DomoNinja.Unity.View
         {
             if (!_units.TryGetValue(unitId, out var unit) || unit.HpFill == null) return;
 
+            // 툴팁이 "체력 32 / 40" 을 적으려면 현재 값이 필요하다. 막대 배율에서 되돌리면
+            // 반올림 때문에 원래 숫자가 안 나온다 — 받은 값을 그대로 들고 있는다.
+            unit.Hp = hp;
+
             float ratio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)hp / unit.MaxHp);
             SetFill(unit, ratio);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  마우스를 올린 유닛의 스펙 (`UnitTooltip`)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>마우스 아래 있는 것. <see cref="TypeId"/> 가 <c>null</c> 이면 아무것도 없다.</summary>
+        public readonly struct HoverTarget
+        {
+            /// <summary>아군이면 캐릭터 id(<c>C1</c>..), 적이면 적 타입 키. 없으면 <c>null</c>.</summary>
+            public readonly string TypeId;
+            public readonly bool IsAlly;
+
+            /// <summary><see cref="HasLiveHp"/> 가 참일 때만 의미 있다. 배치 화면엔 아직 전투 체력이 없다.</summary>
+            public readonly int Hp;
+            public readonly int MaxHp;
+
+            /// <summary>전투 재생 중이라 현재 체력을 아는가. 배치 미리보기면 거짓.</summary>
+            public readonly bool HasLiveHp;
+
+            public HoverTarget(string typeId, bool isAlly, int hp, int maxHp, bool hasLiveHp)
+            {
+                TypeId = typeId; IsAlly = isAlly; Hp = hp; MaxHp = maxHp; HasLiveHp = hasLiveHp;
+            }
+        }
+
+        /// <summary>
+        /// 지금 마우스가 무엇 위에 있는가. <b>배치 화면과 전투 화면 모두</b>에서 답한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>여기서 툴팁을 띄우지 않는다.</b> 툴팁(<c>UnitTooltip</c>)과 그 내용에 필요한 런 상태는
+        /// 둘 다 <c>DomoNinja.Unity.UI</c> 에 있고 그 어셈블리가 이미 <c>View</c> 를 참조한다 —
+        /// 여기서 UI 를 부르면 <b>참조가 순환한다.</b> 이 뷰는 "무엇에 올려져 있는가"까지만 답한다.
+        /// </para>
+        /// <para>
+        /// ★ 전투 유닛(<see cref="_units"/>)과 배치 미리보기(<see cref="_placementRoot"/>)는
+        /// <b>별개 트리다.</b> 전투 것만 보면 <b>정작 배치를 고민하는 동안 스펙을 못 본다</b> —
+        /// 적을 보고 자리를 정하는 화면이 바로 그 화면이다. 둘 다 훑는다.
+        /// </para>
+        /// </remarks>
+        public HoverTarget Hovered { get; private set; }
+
+        /// <summary>마우스가 유닛 중심에서 이 거리(월드) 안에 있으면 그 유닛으로 친다. 칸이 1 이라 절반이 경계다.</summary>
+        private const float HoverRadius = 0.45f;
+
+        private void Update() => Hovered = FindHovered();
+
+        private void OnDisable() => Hovered = default;
+
+        /// <remarks>
+        /// 콜라이더를 붙여 <c>Physics2D</c> 로 쏘지 않는다 — 유닛에 물리를 달면
+        /// <b>전투에 관여하지 않는 컴포넌트가 전투 오브젝트에 붙는다.</b> 판이 격자라
+        /// 거리 비교로 충분하고, 그쪽이 죽은 유닛을 건너뛰기도 쉽다.
+        /// </remarks>
+        private HoverTarget FindHovered()
+        {
+            var cam = Camera.main;
+            // ★ `UnityEngine.Input` 이 아니라 Input System 을 쓴다 — 이 프로젝트는 Player Settings 에서
+            //   입력 처리를 Input System 패키지로 바꿔놨고, 옛 API 를 부르면 예외가 난다.
+            //   `PlacementController` 가 이미 같은 방식으로 마우스를 읽는다.
+            if (cam == null || Mouse.current == null) return default;
+
+            var world = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            float bestSq = HoverRadius * HoverRadius;
+            var best = default(HoverTarget);
+
+            foreach (var kv in _units)
+            {
+                var unit = kv.Value;
+                if (unit.Root == null || unit.IsDead) continue;
+
+                float sq = SqDistance(unit.Root.transform.position, world);
+                if (sq >= bestSq) continue;
+
+                bestSq = sq;
+                best = new HoverTarget(unit.TypeId, unit.IsAlly, unit.Hp, unit.MaxHp, true);
+            }
+
+            if (best.TypeId != null || _placementRoot == null) return best;
+
+            // 배치 미리보기 — 오브젝트 이름이 곧 typeId 다(`CreatePlacementUnit`).
+            foreach (Transform child in _placementRoot)
+            {
+                float sq = SqDistance(child.position, world);
+                if (sq >= bestSq) continue;
+
+                bestSq = sq;
+                best = new HoverTarget(child.name, _placementAllies.ContainsKey(child.name), 0, 0, false);
+            }
+
+            return best;
+        }
+
+        private static float SqDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x, dy = a.y - b.y;
+            return dx * dx + dy * dy;
         }
 
         /// <summary>
