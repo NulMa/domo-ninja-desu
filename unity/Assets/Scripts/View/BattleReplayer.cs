@@ -54,15 +54,61 @@ namespace DomoNinja.Unity.View
             _cursor = 0;
             _playhead = 0f;
             _playing = true;
+            _hitStopLeft = 0f;   // 앞 라운드가 멈춘 채 끝났으면 다음 라운드가 그대로 얼어붙는다
 
             _board.Setup(log);
         }
 
         public void Stop() => _playing = false;
 
+        /// <summary>
+        /// 처치 순간 재생을 멈추는 시간(초). <b>이 장르 타격감의 대부분이 여기서 나온다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>전투 결과에는 영향이 없다.</b> 로그는 이미 전부 나와 있고 여기서 바꾸는 건
+        /// <b>재생 속도</b>뿐이다 — 배속 버튼과 같은 종류의 조작이라 <c>sim</c> 과 갈라질 수 없다.
+        /// </para>
+        /// <para>
+        /// ⚠️ 다만 <b>전투가 실시간으로 길어진다.</b> `M5`(1런 3~5분) 실측을 다시 잴 때
+        /// 이 값이 라운드당 처치 수만큼 곱해져 들어간다는 것을 계산에 넣어야 한다.
+        /// </para>
+        /// </remarks>
+        private const float HitStopSeconds = 0.06f;
+
+        /// <summary>
+        /// 다음 정지까지 최소 간격(초).
+        /// </summary>
+        /// <remarks>
+        /// ★ 없으면 <b>광역기로 다섯이 동시에 죽을 때 0.3초를 끊어서 멈춘다</b> —
+        /// 타격감이 아니라 <b>렉으로 보인다.</b> 한 번의 학살은 한 번의 정지다.
+        /// </remarks>
+        private const float HitStopCooldown = 0.5f;
+
+        private float _hitStopLeft;
+        private float _hitStopReadyAt;
+
+        /// <summary>처치 순간 재생을 잠깐 멈춘다. 이미 최근에 멈췄으면 무시한다.</summary>
+        private void RequestHitStop()
+        {
+            if (Time.time < _hitStopReadyAt) return;
+
+            _hitStopLeft = HitStopSeconds;
+            _hitStopReadyAt = Time.time + HitStopCooldown;
+        }
+
         private void Update()
         {
             if (!_playing || _log == null) return;
+
+            // ★ 시간이 멈춘다 — 재생도 애니메이션도. 번쩍임만 이어간다:
+            //   맞은 표시가 멈춤과 동시에 사라지면 "무엇 때문에 멈췄는지"가 화면에서 없어진다.
+            if (_hitStopLeft > 0f)
+            {
+                _hitStopLeft -= Time.deltaTime;
+                _board.TickFlashes(Time.deltaTime);
+                return;
+            }
 
             _playhead += Time.deltaTime * TicksPerSecond * Mathf.Max(0.01f, _speed);
 
@@ -78,6 +124,10 @@ namespace DomoNinja.Unity.View
             {
                 Apply(_log.Events[_cursor]);
                 _cursor++;
+
+                // 정지가 걸렸으면 <b>이번 프레임은 여기까지</b>다. 계속 소비하면
+                // 멈춘 사이에 나머지 이벤트가 다 지나가버려 정지가 아무것도 안 멈춘 것이 된다.
+                if (_hitStopLeft > 0f) break;
             }
 
             if (_cursor >= _log.Events.Count) _playing = false;
@@ -146,6 +196,7 @@ namespace DomoNinja.Unity.View
                 case EventKind.Death:
                     _board.SetDead(e.TargetId);
                     AudioManager.Instance?.PlaySfx(AudioKeys.Death);
+                    RequestHitStop();
                     break;
 
                 // 나머지 상태(약화·도트·무적·재생·둔화·속박)는 아직 아이콘이 없다.

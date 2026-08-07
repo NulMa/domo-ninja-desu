@@ -59,7 +59,8 @@ namespace DomoNinja.Unity.View
             //   앞에서 만들면 넘길 것이 없어 View 가 이름으로 추측하게 된다 — 적 4종이 그렇게 사라졌다.
             //   데이터가 없어도 격자는 그린다: "데이터를 못 읽었다" 와 "화면이 안 떴다" 는 다른 사고다.
             _board.Initialize(Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName),
-                              BoardView.SpritePathsFrom(data));
+                              BoardView.SpritePathsFrom(data),
+                              BoardView.BossTypeIdsFrom(data));
 
             if (data == null) yield break;
 

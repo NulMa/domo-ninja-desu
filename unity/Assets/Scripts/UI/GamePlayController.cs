@@ -217,7 +217,8 @@ namespace DomoNinja.Unity
             _replayer = boardGo.AddComponent<BattleReplayer>();
             _replayer.Bind(_boardView);
             _boardView.Initialize(Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName),
-                                   BoardView.SpritePathsFrom(mgr.Data));
+                                   BoardView.SpritePathsFrom(mgr.Data),
+                                   BoardView.BossTypeIdsFrom(mgr.Data));
 
             _viewReady = true;
         }
