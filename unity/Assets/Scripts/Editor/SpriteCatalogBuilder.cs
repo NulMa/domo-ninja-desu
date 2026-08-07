@@ -36,6 +36,51 @@ namespace DomoNinja.Unity.Editor
         /// <summary>대표 스프라이트를 고르는 우선순위. 앞에 있는 걸 먼저 쓴다.</summary>
         private static readonly string[] Preferred = { "Faceset", "Idle", "Idle40x40", "Walk" };
 
+        /// <summary>
+        /// 보드 전투 애니메이션(캐릭터 6 + 보스 2, Idle/Attack)과 타격 이펙트(FX/Hit — 범용 1종 +
+        /// 캐릭터별 테마 6종)에 쓰는 시트. 값은 정사각 프레임 한 변(px).
+        /// </summary>
+        /// <remarks>
+        /// 키는 <c>Assets/Sprite</c> 기준 확장자 없는 상대 경로 — 파일형 색인 키와 같은 형식이다.
+        /// 여기 없는 PNG는 전부 기존처럼 <see cref="SpriteImportMode.Single"/> 로 남는다
+        /// (몬스터 66종은 방향별 분리 프레임이 없어 이 표에 넣을 게 없다 — `D-77` 스코프 결정).
+        /// </remarks>
+        private static readonly Dictionary<string, int> AnimatedSpriteFrameSize = new Dictionary<string, int>
+        {
+            ["Actor/Character/Samurai/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Samurai/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/Monk/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Monk/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/NinjaRed/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/NinjaRed/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/Hunter/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Hunter/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/NinjaMageBlack/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/NinjaMageBlack/SeparateAnim/Attack"] = 16,
+            ["Actor/Character/Shaman/SeparateAnim/Idle"] = 16,
+            ["Actor/Character/Shaman/SeparateAnim/Attack"] = 16,
+            ["Actor/Boss/TenguRed/Idle"] = 82,
+            ["Actor/Boss/TenguRed/Attack"] = 82,
+            ["Actor/Boss/GiantFrog/Idle40x40"] = 40,
+            ["Actor/Boss/GiantFrog/Attack"] = 40,
+            ["FX/Hit/SpriteSheet"] = 32,
+            ["FX/Hit/Samurai/SpriteSheet"] = 32,
+            ["FX/Hit/Monk/SpriteSheet"] = 32,
+            ["FX/Hit/NinjaRed/SpriteSheet"] = 32,
+            ["FX/Hit/Hunter/SpriteSheet"] = 32,
+            ["FX/Hit/NinjaMageBlack/SpriteSheet"] = 32,
+            ["FX/Hit/Shaman/SpriteSheet"] = 32,
+        };
+
+        /// <summary>
+        /// 몬스터 "몸통" 시트의 프레임 한 변(px)과 격자 크기. 전 종에서 64×64 / 4×4 로 균일하다
+        /// (D+6 실측 — Bear·KappaGreen 을 갈라 육안 확인). 열이 방향(정면·측면·후면), 행이 같은
+        /// 방향의 미세한 유휴 프레임이다. 보드에는 정면(0행 0열)만 쓴다.
+        /// </summary>
+        private const int MonsterBodyFrameSize = 16;
+
+        private static string MonsterBodyFrameName(int row, int col) => $"body_r{row}_c{col}";
+
         public void OnPreprocessBuild(BuildReport report) => Build();
 
         [MenuItem("DomoNinja/스프라이트 카탈로그 생성")]
@@ -67,7 +112,25 @@ namespace DomoNinja.Unity.Editor
                 string asset = path.Replace('\\', '/');
                 if (!(AssetImporter.GetAtPath(asset) is TextureImporter importer)) continue;
 
+                string key = asset.Substring(SpriteRoot.Length + 1);
+                key = key.Substring(0, key.Length - ".png".Length);
+
+                if (AnimatedSpriteFrameSize.TryGetValue(key, out int frameSize))
+                {
+                    if (ApplyAnimatedImport(importer, frameSize)) changed++;
+                    continue;
+                }
+
+                if (IsMonsterBodyFile(asset))
+                {
+                    if (ApplyMonsterBodyGridImport(importer)) changed++;
+                    continue;
+                }
+
+                // 예전엔 여기 애니메이션 시트도 섞여 있었다 — Multiple 로 한 번 바뀐 파일이
+                // 이 표에서 빠지면(스코프 축소) 이 조건이 없으면 Multiple 로 영영 남는다.
                 bool needsChange = importer.textureType != TextureImporterType.Sprite
+                                   || importer.spriteImportMode != SpriteImportMode.Single
                                    || importer.filterMode != FilterMode.Point
                                    || importer.textureCompression != TextureImporterCompression.Uncompressed;
 
@@ -84,6 +147,130 @@ namespace DomoNinja.Unity.Editor
             }
 
             return changed;
+        }
+
+        /// <summary>
+        /// 정사각 프레임이 가로로 나열된 시트를 <see cref="SpriteImportMode.Multiple"/> 로 자른다.
+        /// </summary>
+        /// <remarks>
+        /// 프레임 수는 시트 폭에서 역산한다(폭 ÷ <paramref name="frameSize"/>) — 프레임 수를 표에
+        /// 따로 박아두면 아트가 프레임을 늘렸을 때 코드도 같이 고쳐야 하고, 둘이 어긋나면 마지막 프레임이
+        /// 잘리거나 빈 칸이 섞인다. 이름은 <c>{파일명}_{인덱스}</c> — <see cref="AddAnimatedFrameEntries"/> 가
+        /// 이 이름으로 되찾는다.
+        /// </remarks>
+        private static bool ApplyAnimatedImport(TextureImporter importer, int frameSize)
+        {
+            importer.GetSourceTextureWidthAndHeight(out int width, out _);
+            int frameCount = Mathf.Max(1, width / frameSize);
+
+            bool needsChange = importer.textureType != TextureImporterType.Sprite
+                               || importer.spriteImportMode != SpriteImportMode.Multiple
+                               || importer.filterMode != FilterMode.Point
+                               || importer.textureCompression != TextureImporterCompression.Uncompressed
+                               || importer.spritesheet == null
+                               || importer.spritesheet.Length != frameCount;
+
+            if (!needsChange) return false;
+
+            string baseName = Path.GetFileNameWithoutExtension(importer.assetPath);
+            var meta = new SpriteMetaData[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                meta[i] = new SpriteMetaData
+                {
+                    name = $"{baseName}_{i}",
+                    rect = new Rect(i * frameSize, 0, frameSize, frameSize),
+                    alignment = (int)SpriteAlignment.Center,
+                    pivot = new Vector2(0.5f, 0.5f),
+                };
+            }
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Multiple;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+#pragma warning disable CS0618 // spritesheet 는 레거시 API지만 개별 서브스프라이트를 코드로 지정하는 유일한 방법이다.
+            importer.spritesheet = meta;
+#pragma warning restore CS0618
+
+            importer.SaveAndReimport();
+            return true;
+        }
+
+        /// <summary>
+        /// <paramref name="normalizedPath"/> 가 몬스터 폴더 바로 아래의 "몸통" 파일인지 —
+        /// Faceset 이 아니고, <c>SeparateAnim</c> 처럼 더 깊은 하위 폴더도 아니어야 한다.
+        /// </summary>
+        /// <remarks>
+        /// 파일명이 폴더마다 다르다(SpriteSheet·Eye·Slime·mushroom...) — 이름으로 찾을 수 없어
+        /// "Faceset 이 아닌, 폴더 바로 아래 파일"이라는 배제 규칙으로 찾는다.
+        /// </remarks>
+        private static bool IsMonsterBodyFile(string normalizedPath)
+        {
+            const string prefix = "Assets/Sprite/Actor/Monster/";
+            if (!normalizedPath.StartsWith(prefix)) return false;
+
+            string rest = normalizedPath.Substring(prefix.Length); // "Bear/SpriteSheet.png"
+            int slash = rest.IndexOf('/');
+            if (slash < 0) return false;
+
+            string afterFolder = rest.Substring(slash + 1); // "SpriteSheet.png" 또는 "SeparateAnim/Idle.png"
+            if (afterFolder.Contains('/')) return false; // 더 깊은 하위 폴더 — Statue/SeparateAnim 류는 제외
+
+            return Path.GetFileNameWithoutExtension(afterFolder) != "Faceset";
+        }
+
+        /// <summary>
+        /// 몬스터 몸통 시트를 4×4 격자로 자른다. 절차적 공격 연출(확대+돌진, `D-77` 후속)이
+        /// 이 중 정면(0행 0열) 한 장만 골라 쓴다 — 시트 전체를 그대로 색인하면 보드에
+        /// 16장이 뭉쳐진 콜라주가 그대로 뜬다.
+        /// </summary>
+        private static bool ApplyMonsterBodyGridImport(TextureImporter importer)
+        {
+            importer.GetSourceTextureWidthAndHeight(out int width, out int height);
+            int cols = Mathf.Max(1, width / MonsterBodyFrameSize);
+            int rows = Mathf.Max(1, height / MonsterBodyFrameSize);
+
+            bool needsChange = importer.textureType != TextureImporterType.Sprite
+                               || importer.spriteImportMode != SpriteImportMode.Multiple
+                               || importer.filterMode != FilterMode.Point
+                               || importer.textureCompression != TextureImporterCompression.Uncompressed
+                               || importer.spritesheet == null
+                               || importer.spritesheet.Length != cols * rows
+                               || importer.spritesheet[0].name != MonsterBodyFrameName(0, 0);
+
+            if (!needsChange) return false;
+
+            var meta = new SpriteMetaData[cols * rows];
+            int idx = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < cols; c++)
+                {
+                    meta[idx++] = new SpriteMetaData
+                    {
+                        name = MonsterBodyFrameName(r, c),
+                        // Unity Rect 는 좌하단 원점 — 이미지 맨 위 행(r=0)을 얻으려면 y 를 뒤집는다.
+                        rect = new Rect(c * MonsterBodyFrameSize, height - (r + 1) * MonsterBodyFrameSize,
+                                        MonsterBodyFrameSize, MonsterBodyFrameSize),
+                        alignment = (int)SpriteAlignment.Center,
+                        pivot = new Vector2(0.5f, 0.5f),
+                    };
+                }
+            }
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Multiple;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+#pragma warning disable CS0618
+            importer.spritesheet = meta;
+#pragma warning restore CS0618
+
+            importer.SaveAndReimport();
+            return true;
         }
 
         public static int Build()
@@ -110,12 +297,20 @@ namespace DomoNinja.Unity.Editor
             foreach (string png in allPngs)
             {
                 string normalized = png.Replace('\\', '/');
-                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(normalized);
-                if (sprite == null) continue;
 
                 // "Assets/Sprite/Item/statBoost_스탯강화.png" → "Item/statBoost_스탯강화"
                 string key = normalized.Substring(SpriteRoot.Length + 1);
                 key = key.Substring(0, key.Length - ".png".Length);
+
+                if (AnimatedSpriteFrameSize.ContainsKey(key))
+                {
+                    // Multiple 모드라 텍스처 자체는 Sprite 가 아니다 — 프레임마다 따로 색인한다.
+                    AddAnimatedFrameEntries(entries, normalized, key);
+                    continue;
+                }
+
+                var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(normalized);
+                if (sprite == null) continue;
 
                 entries.Add(new SpriteCatalog.Entry { Key = key, Sprite = sprite });
             }
@@ -135,6 +330,25 @@ namespace DomoNinja.Unity.Editor
                 // "Assets/Sprite/Actor/Character/Samurai" → "Actor/Character/Samurai"
                 string key = normalized.Substring(SpriteRoot.Length + 1);
                 entries.Add(new SpriteCatalog.Entry { Key = key, Sprite = sprite });
+
+                // ★ 몬스터는 Idle/Attack 분리 프레임이 없다 — 대신 Faceset(초상) 말고
+                //   "몸통 전체" 그림도 따로 색인해둔다. 절차적 공격 연출(확대+돌진, `D-77` 후속)이
+                //   보드에서 이 그림을 쓴다. 캐릭터·보스는 이미 프레임 애니메이션이 있어 필요 없으니
+                //   몬스터 폴더로 한정한다 — 파일명이 폴더마다 다르다(SpriteSheet·Eye·Slime...)
+                //   그래서 "Faceset 이 아닌 파일"로 찾는다.
+                if (normalized.StartsWith("Assets/Sprite/Actor/Monster/"))
+                {
+                    string body = pngs.FirstOrDefault(p => Path.GetFileNameWithoutExtension(p) != "Faceset");
+                    if (body != null)
+                    {
+                        // Multiple 모드라 텍스처 자체는 Sprite 가 아니다 — 정면(0행 0열) 서브스프라이트만 찾는다.
+                        var frontFrame = AssetDatabase.LoadAllAssetRepresentationsAtPath(body.Replace('\\', '/'))
+                                                       .OfType<Sprite>()
+                                                       .FirstOrDefault(s => s.name == MonsterBodyFrameName(0, 0));
+                        if (frontFrame != null)
+                            entries.Add(new SpriteCatalog.Entry { Key = key + "/Body", Sprite = frontFrame });
+                    }
+                }
             }
 
             entries.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
@@ -156,6 +370,24 @@ namespace DomoNinja.Unity.Editor
 
             AssetDatabase.SaveAssets();
             return entries.Count;
+        }
+
+        /// <summary>
+        /// <paramref name="path"/> 를 자른 프레임들을 <c>{key}_0</c>, <c>{key}_1</c>, ... 로 색인한다.
+        /// </summary>
+        /// <remarks>
+        /// 서브스프라이트 순서가 아니라 <b>이름으로</b> 찾는다 — <c>LoadAllAssetRepresentationsAtPath</c> 의
+        /// 반환 순서는 보장되지 않지만, 이름은 <see cref="ApplyAnimatedImport"/> 가 직접 지었으니 확실하다.
+        /// </remarks>
+        private static void AddAnimatedFrameEntries(List<SpriteCatalog.Entry> entries, string path, string key)
+        {
+            var frames = AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
+                                       .OfType<Sprite>()
+                                       .ToDictionary(s => s.name);
+
+            string baseName = Path.GetFileNameWithoutExtension(path);
+            for (int i = 0; frames.TryGetValue($"{baseName}_{i}", out var frame); i++)
+                entries.Add(new SpriteCatalog.Entry { Key = $"{key}_{i}", Sprite = frame });
         }
 
         private static string Pick(string[] pngs)

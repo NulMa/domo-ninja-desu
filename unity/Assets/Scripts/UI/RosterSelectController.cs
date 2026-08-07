@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DomoNinja.Core.Data;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,6 +26,11 @@ namespace DomoNinja.Unity
         private Transform _confirmedTray;
         private Button _enterBattleButton;
         private TMP_Text _infoLabel;
+        private TMP_Text _skillTitleLabel;
+        private readonly UImage[] _skillIcons = new UImage[2];
+        private readonly TMP_Text[] _skillNameLabels = new TMP_Text[2];
+        /// <summary>스킬 카드마다 캐릭터가 그 스킬을 두고 하는 한마디. `SkillDef.Flavor` — 없는 스킬도 있다(보조 18개).</summary>
+        private readonly TMP_Text[] _skillFlavorLabels = new TMP_Text[2];
         private SpriteCatalog _catalog;
 
         private readonly List<string> _selected = new List<string>();
@@ -35,7 +41,16 @@ namespace DomoNinja.Unity
             _portraitGrid = board.Find("PortraitGrid");
             _confirmedTray = board.Find("ConfirmedTray");
             _enterBattleButton = UITheme.EnsureButton(board.Find("EnterBattleButton").gameObject);
-            _infoLabel = board.Find("InfoPanel/Label").GetComponent<TMP_Text>();
+            var infoPanel = board.Find("InfoPanel");
+            _infoLabel = infoPanel.Find("Label").GetComponent<TMP_Text>();
+            _skillTitleLabel = infoPanel.Find("SkillTitleLabel").GetComponent<TMP_Text>();
+            for (int i = 0; i < 2; i++)
+            {
+                var card = (RectTransform)infoPanel.Find("SkillCard" + (i + 1));
+                _skillIcons[i] = card.Find("Icon").GetComponent<UImage>();
+                _skillNameLabels[i] = card.Find("NameLabel").GetComponent<TMP_Text>();
+                _skillFlavorLabels[i] = BuildFlavorLabel(card);
+            }
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
 
@@ -117,14 +132,91 @@ namespace DomoNinja.Unity
             if (_selected.Count == 0)
             {
                 _infoLabel.text = "용병을 선택하면 정보가 표시됩니다";
+                _skillTitleLabel.text = "";
+                SetSkillCard(0, null);
+                SetSkillCard(1, null);
                 return;
             }
 
             var mgr = RunManager.Instance;
             var def = mgr != null && mgr.Data != null ? mgr.Data.FindCharacter(_selected[_selected.Count - 1]) : null;
-            _infoLabel.text = def != null
-                ? $"{def.Name}\n공격력 {def.Attack}   체력 {def.Hp}   공격간격 {def.AttackInterval}"
-                : "정보를 찾지 못했다";
+            if (def == null)
+            {
+                _infoLabel.text = "정보를 찾지 못했다";
+            }
+            else
+            {
+                // 플레이버(성격·배경)가 있으면 이름 바로 아래, 없으면 그 줄만 빠진다 — 필수 필드가 아니다.
+                string flavorLine = string.IsNullOrEmpty(def.Flavor) ? "" : $"{def.Flavor}\n";
+                _infoLabel.text = $"{def.Name}\n{flavorLine}\n공격력 {def.Attack}   체력 {def.Hp}   공격간격 {def.AttackInterval}";
+            }
+
+            RefreshSkillCards(mgr, def);
+        }
+
+        /// <summary>
+        /// 액티브 스킬은 이 화면에서 아직 "확정된 하나"가 아니다 — 상점에서 하나를 사는 순간
+        /// 나머지가 배타되는 2택 후보라(`08` §2.2), 로스터 선택 단계에선 후보 둘 다 보여준다.
+        /// </summary>
+        private void RefreshSkillCards(RunManager mgr, CharacterDef def)
+        {
+            if (def == null || mgr == null || mgr.Data == null)
+            {
+                _skillTitleLabel.text = "";
+                SetSkillCard(0, null);
+                SetSkillCard(1, null);
+                return;
+            }
+
+            _skillTitleLabel.text = "액티브 스킬 (상점에서 2택)";
+            for (int i = 0; i < 2; i++)
+            {
+                var skill = i < def.SkillIds.Count ? mgr.Data.FindSkill(def.SkillIds[i]) : null;
+                SetSkillCard(i, skill);
+            }
+        }
+
+        private void SetSkillCard(int index, SkillDef skill)
+        {
+            var icon = _skillIcons[index];
+            var label = _skillNameLabels[index];
+            var flavorLabel = _skillFlavorLabels[index];
+
+            icon.sprite = skill?.Icon != null ? _catalog?.Find(skill.Icon) : null;
+            icon.enabled = icon.sprite != null;
+            label.text = skill != null ? skill.Name : "-";
+            flavorLabel.text = !string.IsNullOrEmpty(skill?.Flavor) ? $"“{skill.Flavor}”" : "";
+        }
+
+        /// <summary>
+        /// 스킬 카드의 <c>NameLabel</c> 아래에 캐릭터가 그 스킬을 두고 하는 한마디를 둘 자리를 만든다.
+        /// 씬에 없던 조각이라 <c>ShopController.BuildIllustrationZone</c>과 같은 방식으로 코드로 채운다
+        /// (`19` §5.1 — 씬 파일은 손으로 병합이 안 된다).
+        /// </summary>
+        private static TMP_Text BuildFlavorLabel(RectTransform card)
+        {
+            var rt = NewChild("FlavorLabel", card);
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = new Vector2(4f, -300f);
+            rt.offsetMax = new Vector2(-4f, -168f); // NameLabel(y=-108, h=60) 바로 아래부터 카드 하단까지
+
+            var label = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            label.fontSize = 18f;
+            label.alignment = TextAlignmentOptions.Top;
+            label.color = new Color(0.86f, 0.84f, 0.80f);
+            label.fontStyle = FontStyles.Italic;
+            label.raycastTarget = false;
+            label.enableWordWrapping = true;
+            return label;
+        }
+
+        private static RectTransform NewChild(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return (RectTransform)go.transform;
         }
 
         private Sprite FindSprite(string characterId)

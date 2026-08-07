@@ -228,8 +228,9 @@ namespace DomoNinja.Unity
             }
         }
 
-        /// <summary>스킬 표기 규칙(`08` §2.6) — 이름 + 「얻는 것 / 버리는 것」 2줄.</summary>
-        private static string FormatSkill(SkillDef skill)
+        /// <summary>스킬 표기 규칙(`08` §2.6) — 이름 + 「얻는 것 / 버리는 것」 2줄. <c>ShopController</c>도 같이 쓴다
+        /// (상점 일러스트 영역에 스킬 정보를 띄울 때) — 표기 규칙이 두 군데서 갈리면 언젠가 어긋난다.</summary>
+        internal static string FormatSkill(SkillDef skill)
         {
             var sb = new StringBuilder(skill.Name);
             if (skill.TextGain != null) sb.Append("\n얻는 것: ").Append(skill.TextGain);
@@ -300,8 +301,10 @@ namespace DomoNinja.Unity
             return icon != null ? _catalog?.Find(icon) : null;
         }
 
-        /// <summary>아이템의 실제 수치 효과를 데이터에서 그대로 읽어 문장으로 만든다. 표시용 상수를 코드에 박지 않는다.</summary>
-        private static string DescribeItem(RunManager mgr, string itemKey, int optionIndex)
+        /// <summary>아이템의 실제 수치 효과를 데이터에서 그대로 읽어 문장으로 만든다. 표시용 상수를 코드에 박지 않는다.
+        /// <c>ShopController</c>도 같이 쓴다(상점 일러스트 영역) — <c>ShopOffer.OptionIndex</c>가 이미
+        /// 추첨 시점에 정해져 있어 여기 그대로 넘기면 된다.</summary>
+        internal static string DescribeItem(RunManager mgr, string itemKey, int optionIndex)
         {
             var item = (mgr.Data.Economy.Raw["items"] as JObject)?[itemKey] as JObject;
             if (item == null) return "-";

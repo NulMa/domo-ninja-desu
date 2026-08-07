@@ -22,12 +22,17 @@ namespace DomoNinja.Core.Data
         /// <summary>액티브 스킬 id 2개. 배타 선택의 대상이다 (08 §2.2).</summary>
         public IReadOnlyList<string> SkillIds { get; }
 
+        /// <summary>캐릭터 소개 문구(성격·배경). 표시 전용 — 전투 규칙에 관여하지 않는다. 없을 수 있다.</summary>
+        public string? Flavor { get; }
+
         public CharacterDef(string id, string sprite, string name, int hp, int attack,
-                            int attackInterval, int range, int moveInterval, IReadOnlyList<string> skillIds)
+                            int attackInterval, int range, int moveInterval, IReadOnlyList<string> skillIds,
+                            string? flavor = null)
         {
             Id = id; Sprite = sprite; Name = name;
             Hp = hp; Attack = attack; AttackInterval = attackInterval;
             Range = range; MoveInterval = moveInterval; SkillIds = skillIds;
+            Flavor = flavor;
         }
 
         public override string ToString() => $"{Id}({Name})";
@@ -104,13 +109,17 @@ namespace DomoNinja.Core.Data
         /// <summary>⚠️ <b>표시에 쓰지 않는다.</b> `_schema` §5 — 런타임 태그는 effects 에서 파생한다. 이 값은 검증용 기대치다.</summary>
         public IReadOnlyList<string> DeclaredTags { get; }
 
+        /// <summary>캐릭터가 그 스킬을 두고 하는 한마디. 표시 전용 — 전투 규칙에 관여하지 않는다.
+        /// 지금은 메인 12개만 갖는다(보조 18개는 없음) — 없을 수 있다.</summary>
+        public string? Flavor { get; }
+
         public SkillDef(string id, string characterId, string name, string? role, string? slot,
                         string? textGain, string? textCost, JArray effects, IReadOnlyList<string> declaredTags,
-                        string? icon = null)
+                        string? icon = null, string? flavor = null)
         {
             Id = id; CharacterId = characterId; Name = name; Role = role; Slot = slot;
             TextGain = textGain; TextCost = textCost; Effects = effects; DeclaredTags = declaredTags;
-            Icon = icon;
+            Icon = icon; Flavor = flavor;
         }
 
         /// <summary>보조 스킬인가. <see cref="Slot"/> 을 갖는 쪽이 보조다.</summary>

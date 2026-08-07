@@ -54,6 +54,10 @@ namespace DomoNinja.Unity
             mgr.SelectedStageId = StageId;
             foreach (var slot in transform.parent.GetComponentsInChildren<StageSlotButton>())
                 slot.Refresh();
+
+            // 예전엔 여기서 선택만 하고 별도 "용병 선택" 버튼을 또 눌러야 했다 — 이제 스테이지를
+            // 고르는 순간 바로 로스터 화면으로 들어간다(두 단계를 한 번의 조작으로 합침).
+            UIScreenManager.ShowScreen("RosterSelect");
         }
 
         public void Refresh()

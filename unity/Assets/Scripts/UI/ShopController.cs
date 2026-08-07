@@ -85,6 +85,18 @@ namespace DomoNinja.Unity
         private SpriteCatalog _catalog;
         private int _pendingOfferIndex = -1;
 
+        // ── 일러스트 영역(`IllustrationZone`). 예전엔 아무것도 안 그려진 자리표시자였다 —
+        //    아이템을 눌렀을 때 뜨던 전체화면 확인창(UIConfirmPopup)을 여기로 옮기고,
+        //    "무엇을 사는지" 정보 표시까지 얹었다(D+9).
+        private GameObject _illustEmptyLabel;
+        private GameObject _illustInfo;
+        private UImage _illustIcon;
+        private TMP_Text _illustNameLabel;
+        private TMP_Text _illustDescLabel;
+        private Button _illustConfirmButton;
+        private TMP_Text _illustConfirmLabel;
+        private int _illustOfferIndex = -1;
+
         private void Awake()
         {
             _board = transform.Find("Board");
@@ -111,6 +123,137 @@ namespace DomoNinja.Unity
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
             BindTargetPicker();
+            BuildIllustrationZone();
+        }
+
+        /// <summary>
+        /// <c>IllustrationZone</c>(씬에 이미 있던 빈 자리표시자 패널) 안에 아이콘·이름·설명·구매 버튼을
+        /// 코드로 채운다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ 씬을 손으로 더 건드리지 않는다 — 이 저장소의 UI 화면은 대부분 씬에 직접 배치돼 있지만,
+        /// <c>UIConfirmPopup</c>처럼 <b>동적으로 채워지는 조각은 코드로 만드는 관례</b>가 이미 있다
+        /// (`19` §5.1 — 씬 파일은 손으로 병합이 안 된다). 패널의 크기·위치는 <c>IllustrationZone</c>
+        /// 자체(씬)가 갖고, 그 안의 내용만 여기서 채운다.
+        /// </para>
+        /// <para>
+        /// 기존 <c>Label</c>("[일러스트존]")은 <b>빈 상태 안내문</b>으로 재활용한다 — 아이템을 아직
+        /// 안 눌렀을 때도 이 자리가 죽은 공간처럼 보이면 안 된다.
+        /// </para>
+        /// </remarks>
+        private void BuildIllustrationZone()
+        {
+            var zone = (RectTransform)_board.Find("IllustrationZone");
+            if (zone == null) return; // 구버전 씬 폴백 — 없으면 그냥 옛 확인창으로 동작한다.
+
+            var emptyLabel = zone.Find("Label").GetComponent<TMP_Text>();
+            emptyLabel.text = "품목을 선택하면\n여기에 정보가 표시됩니다";
+            emptyLabel.fontSize = 22f;
+            _illustEmptyLabel = emptyLabel.gameObject;
+
+            var info = NewChild("Info", zone);
+            Stretch(info);
+            _illustInfo = info.gameObject;
+
+            var iconRt = NewChild("Icon", info);
+            iconRt.anchorMin = new Vector2(0.5f, 1f);
+            iconRt.anchorMax = new Vector2(0.5f, 1f);
+            iconRt.pivot = new Vector2(0.5f, 1f);
+            iconRt.sizeDelta = new Vector2(180f, 180f);
+            iconRt.anchoredPosition = new Vector2(0f, -24f);
+            _illustIcon = iconRt.gameObject.AddComponent<UImage>();
+            _illustIcon.preserveAspect = true;
+
+            _illustNameLabel = MakeStretchedLabel(info, "NameLabel", 26f, TextAlignmentOptions.Center,
+                top: 212f, height: 44f, margin: 16f);
+
+            _illustDescLabel = MakeStretchedLabel(info, "DescLabel", 20f, TextAlignmentOptions.TopLeft,
+                top: 264f, height: 168f, margin: 16f);
+            _illustDescLabel.color = new Color(0.86f, 0.84f, 0.80f);
+
+            var buttonRt = NewChild("ConfirmButton", info);
+            buttonRt.anchorMin = new Vector2(0.5f, 0f);
+            buttonRt.anchorMax = new Vector2(0.5f, 0f);
+            buttonRt.pivot = new Vector2(0.5f, 0f);
+            buttonRt.sizeDelta = new Vector2(300f, 72f);
+            buttonRt.anchoredPosition = new Vector2(0f, 20f);
+
+            var buttonImage = buttonRt.gameObject.AddComponent<UImage>();
+            buttonImage.sprite = UITheme.Find(UITheme.ButtonNormalKey);
+            buttonImage.type = UImage.Type.Sliced;
+
+            _illustConfirmButton = UITheme.EnsureButton(buttonRt.gameObject);
+            _illustConfirmButton.onClick.AddListener(OnIllustrationConfirmClicked);
+
+            _illustConfirmLabel = MakeLabel(buttonRt, "Label", 24f, TextAlignmentOptions.Center,
+                Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), Vector2.zero, 0f);
+            Stretch((RectTransform)_illustConfirmLabel.transform);
+
+            ResetIllustrationZone();
+        }
+
+        /// <summary>
+        /// 가로로 꽉 채우고(좌우 여백만 두고) 위에서부터 <paramref name="top"/>만큼 내려온 라벨.
+        /// </summary>
+        /// <remarks>
+        /// ★ <c>anchoredPosition</c> + <c>sizeDelta</c> 조합으로 만들었다가 실제로 폭이 부모보다
+        /// 넓게 잡혀 설명 텍스트가 <c>IllustrationZone</c> 밖으로 흘러나왔다 — 가로 스트레치
+        /// (<c>anchorMin.x=0, anchorMax.x=1</c>) 상태에서는 <c>anchoredPosition.x</c>가 아니라
+        /// <c>offsetMin</c>/<c>offsetMax</c>로 좌우 여백을 줘야 폭이 부모를 넘지 않는다.
+        /// </remarks>
+        private static TMP_Text MakeStretchedLabel(Transform parent, string name, float fontSize,
+                                                    TextAlignmentOptions alignment, float top, float height, float margin)
+        {
+            var rt = NewChild(name, parent);
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+            rt.offsetMin = new Vector2(margin, -(top + height));
+            rt.offsetMax = new Vector2(-margin, -top);
+
+            var label = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            label.fontSize = fontSize;
+            label.alignment = alignment;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            label.enableWordWrapping = true;
+            label.overflowMode = TextOverflowModes.Truncate;
+            return label;
+        }
+
+        private static TMP_Text MakeLabel(Transform parent, string name, float fontSize,
+                                          TextAlignmentOptions alignment, Vector2 anchorMin, Vector2 anchorMax,
+                                          Vector2 pivot, Vector2 anchoredPosition, float height)
+        {
+            var rt = NewChild(name, parent);
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.pivot = pivot;
+            rt.anchoredPosition = anchoredPosition;
+            if (height > 0f) rt.sizeDelta = new Vector2(rt.sizeDelta.x, height);
+
+            var label = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            label.fontSize = fontSize;
+            label.alignment = alignment;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        private static RectTransform NewChild(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            return (RectTransform)go.transform;
+        }
+
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
         }
 
         private void BindTargetPicker()
@@ -154,6 +297,7 @@ namespace DomoNinja.Unity
             RunManager.Instance?.EnsureShopRestocked();
             _sellMode = false;
             CloseTargetPicker();
+            ResetIllustrationZone();
             RefreshUI();
         }
 
@@ -161,6 +305,7 @@ namespace DomoNinja.Unity
         {
             _sellMode = sell;
             RefreshTabs();
+            ResetIllustrationZone();
             RefreshUI();
         }
 
@@ -289,26 +434,115 @@ namespace DomoNinja.Unity
             RefreshUI();
         }
 
+        /// <summary>
+        /// 예전엔 여기서 바로 전체화면 확인창(UIConfirmPopup)을 띄웠다. 이제 그 자리를
+        /// <see cref="ShowOfferInfo"/> 가 대신한다 — IllustrationZone에 정보를 채우고,
+        /// 실제 구매는 그 안의 구매 버튼(<see cref="OnIllustrationConfirmClicked"/>)이 맡는다.
+        /// </summary>
         private void OnBuyClicked(RunManager mgr, int offerIndex)
         {
             var offers = mgr.CurrentShop?.Offers;
             if (offers == null || offerIndex >= offers.Count) return;
 
+            if (_illustInfo == null)
+            {
+                // 구버전 씬 폴백 — IllustrationZone이 없으면 예전처럼 즉시 대상 선택/구매로 간다.
+                var offer = offers[offerIndex];
+                if (!NeedsTarget(offer)) ExecutePurchase(mgr, offerIndex, null);
+                else if (_targetPicker == null) ExecutePurchase(mgr, offerIndex, FirstAliveCharacterId(mgr));
+                else OpenTargetPicker(mgr, offerIndex);
+                return;
+            }
+
+            ShowOfferInfo(mgr, offerIndex);
+        }
+
+        /// <summary>눌린 품목의 아이콘·이름·설명을 IllustrationZone에 채우고 구매 버튼을 켠다.</summary>
+        private void ShowOfferInfo(RunManager mgr, int offerIndex)
+        {
+            var offers = mgr.CurrentShop?.Offers;
+            if (offers == null || offerIndex >= offers.Count) return;
+
             var offer = offers[offerIndex];
+
+            _illustOfferIndex = offerIndex;
+            _illustIcon.sprite = IconFor(offer, mgr.Data);
+            _illustIcon.enabled = _illustIcon.sprite != null;
+            _illustNameLabel.text = OfferLabel(offer, mgr);
+            _illustDescLabel.text = DescribeOffer(mgr, offer);
+            _illustConfirmLabel.text = $"{offer.Price} 재화에 구매";
+            _illustConfirmButton.interactable = mgr.CurrentRun.Currency >= offer.Price;
+
+            _illustEmptyLabel.SetActive(false);
+            _illustInfo.SetActive(true);
+        }
+
+        /// <summary>스킬은 <see cref="InfoPopupController.FormatSkill"/>, 아이템은
+        /// <see cref="InfoPopupController.DescribeItem"/> 로 그대로 재사용한다 — 정보 팝업과 상점
+        /// 일러스트 영역의 설명 문구가 따로 놀면 언젠가 어긋난다.
+        /// 스킬에 <c>Flavor</c>(캐릭터가 그 스킬을 두고 하는 한마디)가 있으면 맨 위에 얹는다 —
+        /// 메인 12개만 갖고 보조 18개·아이템은 없다(값이 없으면 그냥 안 붙는다).</summary>
+        private static string DescribeOffer(RunManager mgr, ShopOffer offer)
+        {
+            switch (offer.Kind)
+            {
+                case OfferKind.ActiveSkill:
+                case OfferKind.SupportSkill:
+                    var skill = mgr.Data.FindSkill(offer.Id);
+                    if (skill == null) return "-";
+                    string mechanics = InfoPopupController.FormatSkill(skill);
+                    return string.IsNullOrEmpty(skill.Flavor) ? mechanics : $"“{skill.Flavor}”\n\n{mechanics}";
+
+                default:
+                    return InfoPopupController.DescribeItem(mgr, offer.Id, offer.OptionIndex);
+            }
+        }
+
+        /// <summary>정보 표시를 접고 빈 상태 안내문으로 되돌린다. 구매·리롤·탭 전환·화면 재진입 때 부른다 —
+        /// 방금 산 품목의 정보가 화면에 그대로 남아 있으면 "또 살 수 있나"로 헷갈린다.</summary>
+        private void ResetIllustrationZone()
+        {
+            _illustOfferIndex = -1;
+            if (_illustInfo == null) return;
+
+            _illustInfo.SetActive(false);
+            _illustEmptyLabel.SetActive(true);
+        }
+
+        /// <summary>IllustrationZone의 구매 버튼. 대상 지정이 필요한 품목이면 대상 선택으로 이어간다.</summary>
+        private void OnIllustrationConfirmClicked()
+        {
+            var mgr = RunManager.Instance;
+            if (mgr == null || _illustOfferIndex < 0) return;
+
+            var offers = mgr.CurrentShop?.Offers;
+            if (offers == null || _illustOfferIndex >= offers.Count) return;
+
+            int offerIndex = _illustOfferIndex;
+            var offer = offers[offerIndex];
+
             if (!NeedsTarget(offer))
             {
-                mgr.TryBuy(offerIndex, null);
+                ExecutePurchase(mgr, offerIndex, null);
                 return;
             }
 
             // 대상 선택 UI가 씬에 없으면(구버전 씬 등) 생존한 첫 캐릭터로 자동 지정해 폴백한다.
             if (_targetPicker == null)
             {
-                mgr.TryBuy(offerIndex, FirstAliveCharacterId(mgr));
+                ExecutePurchase(mgr, offerIndex, FirstAliveCharacterId(mgr));
                 return;
             }
 
             OpenTargetPicker(mgr, offerIndex);
+        }
+
+        /// <summary>실제 구매 실행. <see cref="RunManager.TryBuy"/> 를 부르는 곳은 여기 한 곳뿐이다.</summary>
+        private void ExecutePurchase(RunManager mgr, int offerIndex, string targetCharacterId)
+        {
+            mgr.TryBuy(offerIndex, targetCharacterId);
+            ResetIllustrationZone();
+            RefreshUI();
         }
 
         /// <summary>대상 지정이 필요한 품목(`statBoost`·`conditionalBoost`·`healItem`). `teamBoost`는 전체 대상이라 제외.</summary>
@@ -359,9 +593,11 @@ namespace DomoNinja.Unity
             var deployed = mgr.CurrentRun.Deployed;
             if (slotIndex >= deployed.Count || !deployed[slotIndex].IsAlive) return;
 
-            mgr.TryBuy(_pendingOfferIndex, deployed[slotIndex].CharacterId);
+            int offerIndex = _pendingOfferIndex;
+            string targetCharacterId = deployed[slotIndex].CharacterId;
+
             CloseTargetPicker();
-            RefreshUI();
+            ExecutePurchase(mgr, offerIndex, targetCharacterId);
         }
 
         private void CloseTargetPicker()
@@ -384,6 +620,7 @@ namespace DomoNinja.Unity
         private void OnReroll()
         {
             RunManager.Instance?.TryReroll();
+            ResetIllustrationZone(); // 리롤로 슬롯 구성이 통째로 바뀐다 — 보여주던 정보가 더는 유효하지 않다.
             RefreshUI();
         }
 

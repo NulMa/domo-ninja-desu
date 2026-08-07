@@ -40,6 +40,7 @@
         { "template": "conditional", "trigger": { "type": "on_kill" }, "effect": { "template": "extra_attack", "count": 1 } }
       ],
       "text": { "gain": "공격력 50% 증가, 적 처치 시 즉시 재공격", "cost": "공격 속도 40% 감소" },
+      "flavor": "역시 이 한방에 적을 가르는 맛이 제일 좋다니까?",
       "tags": ["#단일", "#처치시"]
     },
     {
@@ -53,6 +54,7 @@
         { "template": "conditional", "trigger": { "type": "on_hit" }, "effect": { "template": "heal", "target": "self", "fromDamagePermille": 150 } }
       ],
       "text": { "gain": "공속 40% 증가, 인접 대상에 50% 파급, 가한 피해의 15% 흡혈", "cost": "공격력 35% 감소" },
+      "flavor": "어디한번 다 덤벼봐! 모조리 베어주마!",
       "tags": ["#광역", "#공속", "#흡혈"]
     },
 
@@ -67,6 +69,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.65 }
       ],
       "text": { "gain": "받는 피해 40% 감소, 적이 자신을 우선 노림, 피격할 때마다 보호막 획득", "cost": "공격력 35% 감소" },
+      "flavor": "강철같은 신체는 마음먹기 달려있소. 그걸 느끼고 싶소이까? 특별 할인가로 10G만 주면 알려드리겠소이다.",
       "tags": ["#방어", "#어그로", "#보호막"]
     },
     {
@@ -78,6 +81,7 @@
         { "template": "conditional", "trigger": { "type": "every_n_tick", "value": 60 }, "effect": { "template": "self_damage", "value": 0.08 } }
       ],
       "text": { "gain": "3초마다 최대 체력 12%의 전체 광역 공격", "cost": "발동마다 자신의 체력 8% 소모" },
+      "flavor": "이 잔잔한 파동의 흐름이 느껴지십니까? 그것이 수련의 효과입니다. 그러니 10G를 수련비로 주시오.",
       "tags": ["#광역", "#주기", "#체력소모"]
     },
 
@@ -91,6 +95,7 @@
         { "template": "stat_mult", "target": "self", "stat": "hp", "value": 0.8 }
       ],
       "text": { "gain": "첫 피격 무효, 회피할 때마다 보호막 획득 — 가득 차면 체력으로 전환", "cost": "최대 체력 20% 감소" },
+      "flavor": "어딜 보시는겁니까? 그것은 제 잔상입니다만.",
       "tags": ["#회피", "#보호막"]
     },
     {
@@ -103,6 +108,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.7 }
       ],
       "text": { "gain": "사거리 1 → 4, 적중한 적을 둔화", "cost": "공격력 30% 감소" },
+      "flavor": "접근금지. 더는 오지 못할겁니다.",
       "tags": ["#사거리", "#디버프"]
     },
 
@@ -115,6 +121,7 @@
         { "template": "targeting", "priority": "farthest", "setRange": 7 }
       ],
       "text": { "gain": "공격력 80% 증가, 사거리 7로 가장 먼 적을 노린다", "cost": "공격 속도 50% 감소" },
+      "flavor": "백발백중. 일격필살. 그것이 저격의 기초다.",
       "tags": ["#단일", "#사거리"]
     },
     {
@@ -125,6 +132,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.5 }
       ],
       "text": { "gain": "동시에 최대 3체를 공격", "cost": "표적당 위력 50% 감소" },
+      "flavor": "어떻게 화살을 이렇게 빨리 발사 할 수 있냐고? 빨리 움직이면 된다.",
       "tags": ["#광역", "#다중표적"]
     },
 
@@ -137,6 +145,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.65 }
       ],
       "text": { "gain": "대상에 각인 부여 — 시간이 지날수록 피해가 증가", "cost": "즉발 공격력 35% 감소" },
+      "flavor": "완료파멸에게각인적에느낌의고통속죽음.",
       "tags": ["#지속딜", "#장기전"]
     },
     {
@@ -149,6 +158,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attackInterval", "value": 1.35 }
       ],
       "text": { "gain": "처치 시 다음 대상에 재발동(최대 3연쇄), 처치할 때마다 아군 전체 6% 회복", "cost": "공격 속도 35% 감소" },
+      "flavor": "의사있음아님.조심한계이거난",
       "tags": ["#처치시", "#회복"]
     },
 
@@ -160,6 +170,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.7 }
       ],
       "text": { "gain": "적 전체의 공격력 15% 감소, 받는 피해 15% 증가", "cost": "자신의 공격력 30% 감소" },
+      "flavor": "최선의 치료는 적을 한번에 무력화 하는겁니다.",
       "tags": ["#디버프", "#전체"]
     },
     {
@@ -170,6 +181,7 @@
         { "template": "stat_mult", "target": "self", "stat": "attack", "value": 0.7 }
       ],
       "text": { "gain": "자신을 제외한 아군이 매 초 최대 체력의 3% 회복", "cost": "자신의 공격력 30% 감소" },
+      "flavor": "다음부턴 다치지 마세요.",
       "tags": ["#회복", "#전체"]
     }
   ],

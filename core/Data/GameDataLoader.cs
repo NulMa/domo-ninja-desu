@@ -190,7 +190,8 @@ namespace DomoNinja.Core.Data
                     Int(o, "attackInterval", where, errors),
                     Int(o, "range", where, errors),
                     Int(o, "moveInterval", where, errors),
-                    skillIds));
+                    skillIds,
+                    (string?)o["flavor"]));
             }
 
             return list;
@@ -238,7 +239,8 @@ namespace DomoNinja.Core.Data
                     (string?)text?["cost"],
                     o["effects"] as JArray ?? new JArray(),
                     tags,
-                    (string?)o["icon"]));
+                    (string?)o["icon"],
+                    (string?)o["flavor"]));
             }
 
             return list;
