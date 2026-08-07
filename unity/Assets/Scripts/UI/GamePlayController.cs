@@ -343,6 +343,8 @@ namespace DomoNinja.Unity
             //   판을 잠깐 두고, 그 시간에 살아남은 아군이 뛴다.
             if (outcome != null && outcome.Won)
             {
+                // 환호와 같은 프레임에 낸다 — 소리가 늦으면 이미 뛰고 있는 것을 뒤늦게 설명하는 꼴이 된다.
+                AudioManager.Instance?.PlaySfx(AudioKeys.Victory);
                 _boardView.StartVictoryCheer();
                 yield return new WaitForSeconds(BoardView.VictoryCheerSeconds);
             }
@@ -357,6 +359,13 @@ namespace DomoNinja.Unity
             if (runOver)
             {
                 mgr.EndRun();
+
+                // ★ 라운드 승리음과 **다른 소리**를 낸다. 라운드는 8번 이기고 스테이지는 한 번 깬다 —
+                //   같은 소리면 마지막 한 번이 그냥 아홉 번째로 들린다.
+                //   진 채로 끝났을 때 소리가 없으면 <b>화면만 바뀌고 아무 일도 안 일어난 것처럼</b> 보인다.
+                AudioManager.Instance?.PlaySfx(
+                    outcome != null && outcome.Won ? AudioKeys.StageClear : AudioKeys.Defeat);
+
                 UIScreenManager.ShowPopup("Result");
                 yield break;
             }

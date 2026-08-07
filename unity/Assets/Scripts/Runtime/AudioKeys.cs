@@ -43,5 +43,14 @@ namespace DomoNinja.Unity
         public const string Victory = "Sfx/victory";
         public const string Defeat = "Sfx/defeat";
         public const string Reward = "Sfx/reward";
+
+        /// <summary>스테이지(=런) 전체를 깼을 때. <see cref="Victory"/> 와 <b>반드시 달라야 한다.</b></summary>
+        /// <remarks>
+        /// 라운드 승리는 8번 나고 스테이지 클리어는 <b>한 번</b> 난다.
+        /// 같은 소리를 쓰면 <b>마지막 한 번이 그냥 아홉 번째로 들린다</b> —
+        /// 귀로는 "또 이겼다"와 "다 끝났다"가 구분되지 않는다.
+        /// 그래서 길이도 갈랐다: 라운드 0.45초 / 스테이지 2.0초.
+        /// </remarks>
+        public const string StageClear = "Sfx/stage_clear";
     }
 }

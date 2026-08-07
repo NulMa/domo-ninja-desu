@@ -1099,6 +1099,13 @@ namespace DomoNinja.Unity.View
             TickDamagePopups(Time.deltaTime);
             TickCastGlows(Time.deltaTime);
             TickOverlays(Time.deltaTime);
+
+            // ★ 죽는 연출도 **스스로** 돌아야 한다. <see cref="TickAnimations"/> 에 얹었더니
+            //   재생기가 마지막 이벤트를 소비하고 멈추는 순간 Tick 이 끊겨,
+            //   **라운드를 이긴 순간의 마지막 적만 반쯤 사라진 채 얼어붙었다**(사용자 지적).
+            //   위의 무기·피해 숫자가 같은 이유로 이미 여기 와 있다.
+            TickHitPunch(Time.deltaTime);
+            TickDeathFade(Time.deltaTime);
         }
 
         private void OnDisable() => Hovered = default;
@@ -2325,8 +2332,6 @@ namespace DomoNinja.Unity.View
                 }
             }
 
-            TickHitPunch(deltaTime);
-            TickDeathFade(deltaTime);
         }
 
         /// <summary>

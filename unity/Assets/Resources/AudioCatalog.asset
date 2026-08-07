@@ -39,5 +39,7 @@ MonoBehaviour:
     Clip: {fileID: 8300000, guid: 3e59e91967f79fd40b99622a6fc48f80, type: 3}
   - Key: Sfx/reward
     Clip: {fileID: 8300000, guid: 3b97bcf100e95bb40b3d8373dc61d526, type: 3}
+  - Key: Sfx/stage_clear
+    Clip: {fileID: 8300000, guid: c69a84df55c673047a10267654646593, type: 3}
   - Key: Sfx/victory
     Clip: {fileID: 8300000, guid: 26b0c2b9abeac934e8a314e4f87137b0, type: 3}

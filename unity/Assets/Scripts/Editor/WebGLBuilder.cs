@@ -61,6 +61,13 @@ namespace DomoNinja.Unity.Editor
             // 훅에만 맡기면 "에디터에서는 되는데 빌드만 다른" 상태가 생긴다.
             DataSync.Sync();
             SpriteCatalogBuilder.Build();
+
+            // ★ 소리 목록도 여기서 맞춘다. 전에는 <b>메뉴로만</b> 만들어져서, 새 소리를 넣고
+            //   메뉴를 안 누르면 **에디터에서는 나고 웹 빌드에서만 조용히 안 났다.**
+            //   `stage_clear` 를 넣으면서 실제로 걸릴 뻔한 자리다 — 소리는 안 나도
+            //   에러가 없어서 "빠졌다"가 아니라 "원래 그런가"로 읽힌다.
+            AudioCatalogBuilder.BuildFromMenu();
+
             AssetDatabase.Refresh();
 
             ApplyWebGLSettings();
