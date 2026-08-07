@@ -289,8 +289,18 @@ namespace DomoNinja.Core.Combat
         /// 방금 터진 트리거가 <b>액티브 스킬에서 온 것이면</b> 한 번 알린다.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// 같은 틱에 액티브 트리거가 둘 터져도 한 번만 낸다 — <c>C5-B</c> 연쇄처럼
         /// <c>on_kill</c> 을 두 개 든 스킬이 있어서, 그대로 내면 <b>이름이 두 겹으로 겹쳐 뜬다.</b>
+        /// </para>
+        /// <para>
+        /// ★ <b><c>on_hit</c> 은 발동으로 치지 않는다.</b> 그건 <b>공격이 맞을 때마다</b> 터지므로
+        /// 사건이 아니라 <b>평타의 성질 그 자체</b>다. 지시(사용자) —
+        /// *"표창 스킬 집어갈 시, 던질 때 마다 「표창!」 출력하던데 이건 평타 구조 자체가
+        /// 바뀐거니 연출 뜰 필요는 없어보임"*.
+        /// 해당하는 건 <c>C1-B</c> 연격 · <c>C3-B</c> 표창 둘이고, 이 둘은 전투 시작 알림만 받는다 —
+        /// <b>고른 사실은 보이되 매 타격마다 이름이 뜨지는 않는다.</b>
+        /// </para>
         /// </remarks>
         private static void AnnounceIfActive(Unit u, IReadOnlyList<CompiledTrigger> fired,
                                              int tick, IEventSink sink)
@@ -300,7 +310,9 @@ namespace DomoNinja.Core.Combat
 
             for (int i = 0; i < fired.Count; i++)
             {
+                if (fired[i].Type == TriggerType.OnHit) continue;
                 if (fired[i].SourceSkillId != active) continue;
+
                 sink.Emit(new GameEvent(EventKind.SkillCast, tick, u.Id, -1, 1));
                 return;
             }

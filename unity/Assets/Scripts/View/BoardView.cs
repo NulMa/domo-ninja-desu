@@ -44,6 +44,29 @@ namespace DomoNinja.Unity.View
         /// </summary>
         private IReadOnlyDictionary<string, string> _spritePaths;
 
+        /// <summary>
+        /// 보스인 유닛 종류. <b>데이터의 <c>isBoss</c> 를 그대로 받는다</b> — 이름으로 추측하지 않는다.
+        /// </summary>
+        /// <remarks>
+        /// 경로에 <c>Actor/Boss/</c> 가 들어가는지로 갈라도 지금은 맞지만, 그러면 <b>폴더 이름이
+        /// 기획 정보가 된다</b> — 아트가 폴더를 정리하는 순간 보스가 조용히 작아진다.
+        /// <c>_spritePaths</c> 를 데이터에서 받기로 한 것과 같은 이유다.
+        /// </remarks>
+        private ICollection<string> _bossTypeIds;
+
+        /// <summary>
+        /// 보스 스프라이트 확대 배율.
+        /// </summary>
+        /// <remarks>
+        /// 지시(사용자): *"보스 스프라이트 너무 작게 나오던데 지금 크기의 1.5배만 해서 넣자."*
+        /// <para>
+        /// 원본 그림이 82×82(텐구)·40×40(개구리)로 잡몹(16×16)보다 훨씬 큰데,
+        /// <b>전원을 칸의 0.8 로 맞추는 규칙이 그 차이를 통째로 지웠다.</b>
+        /// 칸에 맞추는 것 자체는 필요하다(초상 크기가 제각각이다) — 보스만 예외를 준다.
+        /// </para>
+        /// </remarks>
+        private const float BossSpriteScale = 1.5f;
+
         /// <summary>화면에 올라와 있는 유닛 1체.</summary>
         private sealed class UnitView
         {
@@ -96,6 +119,18 @@ namespace DomoNinja.Unity.View
 
             /// <summary>승리 환호가 시작될 때 서 있던 높이. 뛰었다가 여기로 돌아온다.</summary>
             public float CheerBaseY;
+
+            /// <summary>
+            /// <b>맞은</b> 순간의 튐이 남은 시간(초). <see cref="PunchLeft"/>(때리는 쪽)와 다른 사건이다.
+            /// </summary>
+            /// <remarks>
+            /// 프레임 애니메이션이 있는 종류(캐릭터·보스)도 이건 탄다 —
+            /// 때리는 연출은 그림이 대신해주지만 <b>맞는 그림은 아무도 안 그려줬다.</b>
+            /// </remarks>
+            public float HitPunchLeft;
+
+            /// <summary>죽은 뒤 흩어지는 데 남은 시간(초). 0 이면 이미 다 사라졌거나 살아 있다.</summary>
+            public float DeathFadeLeft;
         }
 
         /// <summary>화면에 재생 중인 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
@@ -141,10 +176,12 @@ namespace DomoNinja.Unity.View
         /// <b><c>null</c> 이면 이름으로 추측하는 옛 규칙으로 떨어진다</b> — 그 경로는 적 4종을 놓친다.
         /// </param>
         public void Initialize(SpriteCatalog catalog,
-                               IReadOnlyDictionary<string, string> spritePaths = null)
+                               IReadOnlyDictionary<string, string> spritePaths = null,
+                               ICollection<string> bossTypeIds = null)
         {
             _catalog = catalog;
             _spritePaths = spritePaths;
+            _bossTypeIds = bossTypeIds;
             BuildGrid();
 
             _unitRoot = new GameObject("Units").transform;
@@ -177,6 +214,18 @@ namespace DomoNinja.Unity.View
                 if (!string.IsNullOrEmpty(kv.Value.Sprite)) map[kv.Key] = kv.Value.Sprite;
 
             return map;
+        }
+
+        /// <summary>보스인 적 종류를 데이터에서 그대로 뽑는다. <see cref="SpritePathsFrom"/> 와 같은 이유다.</summary>
+        public static HashSet<string> BossTypeIdsFrom(GameData data)
+        {
+            var set = new HashSet<string>();
+            if (data == null) return set;
+
+            foreach (var kv in data.EnemyTypes)
+                if (kv.Value.IsBoss) set.Add(kv.Key);
+
+            return set;
         }
 
         /// <summary>바닥 타일 한 장(16×16). 팩의 <c>TilesetFloor</c> 에서 흙 타일만 잘라 별도 에셋으로 뒀다.</summary>
@@ -470,6 +519,12 @@ namespace DomoNinja.Unity.View
             // 빛은 유닛의 자식이라 위에서 이미 사라졌다. 목록만 비우면 된다.
             _castGlows.Clear();
             _castSlotFreeAt = 0f;
+
+            foreach (var o in _overlays)
+            {
+                if (o.Renderer != null) Object.Destroy(o.Renderer.gameObject);
+            }
+            _overlays.Clear();
         }
 
         private UnitView CreateUnit(UnitSpec spec)
@@ -527,9 +582,13 @@ namespace DomoNinja.Unity.View
             }
             else
             {
-                // 초상 크기가 제각각이라 칸에 맞춘다.
+                // 초상 크기가 제각각이라 칸에 맞춘다. 보스만 그 위에 배율을 더 준다 —
+                // 안 그러면 82×82 로 그려진 보스가 16×16 슬라임과 같은 크기로 선다.
                 var size = renderer.sprite.bounds.size;
                 baseSpriteScale = size.x > 0 ? CellSize * 0.8f / Mathf.Max(size.x, size.y) : 1f;
+                if (_bossTypeIds != null && _bossTypeIds.Contains(spec.TypeId))
+                    baseSpriteScale *= BossSpriteScale;
+
                 spriteObject.transform.localScale = Vector3.one * baseSpriteScale;
             }
 
@@ -1039,6 +1098,7 @@ namespace DomoNinja.Unity.View
             TickWeaponFx(Time.deltaTime);
             TickDamagePopups(Time.deltaTime);
             TickCastGlows(Time.deltaTime);
+            TickOverlays(Time.deltaTime);
         }
 
         private void OnDisable() => Hovered = default;
@@ -1182,7 +1242,13 @@ namespace DomoNinja.Unity.View
 
             unit.IsDead = true;
             unit.FlashLeft = 0f;
-            if (unit.Sprite != null) unit.Sprite.color = new Color(1f, 1f, 1f, 0.25f);
+            unit.HitPunchLeft = 0f;
+            unit.DeathFadeLeft = DeathFadeSeconds;
+            if (unit.Sprite != null)
+            {
+                unit.Sprite.color = Color.white;   // TickDeathFade 가 여기서부터 흐리게 한다
+                unit.Sprite.transform.localScale = Vector3.one * unit.BaseSpriteScale;
+            }
             // 빈 트랙은 남긴다 — 막대가 통째로 사라지면 "죽었다"와 "막대를 못 그렸다"가 같아 보인다.
             if (unit.HpFill != null) SetFill(unit, 0f);
             if (unit.ShieldFill != null) unit.ShieldFill.parent.gameObject.SetActive(false);
@@ -1190,8 +1256,138 @@ namespace DomoNinja.Unity.View
 
             // ★ 아군 쪽을 더 크게 흔든다. 같은 세기로 두면 <b>이겼는지 졌는지가 화면에서 안 갈린다</b> —
             //   적이 훨씬 많이 죽으므로 잦은 쪽이 약해야 드문 쪽(아군 사망)이 사건으로 읽힌다.
-            if (unit.IsAlly) BoardCamera.Shake(AllyDeathShake, AllyDeathShakeSeconds);
-            else BoardCamera.Shake(EnemyDeathShake, EnemyDeathShakeSeconds);
+            if (unit.IsAlly)
+            {
+                BoardCamera.Shake(AllyDeathShake, AllyDeathShakeSeconds);
+
+                // ★ 흔들림만으로는 <b>누가</b> 죽었는지가 안 갈린다 — 적이 죽어도 흔들리기 때문이다.
+                //   가장자리만 붉게 물들이면 판 가운데(읽어야 하는 곳)를 안 가리고 진영이 읽힌다.
+                ShowOverlay(OverlayKind.Vignette, new Color(0.85f, 0.1f, 0.12f), 0.5f, 0.55f);
+            }
+            else
+            {
+                BoardCamera.Shake(EnemyDeathShake, EnemyDeathShakeSeconds);
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  화면 덮개 — 비네트 · 번쩍임
+        // ─────────────────────────────────────────────────────────────
+
+        private enum OverlayKind { Vignette, Flash }
+
+        private sealed class ScreenOverlay
+        {
+            public SpriteRenderer Renderer;
+            public Color Color;
+            public float PeakAlpha;
+            public float Left;
+            public float Total;
+        }
+
+        private readonly List<ScreenOverlay> _overlays = new List<ScreenOverlay>();
+        private static Sprite _vignetteSprite;
+        private static Sprite _flatSprite;
+
+        /// <summary>덮개가 판보다 확실히 커야 하는 크기(월드). 세로 반높이 4.2 보다 넉넉하다.</summary>
+        private const float OverlaySize = 40f;
+
+        /// <summary>
+        /// 화면 전체를 짧게 덮는다. <b>비네트는 가장자리만, 번쩍임은 고르게.</b>
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>후처리를 안 쓴다</b>(테두리 빛과 같은 이유) — WebGL 에서 전체 화면 후처리는
+        /// 빌드 크기와 픽셀 비용을 같이 올린다. 스프라이트 한 장이면 충분하다.
+        /// 비네트 텍스처는 64×64 로 <b>한 번만</b> 만들어 두고 계속 쓴다.
+        /// </remarks>
+        private void ShowOverlay(OverlayKind kind, Color color, float peakAlpha, float seconds)
+        {
+            var go = new GameObject("ScreenOverlay");
+            go.transform.SetParent(transform, false);
+            go.transform.position = new Vector3(0f, 0f, -4f);   // 유닛·팝업보다 앞
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = kind == OverlayKind.Vignette ? VignetteSprite() : FlatSprite();
+            sr.sortingOrder = 200;
+
+            var size = sr.sprite.bounds.size;
+            go.transform.localScale = Vector3.one * (OverlaySize / Mathf.Max(size.x, size.y));
+
+            var c = color; c.a = 0f;
+            sr.color = c;
+
+            _overlays.Add(new ScreenOverlay
+            {
+                Renderer = sr, Color = color, PeakAlpha = peakAlpha,
+                Left = seconds, Total = seconds,
+            });
+        }
+
+        /// <summary>덮개를 띄웠다 지운다. 빠르게 차고 천천히 빠진다 — 사건은 순간이고 여운은 길다.</summary>
+        public void TickOverlays(float deltaTime)
+        {
+            for (int i = _overlays.Count - 1; i >= 0; i--)
+            {
+                var o = _overlays[i];
+                o.Left -= deltaTime;
+
+                if (o.Left <= 0f || o.Renderer == null)
+                {
+                    if (o.Renderer != null) Object.Destroy(o.Renderer.gameObject);
+                    _overlays.RemoveAt(i);
+                    continue;
+                }
+
+                float t = 1f - o.Left / o.Total;
+                // 앞 15% 에 차오르고 나머지 85% 동안 빠진다.
+                float a = t < 0.15f ? t / 0.15f : 1f - (t - 0.15f) / 0.85f;
+
+                var c = o.Color;
+                c.a = o.PeakAlpha * a;
+                o.Renderer.color = c;
+            }
+        }
+
+        /// <summary>가운데는 비고 가장자리로 갈수록 짙어지는 64×64. 한 번 만들어 계속 쓴다.</summary>
+        private static Sprite VignetteSprite()
+        {
+            if (_vignetteSprite != null) return _vignetteSprite;
+
+            const int n = 64;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+            var pixels = new Color32[n * n];
+
+            for (int y = 0; y < n; y++)
+            {
+                for (int x = 0; x < n; x++)
+                {
+                    // 중심에서의 거리 0~1. 0.45 안쪽은 완전히 투명하게 둔다 — 판을 안 가리는 게 목적이다.
+                    float dx = (x + 0.5f) / n * 2f - 1f;
+                    float dy = (y + 0.5f) / n * 2f - 1f;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy) / 1.4142f;
+                    float a = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.45f, 1f, d));
+                    pixels[y * n + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                }
+            }
+
+            tex.SetPixels32(pixels);
+            tex.Apply();
+
+            _vignetteSprite = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), n);
+            return _vignetteSprite;
+        }
+
+        /// <summary>고르게 덮는 1×1. 번쩍임용.</summary>
+        private static Sprite FlatSprite()
+        {
+            if (_flatSprite != null) return _flatSprite;
+
+            var tex = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            tex.SetPixel(0, 0, Color.white);
+            tex.Apply();
+
+            _flatSprite = Sprite.Create(tex, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f), 1);
+            return _flatSprite;
         }
 
         // ─────────────────────────────────────────────────────────────
@@ -1310,7 +1506,7 @@ namespace DomoNinja.Unity.View
 
             bool ranged = RangedTypeIds != null && RangedTypeIds.Contains(actor.TypeId);
             if (ranged) SpawnProjectile(spec.Value.Projectile, from, to);
-            else SpawnSwing(spec.Value.Weapon, from, to);
+            else SpawnSwing(spec.Value.Weapon, from, to, actor);
         }
 
         /// <summary>
@@ -1391,7 +1587,18 @@ namespace DomoNinja.Unity.View
         {
             Flash(unitId, DamageTint);
             SpawnHitFx(unitId, actorId);
+
+            // 맞은 쪽이 순간 부푼다. 색만 바뀌면 <b>연타가 한 번으로 보인다</b> —
+            // 번쩍임은 0.18초 동안 이어지므로 그 안에 들어온 두 번째 타격이 화면에서 사라진다.
+            if (_units.TryGetValue(unitId, out var hit) && !hit.IsDead)
+                hit.HitPunchLeft = HitPunchSeconds;
         }
+
+        /// <summary>맞은 쪽이 부푸는 시간(초). 짧아야 한다 — 길면 유닛이 물렁해 보인다.</summary>
+        private const float HitPunchSeconds = 0.12f;
+
+        /// <summary>부푸는 정도. 0.15 면 15% 다.</summary>
+        private const float HitPunchAmount = 0.18f;
 
         /// <summary>회복. <b>피격과 반드시 달라야 한다</b> — 둘 다 체력 숫자만 바꾸면 화면에서 같은 사건이 된다.</summary>
         public void FlashHeal(int unitId) => Flash(unitId, HealTint);
@@ -1749,6 +1956,20 @@ namespace DomoNinja.Unity.View
             public bool IsSwing;
             public float BaseAngle;
 
+            /// <summary>
+            /// 휘두르는 주인. <b>휘두르기는 손에 붙어 있어야 한다.</b>
+            /// </summary>
+            /// <remarks>
+            /// 지시(사용자): *"휘두르는 무기는 용병 움직여도 따라가야 한다고 생각,
+            /// 지금은 캐릭터 이동하면 무기만 제자리에서 휘둘러지더라."*
+            /// <para>
+            /// 자식으로 붙이지 않고 <b>매 프레임 위치만 따라간다</b> — 붙이면 유닛의 배율
+            /// (<c>BaseSpriteScale</c> · 펀치 확대)까지 상속돼서 무기가 같이 커졌다 작아진다.
+            /// 투사체는 안 따라간다. 그건 손을 떠난 것이라 제자리에서 날아가는 게 맞다.
+            /// </para>
+            /// </remarks>
+            public UnitView Owner;
+
             public SpriteRenderer Renderer;
             /// <summary>여러 장이면 날아가는 동안 넘긴다. 한 장이면 길이 1.</summary>
             public Sprite[] Frames;
@@ -1847,7 +2068,7 @@ namespace DomoNinja.Unity.View
         /// <b>누가 때리는지</b>가 안 보인다 — 이 게임에서 읽어야 하는 건 무기가 아니라 유닛이다.
         /// </para>
         /// </remarks>
-        private void SpawnSwing(string weaponKey, Vector3 from, Vector3 to)
+        private void SpawnSwing(string weaponKey, Vector3 from, Vector3 to, UnitView owner)
         {
             var sprite = _catalog.Find(weaponKey);
             if (sprite == null) return;
@@ -1882,6 +2103,7 @@ namespace DomoNinja.Unity.View
                 To = to,
                 IsSwing = true,
                 BaseAngle = baseAngle,
+                Owner = owner,
             });
         }
 
@@ -1953,6 +2175,11 @@ namespace DomoNinja.Unity.View
 
                 if (fx.IsSwing)
                 {
+                    // ★ 주인이 살아 움직이면 <b>손을 따라간다.</b> 시작 위치만 붙들면
+                    //   유닛이 다음 칸으로 미끄러지는 동안 무기만 원래 칸에서 휘둘러진다.
+                    if (fx.Owner != null && fx.Owner.Root != null)
+                        fx.From = fx.Owner.Root.transform.position;
+
                     // 표적 쪽을 향해 호를 그린다 — 뒤에서 앞으로 베어 나가는 느낌.
                     float angle = fx.BaseAngle + Mathf.Lerp(SwingArcDegrees * 0.5f, -SwingArcDegrees * 0.5f, t);
                     float rad = angle * Mathf.Deg2Rad;
@@ -2079,6 +2306,7 @@ namespace DomoNinja.Unity.View
                 }
 
                 if (unit.PunchLeft <= 0f) continue;
+                if (unit.HitPunchLeft > 0f) continue;   // 맞은 튐이 이긴다 — 아래 패스가 배율을 쓴다
 
                 unit.PunchLeft -= deltaTime;
                 float t = Mathf.Clamp01(unit.PunchLeft / PunchSeconds);
@@ -2095,7 +2323,72 @@ namespace DomoNinja.Unity.View
                     spriteTransform.localPosition = Vector3.zero;
                 }
             }
+
+            TickHitPunch(deltaTime);
+            TickDeathFade(deltaTime);
         }
+
+        /// <summary>
+        /// 맞은 유닛이 순간 부푼다. <b>종류를 안 가린다</b> — 위 반복문은 애니메이션이 있는 유닛을
+        /// <c>continue</c> 로 건너뛰지만, "맞는 그림"은 캐릭터에도 없다.
+        /// </summary>
+        private void TickHitPunch(float deltaTime)
+        {
+            foreach (var unit in _units.Values)
+            {
+                if (unit.HitPunchLeft <= 0f || unit.Sprite == null) continue;
+
+                unit.HitPunchLeft -= deltaTime;
+
+                var t = unit.Sprite.transform;
+                if (unit.HitPunchLeft <= 0f)
+                {
+                    t.localScale = Vector3.one * unit.BaseSpriteScale;
+                    continue;
+                }
+
+                // 맞은 순간이 가장 크고 곧바로 돌아온다 — 종 모양이면 <b>늦게 커져서</b>
+                // 타격과 어긋난 자리에서 부푼 것처럼 보인다.
+                float k = unit.HitPunchLeft / HitPunchSeconds;
+                t.localScale = Vector3.one * unit.BaseSpriteScale * (1f + HitPunchAmount * k);
+            }
+        }
+
+        /// <summary>죽은 유닛이 위로 튀며 돌아 사라진다.</summary>
+        /// <remarks>
+        /// 전에는 <b>그 자리에서 반투명해지기만</b> 했다 — 판이 붐빌 때 누가 죽었는지가 안 읽힌다.
+        /// 시체를 완전히 없애지는 않는다: 칸 점유는 core 가 정하고, 화면이 유닛을 지우면
+        /// <b>"죽었다"와 "화면에서 사라졌다"가 같아져</b> 재생 로그와 대조할 수 없게 된다.
+        /// </remarks>
+        private void TickDeathFade(float deltaTime)
+        {
+            foreach (var unit in _units.Values)
+            {
+                if (unit.DeathFadeLeft <= 0f || unit.Sprite == null) continue;
+
+                unit.DeathFadeLeft -= deltaTime;
+                float t = 1f - Mathf.Clamp01(unit.DeathFadeLeft / DeathFadeSeconds);
+
+                var st = unit.Sprite.transform;
+                st.localPosition = new Vector3(0f, Mathf.Sin(t * Mathf.PI) * DeathHopHeight, 0f);
+                st.localRotation = Quaternion.Euler(0f, 0f, (unit.IsAlly ? 1f : -1f) * DeathSpinDegrees * t);
+
+                var c = unit.Sprite.color;
+                c.a = Mathf.Lerp(1f, 0.25f, t);
+                unit.Sprite.color = c;
+
+                if (unit.DeathFadeLeft <= 0f)
+                {
+                    st.localPosition = Vector3.zero;
+                    unit.Sprite.color = new Color(1f, 1f, 1f, 0.25f);
+                    // 회전은 남긴다 — 쓰러진 채로 두는 편이 "죽었다"로 읽힌다.
+                }
+            }
+        }
+
+        private const float DeathFadeSeconds = 0.45f;
+        private const float DeathHopHeight = 0.22f;
+        private const float DeathSpinDegrees = 80f;
 
         /// <summary>즉시 되돌린다. 되감기·정지처럼 시간이 이어지지 않는 경우에만 쓴다.</summary>
         public void ClearFlash()
@@ -2168,7 +2461,18 @@ namespace DomoNinja.Unity.View
                                 cell.material.color.g / SuddenDeathTint.g,
                                 cell.material.color.b / SuddenDeathTint.b);
             }
+
+            // ★ 격자 색은 <b>바뀐 뒤에만</b> 보인다 — 보고 있지 않으면 언제 바뀌었는지 모른다.
+            //   진입 순간에 한 번 번쩍여야 "지금부터 다르다"가 사건으로 읽힌다.
+            if (on)
+            {
+                ShowOverlay(OverlayKind.Flash, new Color(0.9f, 0.15f, 0.1f), 0.32f, 0.5f);
+                BoardCamera.Shake(SuddenDeathShake, SuddenDeathShakeSeconds);
+            }
         }
+
+        private const float SuddenDeathShake = 0.13f;
+        private const float SuddenDeathShakeSeconds = 0.35f;
 
         private static readonly Color SuddenDeathTint = new Color(1.35f, 0.72f, 0.72f);
 
