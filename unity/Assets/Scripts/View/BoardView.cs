@@ -3,6 +3,7 @@ using DomoNinja.Core.Data;
 using DomoNinja.Core.Domain;
 using DomoNinja.Core.Events;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace DomoNinja.Unity.View
 {
@@ -58,6 +59,10 @@ namespace DomoNinja.Unity.View
             public float FlashLeft;
             public bool IsDead;
             public int MaxHp;
+
+            /// <summary>현재 체력. <see cref="SetHp"/> 가 받은 값을 그대로 둔다 — 툴팁이 읽는다.</summary>
+            public int Hp;
+
             public bool IsAlly;
             /// <summary>유닛 종류(`C1`.. · 몬스터/보스 typeId). 공격자별 타격 이펙트를 고를 때 쓴다.</summary>
             public string TypeId;
@@ -87,6 +92,9 @@ namespace DomoNinja.Unity.View
             public Vector3 MoveFrom;
             public Vector3 MoveTarget;
             public float MoveLeft;
+
+            /// <summary>승리 환호가 시작될 때 서 있던 높이. 뛰었다가 여기로 돌아온다.</summary>
+            public float CheerBaseY;
         }
 
         /// <summary>화면에 재생 중인 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
@@ -143,9 +151,69 @@ namespace DomoNinja.Unity.View
             return map;
         }
 
+        /// <summary>바닥 타일 한 장(16×16). 팩의 <c>TilesetFloor</c> 에서 흙 타일만 잘라 별도 에셋으로 뒀다.</summary>
+        private const string GroundTileKey = "Backgrounds/Ground";
+
+        /// <summary>
+        /// 판 뒤에 <b>흙바닥</b>을 깐다. 칸마다 한 장씩 놓아 타일이 이어지게 한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "배틀씬은 가지고 있는 에셋들에서 배경으로 배치 가능한 타일맵들을
+        /// 장식으로 쓰면 좋을 것 같음."
+        /// </para>
+        /// <para>
+        /// ★ <b>타일셋을 통째로 잘라 색인하지 않았다.</b> <c>TilesetFloor.png</c> 는 352×417 이라
+        /// 세로가 16 의 배수가 아니고(26칸 + 1px), 그대로 슬라이스하면 <b>칸 번호가 한 줄씩 밀린다</b> —
+        /// 그러면 "몇 번이 흙인가"가 임포트 설정에 매달린 값이 된다.
+        /// 필요한 타일 한 장만 잘라 <c>Backgrounds/Ground.png</c> 로 뒀다.
+        /// </para>
+        /// <para>
+        /// 격자 칸(<see cref="_gridCells"/>)은 <b>그대로 위에 남는다.</b> 진영 구분 색이 사라지면
+        /// "왜 여기 못 놓지"가 다시 버그처럼 보인다 — 바닥은 그 아래에 깔릴 뿐이다.
+        /// </para>
+        /// </remarks>
+        private void BuildGround()
+        {
+            var tile = _catalog != null ? _catalog.Find(GroundTileKey) : null;
+            if (tile == null) return;
+
+            var root = new GameObject("Ground").transform;
+            root.SetParent(transform, false);
+
+            // 칸 하나를 꽉 채우도록 배율을 맞춘다. 16px 타일이라 원본 월드 크기는 1 이 아니다.
+            var size = tile.bounds.size;
+            float scale = size.x > 0f ? CellSize / size.x : 1f;
+
+            for (int y = -1; y <= Coord.BoardHeight; y++)
+            {
+                for (int x = -1; x <= Coord.BoardWidth; x++)
+                {
+                    var go = new GameObject($"Ground_{x}_{y}");
+                    go.transform.SetParent(root, false);
+                    // 격자(z=1)보다 뒤. 유닛은 z=0 이라 바닥이 유닛을 가리지 않는다.
+                    go.transform.position = ToWorld(new Coord(Mathf.Clamp(x, 0, Coord.BoardWidth - 1),
+                                                              Mathf.Clamp(y, 0, Coord.BoardHeight - 1)))
+                                            + new Vector3((x - Mathf.Clamp(x, 0, Coord.BoardWidth - 1)) * CellSize,
+                                                          (y - Mathf.Clamp(y, 0, Coord.BoardHeight - 1)) * CellSize,
+                                                          1.5f);
+                    go.transform.localScale = Vector3.one * scale;
+
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sprite = tile;
+                    sr.sortingOrder = -20;
+                    // 판 밖으로 한 줄 더 깔되 가장자리는 어둡게 — 바닥이 뚝 끊기면 판이 떠 보인다.
+                    bool border = x < 0 || y < 0 || x >= Coord.BoardWidth || y >= Coord.BoardHeight;
+                    sr.color = border ? new Color(0.45f, 0.45f, 0.45f) : new Color(0.72f, 0.72f, 0.72f);
+                }
+            }
+        }
+
         /// <summary>격자. 아군 진영과 적 진영을 색으로 나눈다.</summary>
         private void BuildGrid()
         {
+            BuildGround();
+
             var root = new GameObject("Grid").transform;
             root.SetParent(transform, false);
 
@@ -170,10 +238,14 @@ namespace DomoNinja.Unity.View
                     // 배치 규칙이 화면에 안 보이면 "왜 여기 못 놓지"가 버그처럼 보인다.
                     bool ally = x <= Coord.AllyMaxX;
                     bool dark = (x + y) % 2 == 0;
+                    // ★ 반투명이다. 전에는 불투명 사각형이라 그 자체가 배경이었는데, 이제 뒤에
+                    //   흙바닥(`BuildGround`)이 깔려 있어 불투명하게 두면 바닥이 아예 안 보인다.
+                    //   진영 구분은 남기고 바닥이 비쳐 보일 만큼만 덮는다.
                     var color = ally
                         ? new Color(0.16f, 0.20f, 0.28f)
                         : new Color(0.26f, 0.17f, 0.19f);
                     if (dark) color *= 0.82f;
+                    color.a = 0.55f;
 
                     var renderer = cell.GetComponent<MeshRenderer>();
                     renderer.material = new Material(Shader.Find("Sprites/Default")) { color = color };
@@ -283,6 +355,7 @@ namespace DomoNinja.Unity.View
                 ShieldFullScaleX = shield != null ? shield.localScale.x : 1f,
                 Outline = outline,
                 MaxHp = spec.MaxHp,
+                Hp = spec.MaxHp,
                 IsAlly = spec.Team == 0,
                 TypeId = spec.TypeId,
                 IdleFrames = idleFrames,
@@ -400,7 +473,9 @@ namespace DomoNinja.Unity.View
         {
             var root = new GameObject("ShieldBar");
             root.transform.SetParent(parent, false);
-            root.transform.localPosition = new Vector3(0f, 0.44f, -0.1f);
+            // 체력 막대를 발밑으로 내린 만큼(`BarBaseY`) 이쪽도 머리 위로 대칭 이동한다 — 0.44 에선
+            // 막대(높이 0.165)의 아래끝이 +0.36 이라 그림 윗부분(+0.4까지)을 물고 있었다.
+            root.transform.localPosition = new Vector3(0f, -BarBaseY, -0.1f);
 
             float height = HpBarHeight * 0.75f;
             AddQuad(root.transform, "ShieldTrack", new Color(0.12f, 0.14f, 0.17f),
@@ -459,6 +534,27 @@ namespace DomoNinja.Unity.View
         private const float HpBarHeight = 0.22f;
 
         /// <summary>
+        /// 체력·보호막 막대를 유닛의 <b>발밑 바깥</b>에 둘 높이.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 유닛 그림은 <c>CellSize * 0.8</c> 로 맞춰지므로 칸 중심 기준 <b>−0.4 ~ +0.4</b> 를 차지한다.
+        /// 막대가 −0.38 에 있었는데 막대 높이가 0.22 라 <b>−0.49 ~ −0.27</b> 을 덮었다 —
+        /// 그림의 아래쪽 몸통을 정확히 가린 것이다.
+        /// </para>
+        /// <para>
+        /// ★ 그래서 <b>도트 애니메이션을 넣었는데 머리만 움직이는 것처럼 보였다.</b> 이 팩의 Idle 은
+        /// 정면/뒤통수 두 포즈를 오가는 그림이라 <b>차이가 어깨선 아래에서 가장 크게 난다</b> —
+        /// 하필 막대가 덮고 있던 자리다. 연출이 없는 게 아니라 <b>가려져 있었다.</b>
+        /// </para>
+        /// <para>
+        /// 그림 아래끝(−0.4)에서 막대 절반(0.11)과 여백(0.04)만큼 더 내린다. 칸(±0.5)을 조금
+        /// 넘지만 <see cref="ToWorld"/> 의 칸 간격이 1 이라 아랫줄 그림(−0.4 부터 시작)과는 안 겹친다.
+        /// </para>
+        /// </remarks>
+        private const float BarBaseY = -0.55f;
+
+        /// <summary>
         /// 체력 막대. <b>빈 칸(트랙) 위에 채움을 얹는다.</b>
         /// </summary>
         /// <remarks>
@@ -477,7 +573,7 @@ namespace DomoNinja.Unity.View
         {
             var root = new GameObject("HpBar");
             root.transform.SetParent(parent, false);
-            root.transform.localPosition = new Vector3(0f, -0.38f, -0.1f);
+            root.transform.localPosition = new Vector3(0f, BarBaseY, -0.1f);
 
             var trackSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniUnder") : null;
             var fillSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniProgress") : null;
@@ -678,8 +774,180 @@ namespace DomoNinja.Unity.View
         {
             if (!_units.TryGetValue(unitId, out var unit) || unit.HpFill == null) return;
 
+            // 툴팁이 "체력 32 / 40" 을 적으려면 현재 값이 필요하다. 막대 배율에서 되돌리면
+            // 반올림 때문에 원래 숫자가 안 나온다 — 받은 값을 그대로 들고 있는다.
+            unit.Hp = hp;
+
             float ratio = unit.MaxHp <= 0 ? 0f : Mathf.Clamp01((float)hp / unit.MaxHp);
             SetFill(unit, ratio);
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  마우스를 올린 유닛의 스펙 (`UnitTooltip`)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>마우스 아래 있는 것. <see cref="TypeId"/> 가 <c>null</c> 이면 아무것도 없다.</summary>
+        public readonly struct HoverTarget
+        {
+            /// <summary>아군이면 캐릭터 id(<c>C1</c>..), 적이면 적 타입 키. 없으면 <c>null</c>.</summary>
+            public readonly string TypeId;
+            public readonly bool IsAlly;
+
+            /// <summary><see cref="HasLiveHp"/> 가 참일 때만 의미 있다. 배치 화면엔 아직 전투 체력이 없다.</summary>
+            public readonly int Hp;
+            public readonly int MaxHp;
+
+            /// <summary>전투 재생 중이라 현재 체력을 아는가. 배치 미리보기면 거짓.</summary>
+            public readonly bool HasLiveHp;
+
+            public HoverTarget(string typeId, bool isAlly, int hp, int maxHp, bool hasLiveHp)
+            {
+                TypeId = typeId; IsAlly = isAlly; Hp = hp; MaxHp = maxHp; HasLiveHp = hasLiveHp;
+            }
+        }
+
+        /// <summary>
+        /// 지금 마우스가 무엇 위에 있는가. <b>배치 화면과 전투 화면 모두</b>에서 답한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>여기서 툴팁을 띄우지 않는다.</b> 툴팁(<c>UnitTooltip</c>)과 그 내용에 필요한 런 상태는
+        /// 둘 다 <c>DomoNinja.Unity.UI</c> 에 있고 그 어셈블리가 이미 <c>View</c> 를 참조한다 —
+        /// 여기서 UI 를 부르면 <b>참조가 순환한다.</b> 이 뷰는 "무엇에 올려져 있는가"까지만 답한다.
+        /// </para>
+        /// <para>
+        /// ★ 전투 유닛(<see cref="_units"/>)과 배치 미리보기(<see cref="_placementRoot"/>)는
+        /// <b>별개 트리다.</b> 전투 것만 보면 <b>정작 배치를 고민하는 동안 스펙을 못 본다</b> —
+        /// 적을 보고 자리를 정하는 화면이 바로 그 화면이다. 둘 다 훑는다.
+        /// </para>
+        /// </remarks>
+        public HoverTarget Hovered { get; private set; }
+
+        /// <summary>마우스가 유닛 중심에서 이 거리(월드) 안에 있으면 그 유닛으로 친다. 칸이 1 이라 절반이 경계다.</summary>
+        private const float HoverRadius = 0.45f;
+
+        private void Update()
+        {
+            Hovered = FindHovered();
+            TickCheer();
+        }
+
+        private void OnDisable() => Hovered = default;
+
+        // ─────────────────────────────────────────────────────────────
+        //  승리 환호 — 전투가 "끝났다"는 신호
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>환호가 남은 시간(초). 0 이면 아무것도 안 한다.</summary>
+        private float _cheerLeft;
+
+        /// <summary>환호 총 길이. <see cref="StartVictoryCheer"/> 를 부른 쪽이 이만큼은 기다려야 한다.</summary>
+        public const float VictoryCheerSeconds = 0.9f;
+
+        private const float CheerHopHeight = 0.18f;
+        private const float CheerHops = 3f;
+
+        /// <summary>
+        /// 살아남은 아군을 <b>몇 번 뛰게</b> 한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "전투 끝났을 때 간단한 전투 승리 연출. 현재는 이기자마자 팝업이
+        /// 올라와서 전투 종료가 실감이 안 남."
+        /// </para>
+        /// <para>
+        /// ★ 원인은 연출이 없어서가 아니라 <b>마지막 적이 죽은 프레임에 판이 바로 지워지기</b>
+        /// 때문이다(<c>PlayRoundRoutine</c> 이 재생이 끝나자마자 <see cref="Clear"/> 를 부른다).
+        /// 그래서 "이겼다"를 볼 시간 자체가 없었다 — 새 연출을 얹기 전에 <b>판을 잠깐 두는 것</b>이
+        /// 먼저다. 환호는 그 시간에 무엇을 볼지를 채울 뿐이다.
+        /// </para>
+        /// <para>
+        /// 스프라이트가 아니라 <see cref="UnitView.Root"/> 를 올린다 — 스프라이트 로컬 좌표는
+        /// 절차적 공격 연출(돌진)이 쓰고 있어서, 같은 채널을 두 곳에서 만지면 섞인다.
+        /// </para>
+        /// </remarks>
+        public void StartVictoryCheer()
+        {
+            // ★ 서 있는 자리를 지금 기억한다. `MoveTarget` 을 기준으로 삼으면 **한 번도 안 움직인
+            //   유닛은 그 값이 (0,0,0)** 이라 환호가 시작되는 순간 판 원점으로 순간이동한다.
+            foreach (var kv in _units)
+            {
+                var unit = kv.Value;
+                if (unit.Root != null) unit.CheerBaseY = unit.Root.transform.position.y;
+            }
+
+            _cheerLeft = VictoryCheerSeconds;
+        }
+
+        private void TickCheer()
+        {
+            if (_cheerLeft <= 0f) return;
+
+            _cheerLeft -= Time.deltaTime;
+            float t = Mathf.Clamp01(1f - _cheerLeft / VictoryCheerSeconds);
+
+            // 끝으로 갈수록 잦아든다 — 뚝 끊기면 마지막 프레임에 유닛이 순간이동한 것처럼 보인다.
+            float damping = 1f - t;
+            float hop = Mathf.Abs(Mathf.Sin(t * Mathf.PI * CheerHops)) * CheerHopHeight * damping;
+
+            foreach (var kv in _units)
+            {
+                var unit = kv.Value;
+                if (unit.Root == null || unit.IsDead || !unit.IsAlly) continue;
+
+                var p = unit.Root.transform.position;
+                unit.Root.transform.position = new Vector3(p.x, unit.CheerBaseY + hop, p.z);
+            }
+        }
+
+        /// <remarks>
+        /// 콜라이더를 붙여 <c>Physics2D</c> 로 쏘지 않는다 — 유닛에 물리를 달면
+        /// <b>전투에 관여하지 않는 컴포넌트가 전투 오브젝트에 붙는다.</b> 판이 격자라
+        /// 거리 비교로 충분하고, 그쪽이 죽은 유닛을 건너뛰기도 쉽다.
+        /// </remarks>
+        private HoverTarget FindHovered()
+        {
+            var cam = Camera.main;
+            // ★ `UnityEngine.Input` 이 아니라 Input System 을 쓴다 — 이 프로젝트는 Player Settings 에서
+            //   입력 처리를 Input System 패키지로 바꿔놨고, 옛 API 를 부르면 예외가 난다.
+            //   `PlacementController` 가 이미 같은 방식으로 마우스를 읽는다.
+            if (cam == null || Mouse.current == null) return default;
+
+            var world = cam.ScreenToWorldPoint(Mouse.current.position.ReadValue());
+            float bestSq = HoverRadius * HoverRadius;
+            var best = default(HoverTarget);
+
+            foreach (var kv in _units)
+            {
+                var unit = kv.Value;
+                if (unit.Root == null || unit.IsDead) continue;
+
+                float sq = SqDistance(unit.Root.transform.position, world);
+                if (sq >= bestSq) continue;
+
+                bestSq = sq;
+                best = new HoverTarget(unit.TypeId, unit.IsAlly, unit.Hp, unit.MaxHp, true);
+            }
+
+            if (best.TypeId != null || _placementRoot == null) return best;
+
+            // 배치 미리보기 — 오브젝트 이름이 곧 typeId 다(`CreatePlacementUnit`).
+            foreach (Transform child in _placementRoot)
+            {
+                float sq = SqDistance(child.position, world);
+                if (sq >= bestSq) continue;
+
+                bestSq = sq;
+                best = new HoverTarget(child.name, _placementAllies.ContainsKey(child.name), 0, 0, false);
+            }
+
+            return best;
+        }
+
+        private static float SqDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x, dy = a.y - b.y;
+            return dx * dx + dy * dy;
         }
 
         /// <summary>

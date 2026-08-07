@@ -5,7 +5,8 @@
     "DomoNinja.Core",
     "DomoNinja.Unity",
     "DomoNinja.Unity.View",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

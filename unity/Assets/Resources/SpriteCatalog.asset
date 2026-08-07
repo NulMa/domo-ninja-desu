@@ -445,6 +445,10 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: edfbf18f4a83de14e9597b23b29a77cc, type: 3}
   - Key: Actor/Monster/TRex/SpriteSheet
     Sprite: {fileID: 244629415248885162, guid: 1e980aab9e9b592449f430bc3d9d5385, type: 3}
+  - Key: Backgrounds
+    Sprite: {fileID: 21300000, guid: 015dfde14f6af734e9d2180f642fef27, type: 3}
+  - Key: Backgrounds/Ground
+    Sprite: {fileID: 21300000, guid: 015dfde14f6af734e9d2180f642fef27, type: 3}
   - Key: FX/Hit
     Sprite: {fileID: 5546671543968653177, guid: f92758126ef70bc458bf5876d1986209, type: 3}
   - Key: FX/Hit/Hunter
@@ -733,6 +737,8 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 364301758b37cc24a83a96ff2cabbf92, type: 3}
   - Key: UI/Theme/v_slidder_grabber_hover
     Sprite: {fileID: 21300000, guid: 5de0942194499be4db7e9ec3d38bdec4, type: 3}
+  - Key: UI/TitleBackdrop
+    Sprite: {fileID: 21300000, guid: b50f59e5f58280b4d9cff556896dc780, type: 3}
   - Key: UI/circle_infinity_placeholder
     Sprite: {fileID: 21300000, guid: e4b0c23ad3ba6e44fa8ffbd0255c4a80, type: 3}
   - Key: UI/gear_icon

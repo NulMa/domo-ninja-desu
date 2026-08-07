@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using DomoNinja.Core.Data;
 using TMPro;
 using UnityEngine;
@@ -96,17 +97,34 @@ namespace DomoNinja.Unity
             _enterBattleButton.interactable = _selected.Count == DeployCount;
         }
 
+        /// <summary>
+        /// 출전 트레이 한 칸. <b>칸을 눌러도 선택이 풀린다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 전에는 아래 로스터 격자에서만 토글이 됐다. 그런데 <b>방금 올린 초상화는 트레이에 있고</b>
+        /// 격자에 있는 같은 얼굴은 선택 표시만 바뀌어 있어서, "빼려면 원래 있던 자리를 다시 찾아야"
+        /// 했다 — 올린 곳과 내리는 곳이 다르면 되돌리는 조작이 한 박자 늦는다.
+        /// </remarks>
         private void RefreshTraySlot(Transform slot, string characterId)
         {
             var slotImg = slot.GetComponent<UImage>();
             var face = slot.Find("Face");
 
+            // ★ 리스너를 매번 지우고 다시 건다. 칸과 캐릭터의 짝은 선택할 때마다 바뀌므로
+            //   (2번을 빼면 3번이 2번 칸으로 당겨온다) 한 번 걸어두면 엉뚱한 얼굴이 빠진다.
+            var slotButton = UITheme.EnsureButton(slot.gameObject);
+            slotButton.onClick.RemoveAllListeners();
+
             if (characterId == null)
             {
                 if (slotImg != null) slotImg.color = TrayEmptyColor;
                 if (face != null) face.gameObject.SetActive(false);
+                slotButton.interactable = false;
                 return;
             }
+
+            slotButton.interactable = true;
+            slotButton.onClick.AddListener(() => OnPortraitClicked(characterId));
 
             if (slotImg != null) slotImg.color = TrayFilledColor;
 
@@ -185,7 +203,34 @@ namespace DomoNinja.Unity
             icon.sprite = skill?.Icon != null ? _catalog?.Find(skill.Icon) : null;
             icon.enabled = icon.sprite != null;
             label.text = skill != null ? skill.Name : "-";
-            flavorLabel.text = !string.IsNullOrEmpty(skill?.Flavor) ? $"“{skill.Flavor}”" : "";
+            flavorLabel.text = DescribeSkillCard(skill);
+        }
+
+        /// <summary>
+        /// 카드 본문 — <b>이득/대가가 먼저, 한마디는 그 아래.</b>
+        /// </summary>
+        /// <remarks>
+        /// 전엔 한마디(<c>Flavor</c>)만 있었는데 <b>보조 18개는 값이 없어서 카드가 통째로 비었다.</b>
+        /// 고를 근거가 되는 건 어차피 수치 쪽이라, 항상 있는 것을 위에 두고 없을 수 있는 것을 아래로 뺀다.
+        /// 색 규칙은 <see cref="InfoPopupController.FormatSkill"/> 과 같은 출처를 쓴다.
+        /// </remarks>
+        private static string DescribeSkillCard(SkillDef skill)
+        {
+            if (skill == null) return "";
+
+            var sb = new StringBuilder();
+            if (skill.TextGain != null) sb.Append(UITheme.Semantic.Gain(skill.TextGain));
+            if (skill.TextCost != null)
+            {
+                if (sb.Length > 0) sb.Append('\n');
+                sb.Append(UITheme.Semantic.Cost(skill.TextCost));
+            }
+            if (!string.IsNullOrEmpty(skill.Flavor))
+            {
+                if (sb.Length > 0) sb.Append("\n\n");
+                sb.Append("<i>“").Append(skill.Flavor).Append("”</i>");
+            }
+            return sb.ToString();
         }
 
         /// <summary>
@@ -206,9 +251,10 @@ namespace DomoNinja.Unity
             label.fontSize = 18f;
             label.alignment = TextAlignmentOptions.Top;
             label.color = new Color(0.86f, 0.84f, 0.80f);
-            label.fontStyle = FontStyles.Italic;
+            // ★ 라벨 전체를 이탤릭으로 두지 않는다. 이제 본문이 수치(이득/대가)고 한마디는 아래
+            //   한 덩어리라, 기울일 곳은 그 한 덩어리뿐이다 — <i> 로 그 자리만 감싼다.
             label.raycastTarget = false;
-            label.enableWordWrapping = true;
+            label.textWrappingMode = TextWrappingModes.Normal;
             return label;
         }
 

@@ -64,6 +64,24 @@
 없으면 UI가 그 줄을 건너뛴다 — `text.gain`/`text.cost`와 달리 로드 시 필수 검증(`R` 규칙) 대상이 아니다.
 용병 선택 화면(`RosterSelectController`)과 상점 일러스트 영역(`ShopController`)이 표시한다.
 
+### 2.2 `name` — 적 표시 이름 (v0.10 신설)
+
+`encounters.json` 의 `enemyTypes.{키}` 가 갖는 선택 필드. **표시 전용이다.**
+
+적의 데이터 키는 `slime`·`tenguRed`·`giantFrog` 처럼 영문 식별자라 화면에 그대로 내면
+**개발 중 화면으로 읽힌다.** 그렇다고 UI 코드에 한글 표를 박으면 이 문서 머리말의
+"표시용 상수를 코드에 박지 않는다"를 어긴다 — 그래서 데이터에 둔다.
+
+| 위치 | 의미 |
+|---|---|
+| `enemyTypes.{키}.name` | 화면에 적는 이름 (예: `tenguRed` → `적귀 텐구`) |
+
+없으면 `EnemyTypeDef.Name` 이 **키를 그대로 돌려준다** — 값이 비어도 화면이 안 깨진다.
+스테이지 인트로(`StageIntroController`)와 유닛 툴팁(`UnitStatText`)이 표시한다.
+
+⚠️ `encountersStage2.json` 은 `enemyTypes` 를 갖지 않는다 — 적 타입 표는 스테이지가 공유한다
+(`GameData` §적 타입 테이블). 이름도 한 곳에만 적으면 된다.
+
 **사거리 판정 — 부동소수점 금지**
 
 ```

@@ -42,6 +42,15 @@ namespace DomoNinja.Core.Data
     public sealed class EnemyTypeDef
     {
         public string Type { get; }
+
+        /// <summary>화면에 적는 이름. 표시 전용 — 전투 규칙에 관여하지 않는다. 없으면 <see cref="Type"/> 을 쓴다.</summary>
+        /// <remarks>
+        /// <c>Type</c> 은 <c>tenguRed</c>·<c>giantFrog</c> 같은 <b>데이터 키</b>라 화면에 그대로 내면
+        /// 개발 중 화면으로 읽힌다. 그렇다고 UI 코드에 한글 표를 박으면 <c>_schema</c> 머리말의
+        /// "표시용 상수를 코드에 박지 않는다"를 어긴다 — 데이터에 둔다.
+        /// </remarks>
+        public string Name { get; }
+
         public string Sprite { get; }
         public int Hp { get; }
         public int Attack { get; }
@@ -57,11 +66,13 @@ namespace DomoNinja.Core.Data
         public bool IsBoss { get; }
 
         public EnemyTypeDef(string type, string sprite, int hp, int attack, int attackInterval,
-                            int range, int? moveInterval, bool immobile, bool isBoss)
+                            int range, int? moveInterval, bool immobile, bool isBoss,
+                            string? name = null)
         {
             Type = type; Sprite = sprite; Hp = hp; Attack = attack;
             AttackInterval = attackInterval; Range = range;
             MoveInterval = moveInterval; Immobile = immobile; IsBoss = isBoss;
+            Name = string.IsNullOrEmpty(name) ? type : name!;
         }
 
         public override string ToString() => Type;

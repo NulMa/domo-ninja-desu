@@ -123,6 +123,41 @@ namespace DomoNinja.Unity
             if (host.GetComponent<GraphicRaycaster>() == null) host.AddComponent<GraphicRaycaster>();
         }
 
+        /// <summary>
+        /// <b>이로운 것과 손해를 색으로 가른다.</b> 스킬·아이템 설명이 쓰는 유일한 표기 규칙이다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 전에는 「얻는 것: …」「버리는 것: …」 이라고 <b>글자로 적었다.</b> 그런데 이 게임의 스킬은
+        /// 전부 <b>주고받는 거래</b>라(`08` §2.6) 두 줄이 항상 같이 나온다 — 그러면 라벨 네 글자가
+        /// 스킬 30종 × 두 줄만큼 반복되면서, 정작 읽어야 할 <b>수치</b>를 밀어낸다.
+        /// 색이 그 역할을 대신하면 같은 자리에 내용만 남는다.
+        /// </para>
+        /// <para>
+        /// ★ <b>색만으로 가르지는 않는다.</b> 초록/빨강은 하필 적록색약이 가장 못 가르는 짝이라,
+        /// 색이 유일한 단서면 그 사람에게는 <b>구분이 아예 사라진다.</b> 그래서 <c>+</c>/<c>−</c>
+        /// 한 글자를 같이 붙인다 — 라벨처럼 길지 않으면서 색이 안 보여도 방향이 남는다.
+        /// </para>
+        /// <para>
+        /// 손해 쪽은 <b>어두운 벽돌빛</b>이다. 순수한 빨강은 나무 배경 위에서 경고문처럼 튀어
+        /// "이 스킬은 고르면 안 된다"로 읽힌다 — 손해는 <b>대가</b>지 경고가 아니다.
+        /// </para>
+        /// </remarks>
+        public static class Semantic
+        {
+            /// <summary>이로운 효과. 어두운 판 위에서 읽히도록 순수 초록보다 밝고 노랗다.</summary>
+            public const string GainHex = "7FC96B";
+
+            /// <summary>손해(대가). 검붉은 벽돌빛 — 어두운 판 위에서 읽히는 하한선까지만 낮췄다.</summary>
+            public const string CostHex = "C0524A";
+
+            /// <summary>이로운 쪽으로 칠한다. 앞에 <c>+</c> 를 붙여 색이 안 보여도 방향이 남게 한다.</summary>
+            public static string Gain(string text) => $"<color=#{GainHex}>+ {text}</color>";
+
+            /// <summary>손해 쪽으로 칠한다. 앞에 <c>−</c>(U+2212) 를 붙인다 — 하이픈과 달리 숫자와 안 붙어 보인다.</summary>
+            public static string Cost(string text) => $"<color=#{CostHex}>− {text}</color>";
+        }
+
         /// <summary>버튼 컴포넌트를 붙이고 연출을 입힌다. 이미 있으면 그대로 쓴다.</summary>
         public static Button EnsureButton(GameObject go)
         {

@@ -228,13 +228,14 @@ namespace DomoNinja.Unity
             }
         }
 
-        /// <summary>스킬 표기 규칙(`08` §2.6) — 이름 + 「얻는 것 / 버리는 것」 2줄. <c>ShopController</c>도 같이 쓴다
-        /// (상점 일러스트 영역에 스킬 정보를 띄울 때) — 표기 규칙이 두 군데서 갈리면 언젠가 어긋난다.</summary>
+        /// <summary>스킬 표기 규칙(`08` §2.6) — 이름 + 이득/대가 2줄. 두 줄을 가르는 건
+        /// <b>글자가 아니라 색</b>이다(<see cref="UITheme.Semantic"/>). <c>ShopController</c>·
+        /// <c>RosterSelectController</c>도 같이 쓴다 — 표기 규칙이 여러 군데서 갈리면 언젠가 어긋난다.</summary>
         internal static string FormatSkill(SkillDef skill)
         {
             var sb = new StringBuilder(skill.Name);
-            if (skill.TextGain != null) sb.Append("\n얻는 것: ").Append(skill.TextGain);
-            if (skill.TextCost != null) sb.Append("\n버리는 것: ").Append(skill.TextCost);
+            if (skill.TextGain != null) sb.Append('\n').Append(UITheme.Semantic.Gain(skill.TextGain));
+            if (skill.TextCost != null) sb.Append('\n').Append(UITheme.Semantic.Cost(skill.TextCost));
             return sb.ToString();
         }
 
@@ -312,7 +313,7 @@ namespace DomoNinja.Unity
             if (itemKey == "healItem")
             {
                 int permille = (int?)item["healPermille"] ?? 0;
-                return $"구매 즉시 체력 {permille / 10f:0.#}% 회복";
+                return Tint($"구매 즉시 체력 {permille / 10f:0.#}% 회복", beneficial: true);
             }
 
             if (!(item["options"] is JArray options) || optionIndex < 0 || optionIndex >= options.Count)
@@ -325,31 +326,56 @@ namespace DomoNinja.Unity
 
         private static string DescribeStatOption(JObject option)
         {
-            string stat = StatName((string)option["stat"]);
+            string statKey = (string)option["stat"];
+            string stat = StatName(statKey);
             double value = (double?)option["value"] ?? 0;
             bool isMultiplier = (bool?)option["isMultiplier"] ?? false;
-            return isMultiplier ? $"{stat} ×{1 + value:0.##}" : $"{stat} +{value:0.##}";
+            string text = isMultiplier ? $"{stat} ×{1 + value:0.##}" : $"{stat} +{value:0.##}";
+            return Tint(text, IsBeneficial(statKey, value));
         }
 
         private static string DescribeConditional(JObject option)
         {
-            string stat = StatName((string)option["stat"]);
+            string statKey = (string)option["stat"];
+            string stat = StatName(statKey);
             double mult = (double?)option["mult"] ?? 0;
+
+            // ★ 조건절("HP 30% 이하일 때")은 칠하지 않는다 — 조건은 이득도 손해도 아니다.
+            //   효과 쪽만 칠해야 "언제"와 "무엇이"가 눈으로 갈린다.
+            string effect = Tint($"{stat} ×{1 + mult:0.##}", IsBeneficial(statKey, mult));
 
             switch ((string)option["condition"])
             {
                 case "hp_below":
                     double hpBelow = (double?)option["value"] ?? 0;
-                    return $"HP {hpBelow * 100:0}% 이하일 때 {stat} ×{1 + mult:0.##}";
+                    return $"HP {hpBelow * 100:0}% 이하일 때 {effect}";
                 case "enemies_above":
                     int count = (int?)option["value"] ?? 0;
-                    return $"적이 {count}체 이상일 때 {stat} ×{1 + mult:0.##}";
+                    return $"적이 {count}체 이상일 때 {effect}";
                 case "is_last_alive":
-                    return $"팀의 마지막 생존자일 때 {stat} ×{1 + mult:0.##}";
+                    return $"팀의 마지막 생존자일 때 {effect}";
                 default:
                     return (string)option["condition"] ?? "-";
             }
         }
+
+        /// <summary>
+        /// 그 변화가 <b>플레이어에게 이로운가</b>. 부호만 보면 틀린다.
+        /// </summary>
+        /// <remarks>
+        /// <c>공격 간격</c>과 <c>받는 피해</c>는 <b>낮을수록 좋은 값</b>이라 <c>+</c> 가 손해다.
+        /// "값이 오르면 초록"으로 짜면 <c>받는 피해 ×1.3</c> 이 이득처럼 칠해진다 —
+        /// 색이 정보를 주는 게 아니라 <b>거짓말을 하게 되는</b> 경우다.
+        /// </remarks>
+        private static bool IsBeneficial(string stat, double value)
+        {
+            bool lowerIsBetter = stat == "attackInterval" || stat == "damageTaken";
+            return lowerIsBetter ? value < 0 : value > 0;
+        }
+
+        /// <summary>이득/손해에 따라 칠한다. <see cref="UITheme.Semantic"/> 이 유일한 색 출처다.</summary>
+        private static string Tint(string text, bool beneficial) =>
+            beneficial ? UITheme.Semantic.Gain(text) : UITheme.Semantic.Cost(text);
 
         private static string StatName(string stat)
         {
