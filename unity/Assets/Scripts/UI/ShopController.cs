@@ -486,8 +486,19 @@ namespace DomoNinja.Unity
                 }
 
                 var offer = offers[i];
-                _slotLabels[i].text = $"{OfferLabel(offer, mgr)}\n{offer.Price}";
-                _slotButtons[i].interactable = run.Currency >= offer.Price;
+                bool affordable = run.Currency >= offer.Price;
+
+                // ★ 못 사도 <b>누를 수는 있다.</b> 전에는 여기서 버튼을 꺼버려서
+                //   돈이 모자라면 **설명조차 읽을 수 없었다** — 무엇을 위해 돈을 모으는지
+                //   모르는 채로 리롤만 하게 된다. 사는 것을 막는 자리는
+                //   오른쪽 상세의 구매 버튼이지 목록이 아니다.
+                _slotButtons[i].interactable = true;
+
+                // 대신 값을 붉게 적어 못 사는 것이 보이게 한다.
+                string price = affordable ? offer.Price.ToString()
+                                          : UITheme.Semantic.Unaffordable(offer.Price.ToString());
+                _slotLabels[i].text = $"{OfferLabel(offer, mgr)}\n{price}";
+
                 SetIcon(i, IconFor(offer, mgr.Data));
             }
         }
@@ -578,6 +589,11 @@ namespace DomoNinja.Unity
             {
                 // 구버전 씬 폴백 — IllustrationZone이 없으면 예전처럼 즉시 대상 선택/구매로 간다.
                 var offer = offers[offerIndex];
+
+                // ★ 목록 버튼을 항상 누를 수 있게 바꾼 뒤로는 여기서 값을 봐야 한다.
+                //   전에는 버튼이 꺼져 있어서 못 사는 품목이 이 경로에 아예 안 들어왔다.
+                if (mgr.CurrentRun.Currency < offer.Price) return;
+
                 if (!NeedsTarget(offer)) ExecutePurchase(mgr, offerIndex, null);
                 else if (_targetPicker == null) ExecutePurchase(mgr, offerIndex, FirstAliveCharacterId(mgr));
                 else OpenTargetPicker(mgr, offerIndex);
@@ -600,8 +616,13 @@ namespace DomoNinja.Unity
             _illustIcon.enabled = _illustIcon.sprite != null;
             _illustNameLabel.text = OfferLabel(offer, mgr);
             _illustDescLabel.text = DescribeOffer(mgr, offer);
-            _illustConfirmLabel.text = $"{offer.Price} 재화에 구매";
-            _illustConfirmButton.interactable = mgr.CurrentRun.Currency >= offer.Price;
+            // 못 살 때는 <b>얼마가 모자란지</b>를 적는다. 버튼만 꺼두면 "고장인가"로 읽힌다.
+            int currency = mgr.CurrentRun.Currency;
+            bool affordable = currency >= offer.Price;
+            _illustConfirmLabel.text = affordable
+                ? $"{offer.Price} 재화에 구매"
+                : $"{offer.Price - currency} 재화 부족";
+            _illustConfirmButton.interactable = affordable;
 
             _illustEmptyLabel.SetActive(false);
             _illustInfo.SetActive(true);
@@ -620,7 +641,7 @@ namespace DomoNinja.Unity
                 case OfferKind.SupportSkill:
                     var skill = mgr.Data.FindSkill(offer.Id);
                     if (skill == null) return "-";
-                    string mechanics = InfoPopupController.FormatSkill(skill);
+                    string mechanics = InfoPopupController.FormatSkill(skill, mgr.Data);
                     return string.IsNullOrEmpty(skill.Flavor) ? mechanics : $"“{skill.Flavor}”\n\n{mechanics}";
 
                 default:

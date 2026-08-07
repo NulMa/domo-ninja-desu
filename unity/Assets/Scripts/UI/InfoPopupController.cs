@@ -203,7 +203,7 @@ namespace DomoNinja.Unity
             {
                 var skill = mgr.Data.FindSkill(selected1.ActiveSkillId);
                 _activeSkillIcon.sprite = skill != null && skill.Icon != null ? _catalog?.Find(skill.Icon) : null;
-                _activeSkillLabel.text = skill != null ? FormatSkill(skill) : selected1.ActiveSkillId;
+                _activeSkillLabel.text = skill != null ? FormatSkill(skill, mgr.Data) : selected1.ActiveSkillId;
             }
             else
             {
@@ -222,7 +222,7 @@ namespace DomoNinja.Unity
                 {
                     var skill = mgr.Data.FindSkill(id);
                     if (sb.Length > 0) sb.Append('\n');
-                    sb.Append(skill != null ? FormatSkill(skill) : id);
+                    sb.Append(skill != null ? FormatSkill(skill, mgr.Data) : id);
                 }
                 _supportSkillLabel.text = sb.ToString();
             }
@@ -231,12 +231,41 @@ namespace DomoNinja.Unity
         /// <summary>스킬 표기 규칙(`08` §2.6) — 이름 + 이득/대가 2줄. 두 줄을 가르는 건
         /// <b>글자가 아니라 색</b>이다(<see cref="UITheme.Semantic"/>). <c>ShopController</c>·
         /// <c>RosterSelectController</c>도 같이 쓴다 — 표기 규칙이 여러 군데서 갈리면 언젠가 어긋난다.</summary>
-        internal static string FormatSkill(SkillDef skill)
+        /// <param name="data">
+        /// 있으면 <b>누구 스킬인지</b>를 이름 옆에 붙인다. 없으면 예전처럼 이름만 나온다.
+        /// </param>
+        /// <remarks>
+        /// 지시(사용자): *"스킬 정보에서 누구 스킬인지 떴으면 좋겠고."*
+        /// <para>
+        /// ★ <b>상점에서 특히 필요하다.</b> 스킬 이름만 보고는 <c>C4-B</c> 난사가 사냥꾼 것인지
+        /// 알 수 없는데, <b>내 팀에 없는 캐릭터의 스킬은 사도 쓸 데가 없다.</b>
+        /// 아이콘 그림으로 구분되기를 기대했지만 30종을 그림만으로 외우게 하는 셈이었다.
+        /// </para>
+        /// <para>
+        /// <see cref="SkillDef.CharacterId"/> 는 <c>"C4"</c> 같은 id 라 그대로 띄우면 못 읽는다.
+        /// 이름은 <c>characters.json</c> 에만 있으므로 <paramref name="data"/> 가 필요하다.
+        /// </para>
+        /// </remarks>
+        internal static string FormatSkill(SkillDef skill, GameData data = null)
         {
             var sb = new StringBuilder(skill.Name);
+
+            string owner = OwnerNameOf(skill, data);
+            if (owner != null) sb.Append("  ").Append(UITheme.Semantic.Muted(owner));
+
             if (skill.TextGain != null) sb.Append('\n').Append(UITheme.Semantic.Gain(skill.TextGain));
             if (skill.TextCost != null) sb.Append('\n').Append(UITheme.Semantic.Cost(skill.TextCost));
             return sb.ToString();
+        }
+
+        /// <summary>스킬 주인의 <b>표시 이름</b>. 못 찾으면 <c>null</c> — 그러면 아무것도 안 붙는다.</summary>
+        private static string OwnerNameOf(SkillDef skill, GameData data)
+        {
+            if (data == null || string.IsNullOrEmpty(skill.CharacterId)) return null;
+
+            var owner = data.FindCharacter(skill.CharacterId);
+            // 이름을 못 찾으면 id 라도 낸다 — 조용히 비면 "주인이 없는 스킬"로 읽힌다.
+            return string.IsNullOrEmpty(owner?.Name) ? skill.CharacterId : owner.Name;
         }
 
         // ────────────────────────────── 아이템 탭

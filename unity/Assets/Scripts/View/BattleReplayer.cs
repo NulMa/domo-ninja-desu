@@ -122,7 +122,14 @@ namespace DomoNinja.Unity.View
             // 지나간 틱의 이벤트를 순서대로 소비한다.
             while (_cursor < _log.Events.Count && _log.Events[_cursor].Tick <= _playhead)
             {
-                Apply(_log.Events[_cursor]);
+                var e = _log.Events[_cursor];
+                Apply(e);
+
+                // ★ 한 번의 공격에 딸린 연속(피해·회피·사망·보호막)이 아니면 다중 사격을 닫는다.
+                //   안 닫으면 <b>같은 틱에 도는 도트</b>가 같은 가해자로 적혀 있어(도트는 건 사람이
+                //   가해자다) 화살이 한 발 더 나간다 — 쏘지 않은 화살이다.
+                if (!IsVolleyContinuation(e.Kind)) _board.EndVolley();
+
                 _cursor++;
 
                 // 정지가 걸렸으면 <b>이번 프레임은 여기까지</b>다. 계속 소비하면
@@ -131,6 +138,29 @@ namespace DomoNinja.Unity.View
             }
 
             if (_cursor >= _log.Events.Count) _playing = false;
+        }
+
+        /// <summary>
+        /// 이 종류가 <b>방금 그 공격의 일부</b>일 수 있는가.
+        /// </summary>
+        /// <remarks>
+        /// <c>Attack</c> 은 여기 없다 — 새 공격은 <b>새 연속의 시작</b>이라
+        /// <see cref="BoardView.FlashAttack"/> 이 직접 다시 연다.
+        /// </remarks>
+        private static bool IsVolleyContinuation(EventKind kind)
+        {
+            switch (kind)
+            {
+                case EventKind.Attack:
+                case EventKind.Damage:
+                case EventKind.Dodge:
+                case EventKind.Death:
+                case EventKind.Shield:
+                case EventKind.StatusApply:   // 공격에 딸린 상태(`C5-A` 각인)가 피해 사이에 낀다
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         /// <remarks>
@@ -159,10 +189,17 @@ namespace DomoNinja.Unity.View
                 case EventKind.Damage:
                     _board.SetHp(e.TargetId, e.Aux);
                     _board.FlashDamage(e.TargetId, e.ActorId);
+                    // 다중 사격이면 이 표적으로 한 발 더 나간다. 아니면 아무 일도 안 한다.
+                    _board.NotifyVolleyHit(e.ActorId, e.TargetId);
                     // `Value` 가 피해량이다(`23` §2.1). 화면에서 다시 계산하지 않는다 —
                     // 체력 막대만으로는 얼마나 아팠는지가 안 읽힌다.
                     _board.ShowDamage(e.TargetId, e.Value);
                     AudioManager.Instance?.PlaySfx(AudioKeys.Hit);
+                    break;
+
+                // 빗나간 화살도 날아가야 한다 — 피해가 0 이라고 안 쏜 것은 아니다.
+                case EventKind.Dodge:
+                    _board.NotifyVolleyHit(e.ActorId, e.TargetId);
                     break;
 
                 case EventKind.Heal:
