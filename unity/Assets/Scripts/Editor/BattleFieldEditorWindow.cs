@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DomoNinja.Core.Domain;
+using DomoNinja.Unity.View;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
@@ -41,8 +42,16 @@ namespace DomoNinja.Unity.Editor
         private const string TileFolder = "Assets/Tilemaps/Tiles";
         private const string FieldPrefix = "BattleField";
 
-        /// <summary>보드 바깥으로 더 칠할 수 있는 여유 칸. 절차적 바닥이 한 줄 더 깔던 것과 같다.</summary>
-        private const int Margin = 1;
+        /// <summary>
+        /// 판 바깥으로 더 칠할 수 있는 여유 칸. <see cref="BoardView"/> 와 <b>같은 값을 쓴다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 여기서 따로 정하면 <b>편집기에서 칠한 자리가 게임에서 안 나오거나 그 반대</b>가 된다.
+        /// 범위의 근거(화면비별 가시 범위)는 <see cref="BoardView.FieldMarginX"/> 에 적혀 있다.
+        /// </remarks>
+        private static int MarginX => BoardView.FieldMarginX;
+
+        private static int MarginY => BoardView.FieldMarginY;
 
         private static readonly Color AllyZone = new Color(0.30f, 0.45f, 0.75f, 0.22f);
         private static readonly Color EnemyZone = new Color(0.75f, 0.32f, 0.32f, 0.22f);
@@ -311,8 +320,8 @@ namespace DomoNinja.Unity.Editor
                     $"{Path.GetFileNameWithoutExtension(_fieldPath)} — 왼쪽 파랑이 아군 진영, 화면 그대로가 게임 화면",
                     EditorStyles.boldLabel);
 
-                int cols = Coord.BoardWidth + Margin * 2;
-                int rows = Coord.BoardHeight + Margin * 2;
+                int cols = Coord.BoardWidth + MarginX * 2;
+                int rows = Coord.BoardHeight + MarginY * 2;
 
                 var area = GUILayoutUtility.GetRect(cols * _zoom, rows * _zoom,
                                                     GUILayout.ExpandWidth(false), GUILayout.ExpandHeight(false));
@@ -321,8 +330,8 @@ namespace DomoNinja.Unity.Editor
                 {
                     for (int rx = 0; rx < cols; rx++)
                     {
-                        int boardX = rx - Margin;
-                        int boardY = ry - Margin;
+                        int boardX = rx - MarginX;
+                        int boardY = ry - MarginY;
                         var rect = new Rect(area.x + rx * _zoom, area.y + ry * _zoom, _zoom, _zoom);
 
                         bool inBoard = boardX >= 0 && boardX < Coord.BoardWidth
@@ -344,14 +353,57 @@ namespace DomoNinja.Unity.Editor
                 }
 
                 // 보드 경계 강조 — 여기 안쪽이 실제로 유닛이 서는 칸이다.
-                var board = new Rect(area.x + Margin * _zoom, area.y + Margin * _zoom,
+                var board = new Rect(area.x + MarginX * _zoom, area.y + MarginY * _zoom,
                                      Coord.BoardWidth * _zoom, Coord.BoardHeight * _zoom);
                 DrawOutline(board, BoardEdge);
 
+                DrawAspectGuides(area);
+
                 EditorGUILayout.HelpBox(
                     "좌클릭 드래그 = 칠하기 · 우클릭 드래그 = 지우기\n" +
-                    "노란 테두리 안이 8×6 보드다. 바깥 한 줄은 가장자리 장식용이라 유닛이 서지 않는다.",
+                    "노란 테두리 = 8×6 보드(유닛이 서는 칸). 점선 = 화면비별로 실제 보이는 범위.\n" +
+                    "16:9 선 안쪽은 반드시 칠할 것 — 심사자 창이 그보다 넓으면 21:9 선까지 보인다.",
                     MessageType.None);
+            }
+        }
+
+        /// <summary>
+        /// 화면비별로 <b>실제로 보이는 범위</b>를 겹쳐 그린다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 칠할 넓이를 눈대중으로 정하면 <b>넓은 창에서 가장자리가 빈다.</b> 실제로 그랬다 —
+        /// 여유를 사방 한 줄로 뒀더니 16:9 에서도 좌우로 2.5칸씩 배경색이 남았다.
+        /// </para>
+        /// <para>
+        /// 그래서 추측 대신 <see cref="BoardCamera.SizeFor"/> 를 <b>그대로 불러</b> 선을 긋는다.
+        /// 카메라 공식이 바뀌면 이 선도 같이 움직인다 — 두 벌로 적으면 언젠가 어긋난다.
+        /// </para>
+        /// </remarks>
+        private void DrawAspectGuides(Rect area)
+        {
+            // 왼쪽 위 칸의 화면 좌표가 보드 좌표 (−MarginX, −MarginY) 에 해당한다.
+            // 월드 원점(판 중앙)은 거기서 MarginX·MarginY 칸만큼 안쪽이다.
+            float originX = area.x + (MarginX + Coord.BoardWidth * 0.5f) * _zoom;
+            float originY = area.y + (MarginY + Coord.BoardHeight * 0.5f) * _zoom;
+
+            foreach (var (label, aspect, color) in new[]
+            {
+                ("16:9", 16f / 9f, new Color(0.45f, 0.85f, 1f, 0.85f)),
+                ("21:9", 21f / 9f, new Color(0.55f, 1f, 0.6f, 0.7f)),
+                ("9:16", 9f / 16f, new Color(1f, 0.6f, 0.9f, 0.7f)),
+            })
+            {
+                float halfH = BoardCamera.SizeFor(aspect);
+                float halfW = halfH * aspect;
+
+                var rect = new Rect(originX - halfW * _zoom, originY - halfH * _zoom,
+                                    halfW * 2f * _zoom, halfH * 2f * _zoom);
+                DrawDashedOutline(rect, color);
+
+                var labelRect = new Rect(rect.x + 3f, rect.y + 1f, 46f, 16f);
+                var style = new GUIStyle(EditorStyles.miniLabel) { normal = { textColor = color } };
+                GUI.Label(labelRect, label, style);
             }
         }
 
@@ -391,6 +443,28 @@ namespace DomoNinja.Unity.Editor
             var tex = sprite.texture;
             var uv = new Rect(r.x / tex.width, r.y / tex.height, r.width / tex.width, r.height / tex.height);
             GUI.DrawTextureWithTexCoords(rect, tex, uv, alphaBlend: true);
+        }
+
+        /// <summary>점선 테두리. 실선(보드 경계)과 구분돼야 "판"과 "보이는 범위"가 안 헷갈린다.</summary>
+        private static void DrawDashedOutline(Rect rect, Color color)
+        {
+            const float dash = 6f;
+            const float gap = 5f;
+            const float t = 1.5f;
+
+            for (float x = rect.x; x < rect.xMax; x += dash + gap)
+            {
+                float w = Mathf.Min(dash, rect.xMax - x);
+                EditorGUI.DrawRect(new Rect(x, rect.y, w, t), color);
+                EditorGUI.DrawRect(new Rect(x, rect.yMax - t, w, t), color);
+            }
+
+            for (float y = rect.y; y < rect.yMax; y += dash + gap)
+            {
+                float h = Mathf.Min(dash, rect.yMax - y);
+                EditorGUI.DrawRect(new Rect(rect.x, y, t, h), color);
+                EditorGUI.DrawRect(new Rect(rect.xMax - t, y, t, h), color);
+            }
         }
 
         private static void DrawOutline(Rect rect, Color color)

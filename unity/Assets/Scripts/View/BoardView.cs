@@ -156,6 +156,34 @@ namespace DomoNinja.Unity.View
         private const string GroundTileKey = "Backgrounds/Ground";
 
         /// <summary>
+        /// 판 바깥으로 더 깔아야 하는 칸 수. <b>화면이 판보다 넓다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ 전에는 <b>사방 한 줄</b>이었는데 근거 없는 값이었다. <see cref="BoardCamera"/> 는
+        /// 판 8×6 이 어떤 창 비율에서도 들어오게 잡을 뿐, <b>남는 자리를 채우지는 않는다</b> —
+        /// 그래서 넓은 창일수록 좌우에 배경색만 남았다.
+        /// </para>
+        /// <para>
+        /// 실제 가시 범위(<c>orthographicSize = max(4.2, 4.2/aspect)</c>) 기준:
+        /// </para>
+        /// <list type="bullet">
+        ///   <item>16:9 → x ±7.47 · y ±4.2</item>
+        ///   <item>21:9 → x ±9.8 · y ±4.2</item>
+        ///   <item>9:16(세로) → x ±4.2 · y ±7.47</item>
+        /// </list>
+        /// <para>
+        /// 판 절반이 x 4.0 · y 3.0 이므로, 여유 <c>X=6 / Y=5</c> 면 x ±10 · y ±8 까지 덮어
+        /// <b>21:9 가로와 9:16 세로를 모두 채운다.</b> 그 이상(32:9 같은)은 포기한다 —
+        /// 칸 수가 제곱으로 늘어 손으로 칠할 양이 감당이 안 된다.
+        /// </para>
+        /// </remarks>
+        public const int FieldMarginX = 6;
+
+        /// <inheritdoc cref="FieldMarginX"/>
+        public const int FieldMarginY = 5;
+
+        /// <summary>
         /// 판 뒤에 <b>흙바닥</b>을 깐다. 칸마다 한 장씩 놓아 타일이 이어지게 한다.
         /// </summary>
         /// <remarks>
@@ -280,26 +308,30 @@ namespace DomoNinja.Unity.View
             var size = tile.bounds.size;
             float scale = size.x > 0f ? CellSize / size.x : 1f;
 
-            for (int y = -1; y <= Coord.BoardHeight; y++)
+            for (int y = -FieldMarginY; y < Coord.BoardHeight + FieldMarginY; y++)
             {
-                for (int x = -1; x <= Coord.BoardWidth; x++)
+                for (int x = -FieldMarginX; x < Coord.BoardWidth + FieldMarginX; x++)
                 {
                     var go = new GameObject($"Ground_{x}_{y}");
                     go.transform.SetParent(root, false);
-                    // 격자(z=1)보다 뒤. 유닛은 z=0 이라 바닥이 유닛을 가리지 않는다.
-                    go.transform.position = ToWorld(new Coord(Mathf.Clamp(x, 0, Coord.BoardWidth - 1),
-                                                              Mathf.Clamp(y, 0, Coord.BoardHeight - 1)))
-                                            + new Vector3((x - Mathf.Clamp(x, 0, Coord.BoardWidth - 1)) * CellSize,
-                                                          (y - Mathf.Clamp(y, 0, Coord.BoardHeight - 1)) * CellSize,
-                                                          1.5f);
+
+                    // ★ 판 밖 좌표를 <b>직접</b> 계산한다. 전에는 좌표를 판 안으로 clamp 한 뒤
+                    //   차이만큼 밀었는데, **세로 부호를 빠뜨려 위아래가 접혔다** —
+                    //   `ToWorld` 는 보드 Y 가 커질수록 월드 y 가 작아지는데 밀어주는 값은
+                    //   그대로 더했기 때문이다. 여유가 한 줄일 땐 한 줄이 겹치는 정도라
+                    //   눈에 안 띄었고, 5줄로 늘리자 세로가 ±3 에서 안 자라는 것으로 드러났다.
+                    go.transform.position = new Vector3(
+                        (x - (Coord.BoardWidth - 1) * 0.5f) * CellSize,
+                        ((Coord.BoardHeight - 1) * 0.5f - y) * CellSize,
+                        1.5f);
                     go.transform.localScale = Vector3.one * scale;
 
                     var sr = go.AddComponent<SpriteRenderer>();
                     sr.sprite = tile;
                     sr.sortingOrder = -20;
-                    // 판 밖으로 한 줄 더 깔되 가장자리는 어둡게 — 바닥이 뚝 끊기면 판이 떠 보인다.
-                    bool border = x < 0 || y < 0 || x >= Coord.BoardWidth || y >= Coord.BoardHeight;
-                    sr.color = border ? new Color(0.45f, 0.45f, 0.45f) : new Color(0.72f, 0.72f, 0.72f);
+                    // ★ 어둡게 칠하지 않는다(사용자 지시). 전에는 판 안 0.72 · 바깥 0.45 로 깔아
+                    //   가장자리를 죽였는데, 그림을 그대로 보여주는 편이 낫다 —
+                    //   어둡게 하는 건 그린 배경을 쓰기 시작하면 더더욱 방해가 된다.
                 }
             }
         }
@@ -334,14 +366,16 @@ namespace DomoNinja.Unity.View
                     // 배치 규칙이 화면에 안 보이면 "왜 여기 못 놓지"가 버그처럼 보인다.
                     bool ally = x <= Coord.AllyMaxX;
                     bool dark = (x + y) % 2 == 0;
-                    // ★ 반투명이다. 전에는 불투명 사각형이라 그 자체가 배경이었는데, 이제 뒤에
-                    //   흙바닥(`BuildGround`)이 깔려 있어 불투명하게 두면 바닥이 아예 안 보인다.
-                    //   진영 구분은 남기고 바닥이 비쳐 보일 만큼만 덮는다.
+
+                    // ★ 진영 구분은 남기되 <b>어둡게 덮지 않는다</b>(사용자 지시).
+                    //   전에는 어두운 남색·자주를 alpha 0.55 로 덮어서, 배경을 아무리 잘 그려도
+                    //   판 위만 그늘진 것처럼 보였다. 밝은 색을 옅게 얹어 **색조만** 남긴다 —
+                    //   구분이 사라지면 "왜 여기 못 놓지"가 다시 버그처럼 보인다.
                     var color = ally
-                        ? new Color(0.16f, 0.20f, 0.28f)
-                        : new Color(0.26f, 0.17f, 0.19f);
-                    if (dark) color *= 0.82f;
-                    color.a = 0.55f;
+                        ? new Color(0.55f, 0.75f, 1.00f)
+                        : new Color(1.00f, 0.62f, 0.58f);
+                    if (dark) color *= 0.92f;
+                    color.a = 0.18f;
 
                     var renderer = cell.GetComponent<MeshRenderer>();
                     renderer.material = new Material(Shader.Find("Sprites/Default")) { color = color };
