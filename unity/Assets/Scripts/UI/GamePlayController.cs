@@ -94,6 +94,7 @@ namespace DomoNinja.Unity
 
             // 무기 연출은 **고른 빌드**가 정한다 — 라운드마다 다시 계산한다(상점에서 스킬을 사면 바뀐다).
             _boardView.RangedTypeIds = BuildRangedTypeIds(mgr);
+            _boardView.ActiveSkillNames = BuildActiveSkillNames(mgr);
 
             var aliveIds = new List<string>();
             foreach (var entry in mgr.CurrentRun.Deployed)
@@ -141,6 +142,37 @@ namespace DomoNinja.Unity
             }
 
             return set;
+        }
+
+        /// <summary>
+        /// 캐릭터 종류 → 그 캐릭터가 고른 <b>액티브 스킬 이름</b>. 화면이 <c>SkillCast</c> 때 띄운다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>이름을 이벤트에 싣지 않은 이유가 여기 있다.</b> 한 유닛의 액티브는 전투 내내 하나라
+        /// core 는 <b>"누가"</b>만 알리면 되고, 이름은 이미 로스터를 들고 있는 이쪽이 안다.
+        /// 이벤트에 문자열을 실으면 틱마다 할당이 생겨 <c>GameEvent</c> 를 struct 로 둔 이유가 사라진다.
+        /// <para>
+        /// <see cref="BuildRangedTypeIds"/> 와 같은 자리에서 같은 로스터를 읽는다 — 둘을 떼어 놓으면
+        /// 한쪽만 갱신되는 라운드가 생기고, 그러면 <b>표창을 던지는데 이름은 그림자</b>가 뜬다.
+        /// </para>
+        /// </remarks>
+        private static Dictionary<string, string> BuildActiveSkillNames(RunManager mgr)
+        {
+            var map = new Dictionary<string, string>();
+            var run = mgr.CurrentRun;
+            if (run == null || mgr.Data == null) return map;
+
+            foreach (var entry in run.Deployed)
+            {
+                if (entry.ActiveSkillId == null) continue;
+
+                var skill = mgr.Data.FindSkill(entry.ActiveSkillId);
+                if (skill?.Name == null) continue;
+
+                map[entry.CharacterId] = skill.Name;
+            }
+
+            return map;
         }
 
         /// <summary>스킬 효과에서 <c>setRange</c> 를 찾는다. 없으면 0 — 기본 사거리가 그대로 쓰인다.</summary>

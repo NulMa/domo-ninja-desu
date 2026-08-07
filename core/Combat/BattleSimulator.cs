@@ -116,6 +116,7 @@ namespace DomoNinja.Core.Combat
             }
 
             ApplyStartEffects(units, target);
+            AnnounceActiveSkills(units, target);
 
             int tick = 0;
             int suddenDeathAt = -1;
@@ -258,6 +259,50 @@ namespace DomoNinja.Core.Combat
                 var ctx = MakeContext(u, null, 0, 0, sink);
                 for (int k = 0; k < start.Count; k++)
                     EffectExecutor.Execute(start[k].Effect, ctx, start[k].SkillPowerPermille);
+            }
+        }
+
+        /// <summary>
+        /// 액티브 스킬을 든 유닛을 전투 시작에 한 번 알린다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>전투에 아무 영향이 없다.</b> 싱크는 쓰기 전용이라(`23` §1) 여기서 무엇을 내보내도
+        /// 계산이 달라질 수 없고, <c>sim</c> 은 <see cref="NullEventSink"/> 라 비용도 없다.
+        /// <para>
+        /// 왜 시작에 알리는가 — 액티브 12종 중 <b>발동 순간이 있는 건 7종뿐</b>이다.
+        /// 저격·난사·각인·주술·가호는 스탯·사거리·시작 버프라서 "터지는" 시점이 없다.
+        /// 발동만 알리면 <b>그 5종을 고른 플레이어는 자기 스킬 이름을 한 번도 못 본다</b> —
+        /// 화면에서 보이지 않는 스킬은 고른 적이 없는 것과 같다.
+        /// </para>
+        /// </remarks>
+        private static void AnnounceActiveSkills(IReadOnlyList<Unit> units, IEventSink sink)
+        {
+            for (int i = 0; i < units.Count; i++)
+            {
+                var u = units[i];
+                if (u.Loadout.ActiveSkillId == null) continue;
+                sink.Emit(new GameEvent(EventKind.SkillCast, 0, u.Id, -1, 0));
+            }
+        }
+
+        /// <summary>
+        /// 방금 터진 트리거가 <b>액티브 스킬에서 온 것이면</b> 한 번 알린다.
+        /// </summary>
+        /// <remarks>
+        /// 같은 틱에 액티브 트리거가 둘 터져도 한 번만 낸다 — <c>C5-B</c> 연쇄처럼
+        /// <c>on_kill</c> 을 두 개 든 스킬이 있어서, 그대로 내면 <b>이름이 두 겹으로 겹쳐 뜬다.</b>
+        /// </remarks>
+        private static void AnnounceIfActive(Unit u, IReadOnlyList<CompiledTrigger> fired,
+                                             int tick, IEventSink sink)
+        {
+            var active = u.Loadout.ActiveSkillId;
+            if (active == null) return;
+
+            for (int i = 0; i < fired.Count; i++)
+            {
+                if (fired[i].SourceSkillId != active) continue;
+                sink.Emit(new GameEvent(EventKind.SkillCast, tick, u.Id, -1, 1));
+                return;
             }
         }
 
@@ -405,6 +450,8 @@ namespace DomoNinja.Core.Combat
             u.Loadout.Triggers.CollectPeriodic(tick, _triggerScratch);
             if (_triggerScratch.Count == 0) return;
 
+            AnnounceIfActive(u, _triggerScratch, tick, sink);
+
             var ctx = MakeContext(u, null, 0, tick, sink);
             for (int i = 0; i < _triggerScratch.Count; i++)
             {
@@ -419,6 +466,8 @@ namespace DomoNinja.Core.Combat
         {
             var triggers = u.Loadout.Triggers.Matching(type);
             if (triggers.Count == 0) return EffectOutcome.None;
+
+            AnnounceIfActive(u, triggers, tick, sink);
 
             var ctx = MakeContext(u, target, lastDamage, tick, sink);
             int extra = 0, chain = 0;

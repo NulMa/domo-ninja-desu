@@ -126,10 +126,22 @@ namespace DomoNinja.Core.Skills
         /// </remarks>
         public SustainedShield? StationaryShield { get; }
 
+        /// <summary>
+        /// 이 유닛이 고른 액티브 스킬 id. <b>없으면 <c>null</c></b> (적 전부, 그리고 액티브 미선택 아군).
+        /// </summary>
+        /// <remarks>
+        /// 전투 계산에는 안 쓴다 — <see cref="Events.EventKind.SkillCast"/> 를 <b>액티브에서 온 것만</b>
+        /// 내보내려고 든다. 보조 스킬의 트리거도 같은 자리에서 터지는데, 그것까지 이름을 띄우면
+        /// 화면이 <b>플레이어가 고른 한 방</b>과 <b>늘 도는 보조</b>를 구분해주지 못한다.
+        /// </remarks>
+        public string? ActiveSkillId { get; }
+
         private Loadout(TriggerSet triggers, JObject? aoe, int skillPower,
                         IReadOnlyList<StartEffect> start, IReadOnlyList<StartEffect> onAttack,
-                        IReadOnlyList<SustainedShield> refreshing, SustainedShield? stationary)
+                        IReadOnlyList<SustainedShield> refreshing, SustainedShield? stationary,
+                        string? activeSkillId = null)
         {
+            ActiveSkillId = activeSkillId;
             Triggers = triggers;
             Aoe = aoe;
             SkillPowerPermille = skillPower;
@@ -202,7 +214,8 @@ namespace DomoNinja.Core.Skills
                 (IReadOnlyList<StartEffect>?)start ?? NoStart,
                 (IReadOnlyList<StartEffect>?)onAttack ?? NoStart,
                 (IReadOnlyList<SustainedShield>?)refreshing ?? NoSustained,
-                stationary);
+                stationary,
+                active?.Id);
         }
 
         /// <summary>스킬이 하나도 없는 유닛(적 전부). <b>적은 스킬을 갖지 않는다</b> (`D-39`).</summary>

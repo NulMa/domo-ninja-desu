@@ -137,6 +137,12 @@ namespace DomoNinja.Unity.View
                     _board.SetSuddenDeath(true);
                     break;
 
+                // Value 0 = 전투 시작 알림 / 1 = 실제 발동 (`23` §2.1).
+                // 어느 쪽을 어떻게 보여줄지는 화면이 정한다 — core 는 사실만 말한다.
+                case EventKind.SkillCast:
+                    _board.ShowSkillCast(e.ActorId, e.Value == 1);
+                    break;
+
                 case EventKind.Death:
                     _board.SetDead(e.TargetId);
                     AudioManager.Instance?.PlaySfx(AudioKeys.Death);
