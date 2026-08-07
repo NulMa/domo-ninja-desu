@@ -72,6 +72,7 @@ namespace DomoNinja.Unity.View
             _board.TickAnimations(Time.deltaTime);
             _board.TickHitFx(Time.deltaTime);
             _board.TickMovement(Time.deltaTime);
+            _board.TickDamagePopups(Time.deltaTime);
 
             // 지나간 틱의 이벤트를 순서대로 소비한다.
             while (_cursor < _log.Events.Count && _log.Events[_cursor].Tick <= _playhead)
@@ -108,6 +109,9 @@ namespace DomoNinja.Unity.View
                 case EventKind.Damage:
                     _board.SetHp(e.TargetId, e.Aux);
                     _board.FlashDamage(e.TargetId, e.ActorId);
+                    // `Value` 가 피해량이다(`23` §2.1). 화면에서 다시 계산하지 않는다 —
+                    // 체력 막대만으로는 얼마나 아팠는지가 안 읽힌다.
+                    _board.ShowDamage(e.TargetId, e.Value);
                     AudioManager.Instance?.PlaySfx(AudioKeys.Hit);
                     break;
 

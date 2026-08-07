@@ -99,6 +99,16 @@ namespace DomoNinja.Unity.View
         }
 
         /// <summary>화면에 재생 중인 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
+        /// <summary>떠오르며 사라지는 피해 숫자 하나. <see cref="HitFx"/> 와 같이 유닛에 안 매인다.</summary>
+        private sealed class DamagePopup
+        {
+            public Transform Transform;
+            public TMPro.TextMeshPro Text;
+            public float Left;
+            public float Total;
+            public Vector3 From;
+        }
+
         private sealed class HitFx
         {
             public Transform Transform;
@@ -1340,6 +1350,92 @@ namespace DomoNinja.Unity.View
             go.transform.localScale = Vector3.one * scale;
 
             _hitFxInstances.Add(new HitFx { Transform = go.transform, Renderer = renderer, Frames = frames });
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  피해 숫자
+        // ─────────────────────────────────────────────────────────────
+
+        private readonly List<DamagePopup> _damagePopups = new List<DamagePopup>();
+
+        /// <summary>숫자가 떠 있는 시간(초). 길면 연타 때 숫자가 쌓여 판을 가린다.</summary>
+        private const float DamagePopupSeconds = 0.7f;
+
+        /// <summary>떠오르는 높이(월드). 칸이 1 이라 반 칸이면 이웃 칸까지 안 넘어간다.</summary>
+        private const float DamagePopupRise = 0.5f;
+
+        /// <summary>
+        /// 맞은 자리에 <b>피해량</b>을 띄운다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "타격마다 데미지 이펙트 띄워줘."
+        /// </para>
+        /// <para>
+        /// 값은 <c>EventKind.Damage</c> 의 <c>Value</c>(피해량)를 그대로 쓴다 —
+        /// 화면에서 다시 계산하지 않는다. 체력 막대만으로는 <b>얼마나 아팠는지</b>가 안 읽히고,
+        /// 특히 스킬이 평타보다 센 것이 숫자로 안 보이면 스킬을 산 보람이 없다.
+        /// </para>
+        /// <para>
+        /// ★ 유닛에 붙이지 않고 <b>맞은 자리에 떨어뜨린다.</b> 붙이면 유닛이 움직이거나 죽을 때
+        /// 숫자가 같이 끌려가거나 사라진다 — 죽는 순간의 마지막 타격이 제일 보고 싶은 숫자다.
+        /// </para>
+        /// </remarks>
+        public void ShowDamage(int unitId, int amount)
+        {
+            if (amount <= 0) return;
+            if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null) return;
+
+            var go = new GameObject("DamagePopup");
+            go.transform.SetParent(transform, false);
+
+            var from = unit.Root.transform.position + new Vector3(0f, 0.25f, -2f);
+            go.transform.position = from;
+
+            var text = go.AddComponent<TMPro.TextMeshPro>();
+            text.text = amount.ToString();
+            text.fontSize = 3.2f;
+            text.alignment = TMPro.TextAlignmentOptions.Center;
+            text.color = unit.IsAlly ? new Color(1f, 0.55f, 0.5f) : new Color(1f, 0.93f, 0.6f);
+            text.sortingOrder = 60;
+
+            // 글자가 칸보다 커지지 않게. RectTransform 이 기본 200x50 이라 그대로 두면 엄청 넓다.
+            var rt = text.rectTransform;
+            rt.sizeDelta = new Vector2(2f, 1f);
+
+            _damagePopups.Add(new DamagePopup
+            {
+                Transform = go.transform,
+                Text = text,
+                Left = DamagePopupSeconds,
+                Total = DamagePopupSeconds,
+                From = from,
+            });
+        }
+
+        /// <summary>피해 숫자를 띄우고 흐리게 하며, 다 되면 없앤다. 재생기가 매 프레임 부른다.</summary>
+        public void TickDamagePopups(float deltaTime)
+        {
+            for (int i = _damagePopups.Count - 1; i >= 0; i--)
+            {
+                var p = _damagePopups[i];
+                p.Left -= deltaTime;
+
+                if (p.Left <= 0f || p.Transform == null)
+                {
+                    if (p.Transform != null) Object.Destroy(p.Transform.gameObject);
+                    _damagePopups.RemoveAt(i);
+                    continue;
+                }
+
+                float t = 1f - p.Left / p.Total;
+                p.Transform.position = p.From + new Vector3(0f, DamagePopupRise * t, 0f);
+
+                // 마지막 30% 에서만 사라진다 — 처음부터 흐려지면 읽기 전에 안 보인다.
+                var c = p.Text.color;
+                c.a = t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f;
+                p.Text.color = c;
+            }
         }
 
         /// <summary>타격 이펙트를 시간에 따라 진행하고, 다 돌면 스스로 없앤다. 재생기가 매 프레임 부른다.</summary>
