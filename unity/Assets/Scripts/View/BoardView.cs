@@ -576,15 +576,24 @@ namespace DomoNinja.Unity.View
             root.transform.localPosition = new Vector3(0f, BarBaseY, -0.1f);
 
             var trackSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniUnder") : null;
-            var fillSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniProgress") : null;
+
+            // ★ 아군은 **초록으로 칠한 별도 스프라이트**를 쓴다. 틴트로는 못 만든다 —
+            //   `LifeBarMiniProgress` 의 채움 픽셀이 빨강(224,57,76)이라 초록(0.45,0.95,0.5)을
+            //   곱하면 (101,54,38) 즉 **탁한 갈색**이 된다. 실제로 그렇게 나와 있었다.
+            //   `CreateShieldBar` 주석이 이미 같은 함정을 적어뒀는데(스프라이트 틴트는 원본보다
+            //   밝아질 수 없다) 이쪽은 안 고쳐져 있었다 — 적군은 빨강×빨강이라 멀쩡해서
+            //   **한쪽만 틀린 상태가 눈에 안 띄었다.**
+            string fillKey = ally ? "UI/Bar/LifeBarMiniProgressAlly" : "UI/Bar/LifeBarMiniProgress";
+            var fillSprite = _catalog != null ? _catalog.Find(fillKey) : null;
             if (trackSprite == null || fillSprite == null) return CreateFallbackHpBar(root.transform, ally);
 
             AddBarPart(root.transform, "Track", trackSprite, Color.white, 1, Vector3.zero,
                        ScaleFor(trackSprite, HpBarWidth, HpBarHeight));
 
+            // 아군은 스프라이트가 이미 제 색이라 흰색(=원본 그대로), 적군만 붉은 쪽으로 살짝 민다.
             var fillScale = ScaleFor(fillSprite, HpBarWidth, HpBarHeight);
             var fill = AddBarPart(root.transform, "Fill", fillSprite,
-                                  ally ? new Color(0.45f, 0.95f, 0.5f) : new Color(1f, 0.45f, 0.42f),
+                                  ally ? Color.white : new Color(1f, 0.45f, 0.42f),
                                   2, Vector3.zero, fillScale);
             return fill;
         }

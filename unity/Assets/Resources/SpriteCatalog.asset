@@ -639,6 +639,8 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 82f9ca96d974fc048a34ccec853bdda5, type: 3}
   - Key: UI/Bar/LifeBarMiniProgress
     Sprite: {fileID: 21300000, guid: 0add6cb27ca01d5469f7eb72e20a54dc, type: 3}
+  - Key: UI/Bar/LifeBarMiniProgressAlly
+    Sprite: {fileID: 21300000, guid: 9119deeb697184e448168da2db6b6051, type: 3}
   - Key: UI/Bar/LifeBarMiniUnder
     Sprite: {fileID: 21300000, guid: 121f208e205533f42b2bf985d4b5e9c2, type: 3}
   - Key: UI/Bar/ProgressHealth
