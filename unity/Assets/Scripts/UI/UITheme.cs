@@ -156,6 +156,19 @@ namespace DomoNinja.Unity
 
             /// <summary>손해 쪽으로 칠한다. 앞에 <c>−</c>(U+2212) 를 붙인다 — 하이픈과 달리 숫자와 안 붙어 보인다.</summary>
             public static string Cost(string text) => $"<color=#{CostHex}>− {text}</color>";
+
+            /// <summary>곁들이는 정보. 본문보다 흐리고 작다.</summary>
+            public const string MutedHex = "9A9188";
+
+            /// <summary>
+            /// 본문에 딸린 부가 정보(누구 스킬인지 등). <b>작고 흐리게</b> — 이름과 같은 무게로 쓰면
+            /// 무엇이 스킬 이름인지가 안 갈린다.
+            /// </summary>
+            public static string Muted(string text) => $"<size=80%><color=#{MutedHex}>{text}</color></size>";
+
+            /// <summary>지금은 못 사는 값. <see cref="CostHex"/> 를 그대로 쓴다 — 「손해」와 「못 삼」은
+            /// 둘 다 <b>빨간 쪽</b>이고, 색을 하나 더 늘리면 화면에서 무엇이 무엇인지 안 갈린다.</summary>
+            public static string Unaffordable(string text) => $"<color=#{CostHex}>{text}</color>";
         }
 
         /// <summary>버튼 컴포넌트를 붙이고 연출을 입힌다. 이미 있으면 그대로 쓴다.</summary>

@@ -519,6 +519,7 @@ namespace DomoNinja.Unity.View
             // 빛은 유닛의 자식이라 위에서 이미 사라졌다. 목록만 비우면 된다.
             _castGlows.Clear();
             _castSlotFreeAt = 0f;
+            _volleyActor = -1;
 
             foreach (var o in _overlays)
             {
@@ -1437,7 +1438,67 @@ namespace DomoNinja.Unity.View
         {
             Flash(actorId, AttackTint);
             PlayAttackAnimation(actorId, targetId);
+
             PlayWeaponFx(actorId, targetId);
+
+            // 이 공격이 여럿을 맞히면 뒤따르는 피해마다 한 발씩 더 나간다 — <see cref="NotifyVolleyHit"/>.
+            _volleyActor = IsRangedActor(actorId) ? actorId : -1;
+            _volleyMainTarget = targetId;
+        }
+
+        /// <summary>지금 다중 사격 중인 원거리 공격자. -1 이면 없다.</summary>
+        private int _volleyActor = -1;
+
+        /// <summary>그 공격의 주 표적. <b>이쪽으로는 이미 한 발 나갔다.</b></summary>
+        private int _volleyMainTarget = -1;
+
+        /// <summary>
+        /// 방금 공격이 <b>주 표적이 아닌 누군가</b>도 맞혔다. 그쪽으로 한 발 더 날린다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): *"사냥꾼의 난사처럼 다중공격을 하는 원거리 공격은 투사체도
+        /// 그만큼 늘어나야한다고 생각함."*
+        /// </para>
+        /// <para>
+        /// ★ <b>표적을 추측하는 게 아니다.</b> `C4-B` 난사는 <c>Attack(사냥꾼, 주표적)</c> 한 건 뒤에
+        /// <c>Damage(사냥꾼, 표적)</c> 를 <b>맞은 수만큼</b> 잇달아 낸다
+        /// (`BattleSimulator.PerformAttack` — 표적별 <c>Attack</c> 은 안 낸다).
+        /// <b>누구를 맞혔는지는 이미 적혀 있는 사실</b>이고, `23` 이
+        /// *"같은 틱의 이벤트가 여러 건이면 리스트 순서가 곧 인과 순서"* 라고 보장한다 —
+        /// 화면은 그 연속을 그대로 읽는다. (`24` §2 의 `C` 안 — *"틱 간격으로 짐작"* — 과는
+        /// 다른 일이다. 짐작할 것이 없다.)
+        /// </para>
+        /// <para>
+        /// ⚠️ 그래서 <b>연속이 끊기면 반드시 닫아야 한다</b>(<see cref="EndVolley"/>).
+        /// 같은 틱에 다른 유닛의 도트가 돌면 <c>Damage(같은 사냥꾼, 다른 적)</c> 가 또 나오는데
+        /// (도트는 <b>건 사람</b>이 가해자로 적힌다), 그건 화살이 아니다.
+        /// </para>
+        /// <para>
+        /// 근접 광역(<c>C1-B</c> 연격 · <c>C2-B</c> 파동)은 <b>안 늘린다.</b> 한 번 휘둘러
+        /// 여럿이 맞는 것이라 휘두르기가 여러 번 나오면 오히려 틀린 그림이 된다.
+        /// </para>
+        /// </remarks>
+        public void NotifyVolleyHit(int actorId, int targetId)
+        {
+            if (_volleyActor < 0 || actorId != _volleyActor) return;
+            if (targetId < 0 || targetId == _volleyMainTarget) return;   // 주 표적엔 이미 나갔다
+            if (targetId == actorId) return;                             // 자해는 공격이 아니다
+
+            PlayWeaponFx(actorId, targetId);
+        }
+
+        /// <summary>공격에 딸린 연속이 끝났다. <see cref="NotifyVolleyHit"/> 의 경고 참조.</summary>
+        public void EndVolley()
+        {
+            _volleyActor = -1;
+            _volleyMainTarget = -1;
+        }
+
+        private bool IsRangedActor(int actorId)
+        {
+            if (RangedTypeIds == null) return false;
+            return _units.TryGetValue(actorId, out var actor) && RangedTypeIds.Contains(actor.TypeId);
         }
 
         // ─────────────────────────────────────────────────────────────
