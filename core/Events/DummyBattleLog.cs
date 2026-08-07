@@ -36,6 +36,10 @@ namespace DomoNinja.Core.Events
 
             var e = new List<GameEvent>();
 
+            // 액티브를 든 유닛을 전투 시작에 한 번 알린다 (Value = 0). 실제 발동은 아래 Value = 1 이다.
+            e.Add(new GameEvent(EventKind.SkillCast, 0, 0, -1, 0));
+            e.Add(new GameEvent(EventKind.SkillCast, 0, 2, -1, 0));
+
             // 접근 — 20틱 = 1초
             e.Add(new GameEvent(EventKind.Move, 10, 0, -1, Key(3, 2), Key(2, 2)));
             e.Add(new GameEvent(EventKind.Move, 10, 3, -1, Key(4, 2), Key(5, 2)));
@@ -66,6 +70,9 @@ namespace DomoNinja.Core.Events
             e.Add(new GameEvent(EventKind.Attack, 44, 3, 1, 0));
             e.Add(new GameEvent(EventKind.StatusExpire, 44, -1, 1, (int)StatusKind.Invulnerable));
             e.Add(new GameEvent(EventKind.Dodge, 44, 3, 1, 0, 210));
+
+            // 액티브가 실제로 터졌다 (Value = 1). 화면은 이때 스킬 이름을 띄운다.
+            e.Add(new GameEvent(EventKind.SkillCast, 46, 0, -1, 1));
 
             // 상태이상 두 종
             e.Add(new GameEvent(EventKind.Attack, 46, 4, 0, 1));

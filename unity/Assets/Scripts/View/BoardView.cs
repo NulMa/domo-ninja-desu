@@ -107,6 +107,23 @@ namespace DomoNinja.Unity.View
             public float Left;
             public float Total;
             public Vector3 From;
+
+            /// <summary>뜨기 전 기다리는 시간(초). 스킬 이름이 겹치지 않게 미룰 때 쓴다.</summary>
+            public float Delay;
+
+            /// <summary>다 올라갔을 때의 높이(월드).</summary>
+            public float Rise = DamagePopupRise;
+        }
+
+        /// <summary>스킬 발동 때 유닛을 감싸는 빛. 유닛에 붙어 다니다 스스로 사라진다.</summary>
+        private sealed class CastGlow
+        {
+            public Transform Transform;
+            public SpriteRenderer Renderer;
+            /// <summary>따라다닐 유닛의 그림. 애니메이션 프레임이 바뀌면 빛도 같이 바뀐다.</summary>
+            public SpriteRenderer Source;
+            public float Left;
+            public float Total;
         }
 
         private sealed class HitFx
@@ -449,6 +466,10 @@ namespace DomoNinja.Unity.View
                 if (p.Transform != null) Object.Destroy(p.Transform.gameObject);
             }
             _damagePopups.Clear();
+
+            // 빛은 유닛의 자식이라 위에서 이미 사라졌다. 목록만 비우면 된다.
+            _castGlows.Clear();
+            _castSlotFreeAt = 0f;
         }
 
         private UnitView CreateUnit(UnitSpec spec)
@@ -1017,6 +1038,7 @@ namespace DomoNinja.Unity.View
             //   승리 연출 0.9초 동안에도 재생기는 멈춰 있으므로 여기서 도는 편이 맞다.
             TickWeaponFx(Time.deltaTime);
             TickDamagePopups(Time.deltaTime);
+            TickCastGlows(Time.deltaTime);
         }
 
         private void OnDisable() => Hovered = default;
@@ -1165,7 +1187,30 @@ namespace DomoNinja.Unity.View
             if (unit.HpFill != null) SetFill(unit, 0f);
             if (unit.ShieldFill != null) unit.ShieldFill.parent.gameObject.SetActive(false);
             if (unit.Outline != null) unit.Outline.gameObject.SetActive(false);
+
+            // ★ 아군 쪽을 더 크게 흔든다. 같은 세기로 두면 <b>이겼는지 졌는지가 화면에서 안 갈린다</b> —
+            //   적이 훨씬 많이 죽으므로 잦은 쪽이 약해야 드문 쪽(아군 사망)이 사건으로 읽힌다.
+            if (unit.IsAlly) BoardCamera.Shake(AllyDeathShake, AllyDeathShakeSeconds);
+            else BoardCamera.Shake(EnemyDeathShake, EnemyDeathShakeSeconds);
         }
+
+        // ─────────────────────────────────────────────────────────────
+        //  화면 흔들림 세기 — 사건의 무게 순서가 곧 숫자의 순서다
+        // ─────────────────────────────────────────────────────────────
+        //
+        // 지시(사용자): "큰 스킬을 쓰거나, 적 처치, 혹은 아군 사망시에 화면 흔들림."
+        //
+        // 세로 반높이가 4.2 이므로 0.16 은 화면 높이의 약 2% 다.
+        // 위로 더 올리면 픽셀 아트가 흐려 보이기 시작한다 — 판이 8×6 이라 흔들 여백이 적다.
+
+        private const float AllyDeathShake = 0.16f;
+        private const float AllyDeathShakeSeconds = 0.30f;
+
+        private const float EnemyDeathShake = 0.07f;
+        private const float EnemyDeathShakeSeconds = 0.18f;
+
+        private const float SkillCastShake = 0.05f;
+        private const float SkillCastShakeSeconds = 0.16f;
 
         /// <summary>번쩍임이 눈에 남아 있는 시간(초).</summary>
         /// <remarks>
@@ -1526,13 +1571,169 @@ namespace DomoNinja.Unity.View
                     continue;
                 }
 
+                // 아직 차례가 안 왔으면 숨겨둔다 — 이름이 여럿 겹치는 것을 막는 유일한 수단이다.
+                if (p.Delay > 0f)
+                {
+                    p.Delay -= deltaTime;
+                    p.Left = p.Total;   // 기다린 시간은 수명에서 빼지 않는다
+                    if (p.Text.enabled) p.Text.enabled = false;
+                    continue;
+                }
+                if (!p.Text.enabled) p.Text.enabled = true;
+
                 float t = 1f - p.Left / p.Total;
-                p.Transform.position = p.From + new Vector3(0f, DamagePopupRise * t, 0f);
+                p.Transform.position = p.From + new Vector3(0f, p.Rise * t, 0f);
 
                 // 마지막 30% 에서만 사라진다 — 처음부터 흐려지면 읽기 전에 안 보인다.
                 var c = p.Text.color;
                 c.a = t < 0.7f ? 1f : 1f - (t - 0.7f) / 0.3f;
                 p.Text.color = c;
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  액티브 스킬 — 이름과 테두리 빛
+        // ─────────────────────────────────────────────────────────────
+
+        private readonly List<CastGlow> _castGlows = new List<CastGlow>();
+
+        /// <summary>다음 스킬 이름을 띄울 수 있는 시각(<see cref="Time.time"/>). 겹침을 막는다.</summary>
+        private float _castSlotFreeAt;
+
+        private const float CastPopupSeconds = 1.1f;
+        private const float CastGlowSeconds = 0.55f;
+
+        /// <summary>이름 하나가 차지하는 시간(초). 전투 시작에 셋이 한꺼번에 올 때 이 간격으로 흩어진다.</summary>
+        private const float CastSlotSeconds = 0.4f;
+
+        private static readonly Color CastNameColor = new Color(1f, 0.85f, 0.35f);
+        private static readonly Color CastGlowColor = new Color(1f, 0.92f, 0.55f);
+
+        /// <summary>
+        /// 캐릭터 종류 → 그 캐릭터가 고른 <b>액티브 스킬 이름</b>. <b>화면 쪽이 로스터를 보고 채운다.</b>
+        /// </summary>
+        /// <remarks>
+        /// 이벤트에 이름을 싣지 않는 이유는 <see cref="EventKind.SkillCast"/> 주석에 있다 —
+        /// 한 유닛의 액티브는 전투 내내 하나라 <b>"누가"만 알면 이름은 여기서 나온다.</b>
+        /// <see cref="RangedTypeIds"/> 와 같은 자리에서 같은 로스터를 읽어 채운다.
+        /// </remarks>
+        public Dictionary<string, string> ActiveSkillNames { get; set; }
+
+        /// <summary>
+        /// 액티브 스킬을 알린다. <paramref name="fired"/> 가 참이면 <b>실제로 터진 것</b>이다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "스킬발동시 시전 캐릭터에 … <b>스킬이름!</b> 같은느낌으로 띄워주고,
+        /// 캐릭터 주변에 반짝이는 효과" → 이어서 *"테두리 글레이징이나 하이라이팅 같은 연출"*.
+        /// </para>
+        /// <para>
+        /// ★ <b>후처리(블룸)를 쓰지 않았다.</b> "빛난다"의 정석은 블룸이지만 WebGL 에서
+        /// 전체 화면 후처리는 빌드 크기와 픽셀 비용을 같이 올린다. 대신 <b>유닛 그림을 한 장 더 깔고
+        /// 키워서 뒤에 둔다</b> — 테두리만 번지는 것처럼 보이고, 비용은 스프라이트 1장이다.
+        /// 애니메이션 프레임을 매 프레임 따라 복사하므로 움직이는 중에도 윤곽이 어긋나지 않는다.
+        /// </para>
+        /// </remarks>
+        public void ShowSkillCast(int unitId, bool fired)
+        {
+            if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null || unit.IsDead) return;
+
+            string name = null;
+            if (ActiveSkillNames != null) ActiveSkillNames.TryGetValue(unit.TypeId, out name);
+
+            if (fired)
+            {
+                SpawnCastGlow(unit);
+                BoardCamera.Shake(SkillCastShake, SkillCastShakeSeconds);
+            }
+
+            // 이름을 모르면 빛만 낸다 — 관전 뷰처럼 로스터가 없는 곳에서도 연출은 남는다.
+            if (string.IsNullOrEmpty(name)) return;
+
+            // 전투 시작 알림은 같은 틱에 인원수만큼 몰려온다. 슬롯을 잡아 순서대로 흩는다.
+            float now = Time.time;
+            if (_castSlotFreeAt < now) _castSlotFreeAt = now;
+            float delay = _castSlotFreeAt - now;
+            _castSlotFreeAt += CastSlotSeconds;
+
+            var go = new GameObject("SkillCastPopup");
+            go.transform.SetParent(transform, false);
+
+            var from = unit.Root.transform.position + new Vector3(0f, 0.45f, -2f);
+            go.transform.position = from;
+
+            var text = go.AddComponent<TMPro.TextMeshPro>();
+            text.text = name + "!";
+            text.fontSize = fired ? 3.6f : 2.8f;
+            text.fontStyle = TMPro.FontStyles.Bold;
+            text.alignment = TMPro.TextAlignmentOptions.Center;
+            text.color = CastNameColor;
+            text.sortingOrder = 61;   // 피해 숫자(60)보다 위 — 겹치면 이름이 읽혀야 한다
+            text.rectTransform.sizeDelta = new Vector2(4f, 1f);
+            text.enabled = false;     // 차례가 오면 Tick 이 켠다
+
+            _damagePopups.Add(new DamagePopup
+            {
+                Transform = go.transform,
+                Text = text,
+                Left = CastPopupSeconds,
+                Total = CastPopupSeconds,
+                From = from,
+                Delay = delay,
+                Rise = 0.75f,
+            });
+        }
+
+        private void SpawnCastGlow(UnitView unit)
+        {
+            if (unit.Sprite == null || unit.Sprite.sprite == null) return;
+
+            var go = new GameObject("CastGlow");
+            go.transform.SetParent(unit.Root.transform, false);
+            go.transform.localPosition = Vector3.zero;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = unit.Sprite.sprite;
+            sr.color = CastGlowColor;
+            sr.sortingOrder = unit.Sprite.sortingOrder - 1;   // 유닛 뒤. 앞에 두면 얼굴을 덮는다
+
+            _castGlows.Add(new CastGlow
+            {
+                Transform = go.transform,
+                Renderer = sr,
+                Source = unit.Sprite,
+                Left = CastGlowSeconds,
+                Total = CastGlowSeconds,
+            });
+        }
+
+        /// <summary>테두리 빛을 키우며 흐리게 한다. 다 되면 없앤다.</summary>
+        public void TickCastGlows(float deltaTime)
+        {
+            for (int i = _castGlows.Count - 1; i >= 0; i--)
+            {
+                var g = _castGlows[i];
+                g.Left -= deltaTime;
+
+                // 유닛이 죽어 사라지면 빛도 같이 사라진다 — 부모가 없어지므로 Transform 이 null 이 된다.
+                if (g.Left <= 0f || g.Transform == null || g.Source == null)
+                {
+                    if (g.Transform != null) Object.Destroy(g.Transform.gameObject);
+                    _castGlows.RemoveAt(i);
+                    continue;
+                }
+
+                float t = 1f - g.Left / g.Total;
+
+                // 애니메이션을 따라간다. 안 하면 공격 모션 중에 윤곽이 어긋나 두 겹으로 보인다.
+                g.Renderer.sprite = g.Source.sprite;
+                g.Renderer.flipX = g.Source.flipX;
+
+                g.Transform.localScale = Vector3.one * Mathf.Lerp(1.06f, 1.38f, t);
+
+                var c = CastGlowColor;
+                c.a = 0.85f * (1f - t);
+                g.Renderer.color = c;
             }
         }
 
