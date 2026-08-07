@@ -244,7 +244,7 @@ namespace DomoNinja.Unity.View
             _fieldRoot = null;
 
             var prefab = FindFieldPrefab(stageId, bossRound);
-            if (prefab != null && HasAnyTile(prefab))
+            if (prefab != null)
             {
                 var field = Object.Instantiate(prefab, transform);
                 field.name = prefab.name;
@@ -275,21 +275,39 @@ namespace DomoNinja.Unity.View
             return false;
         }
 
+        /// <summary>
+        /// 구체적인 것부터 훑어 <b>실제로 칠해진</b> 전장을 찾는다. 없으면 <c>null</c>.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>"파일이 있는가"가 아니라 "타일이 있는가"로 고른다.</b>
+        /// 준비 메뉴가 스테이지·보스별 <b>빈</b> 프리팹을 13개 미리 깔아두기 때문에,
+        /// 파일 존재만 보면 <c>BattleField_S1</c> 이 비어 있어도 먼저 잡혀서
+        /// <b>정작 칠해둔 기본 전장(<c>BattleField</c>)을 건너뛴다.</b>
+        /// 실제로 그렇게 돼 있었다 — 기본 전장만 칠하면 게임에 안 나오는 상태였다.
+        /// 빈 칸은 "아직 안 만든 것"이지 "비우기로 한 것"이 아니므로 다음 후보로 넘어간다.
+        /// </remarks>
         private static GameObject FindFieldPrefab(string stageId, bool bossRound)
         {
             if (!string.IsNullOrEmpty(stageId))
             {
                 if (bossRound)
                 {
-                    var boss = Resources.Load<GameObject>($"{FieldPrefabPrefix}_{stageId}_Boss");
+                    var boss = LoadIfPainted($"{FieldPrefabPrefix}_{stageId}_Boss");
                     if (boss != null) return boss;
                 }
 
-                var stage = Resources.Load<GameObject>($"{FieldPrefabPrefix}_{stageId}");
+                var stage = LoadIfPainted($"{FieldPrefabPrefix}_{stageId}");
                 if (stage != null) return stage;
             }
 
-            return Resources.Load<GameObject>(FieldPrefabPrefix);
+            return LoadIfPainted(FieldPrefabPrefix);
+        }
+
+        /// <summary>이름으로 찾되, <b>타일이 한 장도 없으면 없는 것으로 친다.</b></summary>
+        private static GameObject LoadIfPainted(string resourceName)
+        {
+            var prefab = Resources.Load<GameObject>(resourceName);
+            return prefab != null && HasAnyTile(prefab) ? prefab : null;
         }
 
         private void BuildGround()
