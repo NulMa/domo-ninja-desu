@@ -62,8 +62,20 @@ namespace DomoNinja.Unity.Editor
         // ── 열려 있는 전장
         private string _fieldPath;
         private GameObject _contents;
-        private Tilemap _tilemap;
         private bool _dirty;
+
+        /// <summary>
+        /// 전장의 레이어들. <b>아래에서 위</b> 순서로 들고 있다(배경 → 오브젝트).
+        /// </summary>
+        /// <remarks>
+        /// 칠하는 건 <see cref="_activeLayer"/> 한 장뿐이지만 <b>그리는 건 전부</b> 겹쳐 그린다 —
+        /// 배경만 보이면 오브젝트를 어디에 놨는지 모르고, 오브젝트만 보이면 바닥과 안 맞는다.
+        /// </remarks>
+        private Tilemap[] _layers = new Tilemap[0];
+        private int _activeLayer;
+
+        private Tilemap ActiveMap =>
+            _layers.Length > 0 && _activeLayer < _layers.Length ? _layers[_activeLayer] : null;
 
         // ── 팔레트
         private string _sheetPath;
@@ -114,15 +126,33 @@ namespace DomoNinja.Unity.Editor
 
             _fieldPath = path;
             _contents = PrefabUtility.LoadPrefabContents(path);
-            _tilemap = _contents.GetComponentInChildren<Tilemap>(true);
+            _layers = CollectLayers(_contents);
+            _activeLayer = 0;
             _dirty = false;
 
-            if (_tilemap == null)
+            if (_layers.Length == 0)
                 Debug.LogError($"[전장 편집기] {path} 에 Tilemap 이 없다. 'DomoNinja > 전장 타일맵 준비' 를 먼저 돌릴 것.");
 
             LoadSheet(_sheetPath);
             Repaint();
         }
+
+        /// <summary>
+        /// 전장의 타일맵들을 <b>렌더 순서(아래→위)</b>로 모은다.
+        /// </summary>
+        /// <remarks>
+        /// 계층 순서가 아니라 <c>sortingOrder</c> 로 정렬한다 — 화면에 겹치는 순서를 정하는 건
+        /// 그쪽이고, 계층 순서와 다를 수 있다. 편집기 미리보기가 게임과 다르게 보이면
+        /// <b>편집기를 믿을 수 없게 된다.</b>
+        /// </remarks>
+        private static Tilemap[] CollectLayers(GameObject root) =>
+            root.GetComponentsInChildren<Tilemap>(true)
+                .OrderBy(m =>
+                {
+                    var r = m.GetComponent<TilemapRenderer>();
+                    return r != null ? r.sortingOrder : 0;
+                })
+                .ToArray();
 
         private void CloseField(bool askToSave)
         {
@@ -136,7 +166,7 @@ namespace DomoNinja.Unity.Editor
 
             PrefabUtility.UnloadPrefabContents(_contents);
             _contents = null;
-            _tilemap = null;
+            _layers = new Tilemap[0];
             _dirty = false;
         }
 
@@ -197,7 +227,7 @@ namespace DomoNinja.Unity.Editor
         {
             DrawToolbar();
 
-            if (_contents == null || _tilemap == null)
+            if (_contents == null || _layers.Length == 0)
             {
                 EditorGUILayout.HelpBox(
                     "전장을 고르거나, 프로젝트 창에서 BattleField*.prefab 을 더블클릭하면 열린다.",
@@ -241,6 +271,16 @@ namespace DomoNinja.Unity.Editor
                     if (sheets[pickedSheet] != _sheetPath) LoadSheet(sheets[pickedSheet]);
                 }
 
+                // ★ 어느 층에 칠하는지가 항상 보여야 한다 — 안 보이면 배경에 칠할 것을
+                //   오브젝트 층에 칠해두고 나중에 배경만 지우려다 같이 지운다.
+                if (_layers.Length > 1)
+                {
+                    GUILayout.Space(8);
+                    var layerNames = _layers.Select(m => m.gameObject.name).ToArray();
+                    _activeLayer = EditorGUILayout.Popup(_activeLayer, layerNames,
+                                                         EditorStyles.toolbarPopup, GUILayout.Width(110));
+                }
+
                 GUILayout.Space(8);
                 GUILayout.Label("확대", EditorStyles.miniLabel, GUILayout.Width(28));
                 _zoom = GUILayout.HorizontalSlider(_zoom, 20f, 80f, GUILayout.Width(90));
@@ -251,11 +291,14 @@ namespace DomoNinja.Unity.Editor
                                 EditorStyles.miniLabel);
 
                 GUILayout.Space(8);
-                if (GUILayout.Button("전체 지우기", EditorStyles.toolbarButton))
+                if (GUILayout.Button("이 층 지우기", EditorStyles.toolbarButton))
                 {
-                    if (EditorUtility.DisplayDialog("전장 편집기", "이 전장의 타일을 전부 지울까?", "지움", "취소"))
+                    // 층 이름을 물음에 넣는다 — "전부 지울까?"만 뜨면 전장 통째로 지우는 줄 안다.
+                    string layerName = ActiveMap != null ? ActiveMap.gameObject.name : "?";
+                    if (EditorUtility.DisplayDialog("전장 편집기",
+                            $"'{layerName}' 층의 타일을 전부 지울까? (다른 층은 그대로)", "지움", "취소"))
                     {
-                        _tilemap.ClearAllTiles();
+                        ActiveMap.ClearAllTiles();
                         _dirty = true;
                     }
                 }
@@ -341,8 +384,14 @@ namespace DomoNinja.Unity.Editor
                             ? (boardX <= Coord.AllyMaxX ? AllyZone : EnemyZone)
                             : OutsideZone);
 
-                        var tile = _tilemap.GetTile<Tile>(ToCell(boardX, boardY));
-                        if (tile != null && tile.sprite != null) DrawSprite(rect, tile.sprite);
+                        // 레이어를 아래에서 위로 겹쳐 그린다 — 지금 칠하는 층만 보이면
+                        // 배경과 오브젝트가 어떻게 맞물리는지 알 수 없다.
+                        var cell = ToCell(boardX, boardY);
+                        foreach (var map in _layers)
+                        {
+                            var tile = map.GetTile<Tile>(cell);
+                            if (tile != null && tile.sprite != null) DrawSprite(rect, tile.sprite);
+                        }
 
                         // 격자선
                         EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 1f), GridLine);
@@ -359,8 +408,10 @@ namespace DomoNinja.Unity.Editor
 
                 DrawAspectGuides(area);
 
+                string active = ActiveMap != null ? ActiveMap.gameObject.name : "-";
                 EditorGUILayout.HelpBox(
-                    "좌클릭 드래그 = 칠하기 · 우클릭 드래그 = 지우기\n" +
+                    $"좌클릭 드래그 = 칠하기 · 우클릭 드래그 = 지우기   (지금 칠하는 층: {active})\n" +
+                    "화면에는 모든 층이 겹쳐 보이지만 칠하는 건 고른 층 하나뿐이다.\n" +
                     "노란 테두리 = 8×6 보드(유닛이 서는 칸). 점선 = 화면비별로 실제 보이는 범위.\n" +
                     "16:9 선 안쪽은 반드시 칠할 것 — 심사자 창이 그보다 넓으면 21:9 선까지 보인다.",
                     MessageType.None);
@@ -418,12 +469,12 @@ namespace DomoNinja.Unity.Editor
 
             if (e.button == 1)
             {
-                _tilemap.SetTile(cell, null);
+                ActiveMap.SetTile(cell, null);
                 _dirty = true;
             }
             else if (e.button == 0 && _brush != null)
             {
-                _tilemap.SetTile(cell, GetOrCreateTile(_brush));
+                ActiveMap.SetTile(cell, GetOrCreateTile(_brush));
                 _dirty = true;
             }
             else return;
