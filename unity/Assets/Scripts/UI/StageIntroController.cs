@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using System.Text;
 using DomoNinja.Core.Data;
+using DomoNinja.Core.Economy;
 using DomoNinja.Unity.View;
 using TMPro;
 using UnityEngine;
@@ -8,31 +11,40 @@ using UImage = UnityEngine.UI.Image;
 namespace DomoNinja.Unity
 {
     /// <summary>
-    /// 라운드 경로 미리보기. 스테이지의 라운드 수만큼 노드를 동적으로 만든다.
+    /// 이번 라운드에 <b>무엇이 몇 마리 나오는지</b> 보여준다. 초상화에 올리면 스펙이 뜬다.
     /// </summary>
     /// <remarks>
-    /// ⚠️ <b>실제 적 구성은 아직 못 보여준다.</b> <c>RunEngine.PlayRound</c>가 변형 선택(RNG)과
-    /// 전투 실행을 한 메서드에 붙여놔서, 미리 훔쳐보면 전투가 같이 실행돼버린다.
-    /// 그래서 지금은 라운드가 <b>시험하는 축</b>(<see cref="RoundDef.AxisTested"/>, 데이터에 정적으로 박혀
-    /// RNG 없이도 읽을 수 있다)과 <b>보스 여부</b>만 보여준다. 보스 여부는 그 라운드에 저작된 변형 중
-    /// 하나라도 <c>isBoss</c> 적을 포함하면 참이다 — 이것도 어느 변형이 뽑힐지와 무관한 정적 정보다.
+    /// <para>
+    /// 전에는 스테이지의 <b>라운드 8개를 가로로 늘어놓은 경로도</b>였다. 문제가 둘이었다 —
+    /// (1) 각 칸이 보여주는 게 <c>AxisTested</c>("공격 리듬" 같은 <b>설계 메모</b>)라
+    /// 플레이어가 할 수 있는 판단과 아무 상관이 없었고,
+    /// (2) 칸이 화면 밖으로 넘쳐 가로 스크롤이 붙었는데 <b>스크롤이 있다는 표시가 없어서</b>
+    /// 넘겨볼 수 있다는 걸 아무도 몰랐다.
+    /// </para>
+    /// <para>
+    /// ★ <b>적 구성을 이제 보여줄 수 있다.</b> 예전 주석은 <c>PlayRound</c> 가 추첨과 전투를
+    /// 한 덩어리로 갖고 있어 "미리 훔쳐보면 전투가 같이 끝난다"고 적어뒀는데,
+    /// `D-75` 가 <see cref="RunEngine.PeekVariant"/> 로 그 둘을 갈라놨다.
+    /// <see cref="RunManager.PeekVariant"/> 는 라운드당 한 번만 RNG 를 소비하고 캐시하므로
+    /// 이 화면이 먼저 물어봐도 배치 화면이 같은 편성을 받는다.
+    /// </para>
+    /// <para>
+    /// 라운드 진행도는 경로도 대신 <b>머리줄 한 줄</b>("라운드 3 / 8")로 줄였다.
+    /// 8칸을 늘어놓아도 플레이어가 고를 수 있는 갈래가 없어 <b>지도가 아니라 눈금</b>이었다.
+    /// </para>
     /// </remarks>
     public sealed class StageIntroController : MonoBehaviour
     {
-        private const string SkullIcon = "Actor/Monster/Skull";
-        private const string BossIcon = "Actor/Boss/TenguRed";
-
-        /// <summary>노드 한 칸의 고정 크기 — 더 이상 라운드 수에 맞춰 줄어들지 않는다.</summary>
-        private const float NodeWidth = 260f;
+        /// <summary>적 한 종류 카드의 고정 폭. 종류 수에 맞춰 줄어들지 않는다 — 초상화가 뭉개진다.</summary>
+        private const float CardWidth = 200f;
         private const float NodeGap = 16f;
 
         // ★ 이 화면만 **단색 사각형**으로 그려져 있어서 나머지 UI 와 톤이 어긋났다.
         //   여기 값들은 이제 나무 테마 스프라이트 **위에 곱해지는 틴트**다.
         //   `Upcoming` 을 0.18 짜리 검정으로 두면 그림이 그냥 사라진다 — 밝기만 낮춘다.
+        /// <summary>강조 — 보스 카드와 마릿수. 경로도 시절엔 "현재 라운드" 표시였다.</summary>
         private static readonly Color CurrentColor = new Color(1.00f, 0.85f, 0.55f);
-        private static readonly Color ClearedColor = new Color(0.72f, 0.82f, 0.72f);
         private static readonly Color UpcomingColor = new Color(0.62f, 0.60f, 0.56f);
-        private static readonly Color ConnectorColor = new Color(0.52f, 0.44f, 0.36f);
         private static readonly Color TextMain = new Color(0.95f, 0.93f, 0.88f);
         private static readonly Color TextDim = new Color(0.74f, 0.71f, 0.66f);
 
@@ -44,6 +56,9 @@ namespace DomoNinja.Unity
         private SpriteCatalog _catalog;
         private TMP_FontAsset _fontAsset;
 
+        /// <summary>"라운드 3 / 8   적 5체" 줄. 경로도 8칸을 대신한다 — 씬에 없어서 코드로 만든다.</summary>
+        private TMP_Text _headerLabel;
+
         private void Awake()
         {
             var board = transform.Find("Board");
@@ -54,6 +69,21 @@ namespace DomoNinja.Unity
 
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
             _fontAsset = TMP_Settings.defaultFontAsset;
+
+            _headerLabel = BuildHeaderLabel(board);
+        }
+
+        /// <summary>뷰포트 바로 위에 머리줄을 얹는다. 씬 파일을 건드리지 않으려고 코드로 만든다(`19` §5.1).</summary>
+        private TMP_Text BuildHeaderLabel(Transform board)
+        {
+            var viewport = (RectTransform)_container.parent;
+            var rt = MakeRT("RoundHeader", board);
+            rt.anchorMin = new Vector2(viewport.anchorMin.x, viewport.anchorMax.y);
+            rt.anchorMax = new Vector2(viewport.anchorMax.x, viewport.anchorMax.y);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(viewport.anchoredPosition.x, viewport.anchoredPosition.y + 10f);
+            rt.sizeDelta = new Vector2(viewport.sizeDelta.x, 36f);
+            return AddText(rt, "", 22, TextMain, TextAlignmentOptions.Center);
         }
 
         /// <summary>
@@ -107,120 +137,151 @@ namespace DomoNinja.Unity
             if (mgr == null || mgr.Data == null) return;
 
             string stageId = mgr.CurrentRun != null ? mgr.CurrentRun.StageId : mgr.SelectedStageId;
-            var rounds = mgr.Data.RoundsFor(stageId);
-            int count = rounds.Count;
-            if (count == 0) return;
-
+            int totalRounds = mgr.Data.RoundsFor(stageId).Count;
             int currentRound = mgr.CurrentRun != null ? mgr.CurrentRun.Round : 1;
 
-            float nodeHeight = _container.sizeDelta.y;
-            float contentWidth = count * NodeWidth + (count - 1) * NodeGap;
-            _container.sizeDelta = new Vector2(contentWidth, nodeHeight);
+            // ★ 이 화면이 먼저 물어봐도 안전하다 — 라운드당 한 번만 뽑고 캐시한다(`D-75`).
+            //   배치 화면이 뒤이어 물어보면 같은 편성을 받는다.
+            var variant = mgr.PeekVariant();
+            var lineup = Tally(variant, mgr.Data);
 
-            for (int i = 0; i < count; i++)
+            SetHeader(currentRound, totalRounds, lineup);
+
+            float rowHeight = _container.sizeDelta.y;
+            float contentWidth = lineup.Count * CardWidth + Mathf.Max(0, lineup.Count - 1) * NodeGap;
+            _container.sizeDelta = new Vector2(contentWidth, rowHeight);
+
+            // 카드가 뷰포트보다 좁으면 가운데로 모은다 — 두세 종류뿐일 때 왼쪽에 몰려 있으면
+            // "잘린 게 아닌가" 로 읽힌다.
+            if (_scrollRect != null)
             {
-                float x = i * (NodeWidth + NodeGap);
-                if (i > 0) BuildConnector(x - NodeGap, nodeHeight, NodeGap);
-                BuildNode(rounds[i], x, NodeWidth, nodeHeight, mgr.Data, i + 1, currentRound);
-            }
-
-            ScrollToRound(currentRound, count, contentWidth);
-        }
-
-        /// <summary>현재 라운드 노드가 뷰포트 안에 보이도록 스크롤 위치를 맞춘다.</summary>
-        private void ScrollToRound(int currentRound, int count, float contentWidth)
-        {
-            if (_scrollRect == null) return;
-
-            float viewportWidth = ((RectTransform)_scrollRect.transform).rect.width;
-            float overflow = contentWidth - viewportWidth;
-            if (overflow <= 0f)
-            {
+                float viewportWidth = ((RectTransform)_scrollRect.transform).rect.width;
+                _container.anchoredPosition = contentWidth < viewportWidth
+                    ? new Vector2((viewportWidth - contentWidth) * 0.5f, _container.anchoredPosition.y)
+                    : new Vector2(0f, _container.anchoredPosition.y);
                 _scrollRect.horizontalNormalizedPosition = 0f;
-                return;
             }
 
-            int index = Mathf.Clamp(currentRound - 1, 0, count - 1);
-            float nodeCenterX = index * (NodeWidth + NodeGap) + NodeWidth / 2f;
-            _scrollRect.horizontalNormalizedPosition =
-                Mathf.Clamp01((nodeCenterX - viewportWidth / 2f) / overflow);
+            for (int i = 0; i < lineup.Count; i++)
+                BuildEnemyCard(lineup[i], i * (CardWidth + NodeGap), rowHeight);
         }
 
-        private void BuildConnector(float x, float nodeHeight, float gap)
+        /// <summary>같은 종류를 <b>한 칸으로 묶고 마릿수를 센다.</b> 등장 순서는 유지한다.</summary>
+        /// <remarks>
+        /// 슬라임 3마리를 칸 3개로 늘어놓으면 <b>종류가 셋인 것처럼 읽힌다.</b>
+        /// 플레이어가 세는 단위는 "무엇이 몇"이지 "몇 번째 자리에 무엇"이 아니다 —
+        /// 시작 좌표는 어차피 고정 위치가 아니다(`A5`).
+        /// </remarks>
+        private static List<EnemyGroup> Tally(VariantDef variant, GameData data)
         {
-            var rt = MakeRT("Connector", _container);
-            SetRect(rt, x, nodeHeight / 2f - 4f, gap, 8f);
-            var img = rt.gameObject.AddComponent<UImage>();
-            img.sprite = UITheme.Find("UI/Theme/nine_path_bg");
-            img.type = UImage.Type.Sliced;
-            img.pixelsPerUnitMultiplier = 1f;
-            img.color = ConnectorColor;
+            var list = new List<EnemyGroup>();
+            if (variant == null) return list;
+
+            var indexByType = new Dictionary<string, int>();
+            foreach (var unit in variant.Units)
+            {
+                if (indexByType.TryGetValue(unit.Type, out int at))
+                {
+                    list[at] = new EnemyGroup(list[at].Def, list[at].Count + 1);
+                    continue;
+                }
+
+                if (!data.EnemyTypes.TryGetValue(unit.Type, out var def)) continue;
+                indexByType[unit.Type] = list.Count;
+                list.Add(new EnemyGroup(def, 1));
+            }
+
+            return list;
         }
 
-        private void BuildNode(RoundDef round, float x, float width, float height, GameData data,
-                                int roundNumber, int currentRound)
+        /// <summary>머리줄 — 라운드 눈금과 보스 여부. 경로도 8칸을 대신한다.</summary>
+        private void SetHeader(int round, int totalRounds, List<EnemyGroup> lineup)
         {
-            bool boss = RoundHasBoss(round, data);
-            bool current = roundNumber == currentRound;
-            bool cleared = roundNumber < currentRound;
+            if (_headerLabel == null) return;
 
-            var node = MakeRT("Node" + roundNumber, _container);
-            SetRect(node, x, 0, width, height);
+            bool boss = lineup.Exists(g => g.Def.IsBoss);
+            int total = 0;
+            foreach (var g in lineup) total += g.Count;
 
-            var nodeImage = node.gameObject.AddComponent<UImage>();
-            nodeImage.sprite = UITheme.Find(NodeSpriteKey);
-            nodeImage.type = UImage.Type.Sliced;
-            nodeImage.pixelsPerUnitMultiplier = 1f;
-            nodeImage.color = current ? CurrentColor : cleared ? ClearedColor : UpcomingColor;
+            var sb = new StringBuilder();
+            sb.Append("라운드 ").Append(round);
+            if (totalRounds > 0) sb.Append(" / ").Append(totalRounds);
+            if (total > 0) sb.Append("      적 ").Append(total).Append("체");
+            if (boss) sb.Append("      <color=#E0B252>보스</color>");
+            _headerLabel.text = sb.ToString();
+        }
 
-            // 아이콘 — 중앙 기준 상단.
-            var icon = MakeRT("Icon", node);
+        /// <summary>적 한 종류 카드 — 초상화 + <c>×마릿수</c>. 올리면 스펙이 뜬다.</summary>
+        private void BuildEnemyCard(EnemyGroup group, float x, float height)
+        {
+            var def = group.Def;
+
+            var card = MakeRT("Enemy_" + def.Type, _container);
+            SetRect(card, x, 0, CardWidth, height);
+
+            var cardImage = card.gameObject.AddComponent<UImage>();
+            cardImage.sprite = UITheme.Find(NodeSpriteKey);
+            cardImage.type = UImage.Type.Sliced;
+            cardImage.pixelsPerUnitMultiplier = 1f;
+            cardImage.color = def.IsBoss ? CurrentColor : UpcomingColor;
+
+            // 초상화. 몸통 그림보다 초상(Faceset)이 칸 안에서 알아보기 쉽다.
+            var icon = MakeRT("Icon", card);
             icon.anchorMin = new Vector2(0.5f, 1f);
             icon.anchorMax = new Vector2(0.5f, 1f);
             icon.pivot = new Vector2(0.5f, 1f);
-            icon.anchoredPosition = new Vector2(0, -12);
-            icon.sizeDelta = new Vector2(72, 72);
+            icon.anchoredPosition = new Vector2(0, -14);
+            icon.sizeDelta = new Vector2(96, 96);
             var iconImg = icon.gameObject.AddComponent<UImage>();
-            iconImg.sprite = _catalog != null ? _catalog.Find(boss ? BossIcon : SkullIcon) : null;
+            iconImg.sprite = FindPortrait(def);
             iconImg.preserveAspect = true;
 
-            var roundLabel = MakeRT("RoundLabel", node);
-            roundLabel.anchorMin = new Vector2(0, 1);
-            roundLabel.anchorMax = new Vector2(1, 1);
-            roundLabel.pivot = new Vector2(0.5f, 1f);
-            roundLabel.anchoredPosition = new Vector2(0, -92);
-            roundLabel.sizeDelta = new Vector2(0, 24);
-            AddText(roundLabel, boss ? $"R{roundNumber} 보스" : $"R{roundNumber}", 14,
-                    current ? Color.white : TextMain, TextAlignmentOptions.Center);
+            var nameLabel = MakeRT("NameLabel", card);
+            nameLabel.anchorMin = new Vector2(0, 1);
+            nameLabel.anchorMax = new Vector2(1, 1);
+            nameLabel.pivot = new Vector2(0.5f, 1f);
+            nameLabel.anchoredPosition = new Vector2(0, -116);
+            nameLabel.sizeDelta = new Vector2(0, 26);
+            AddText(nameLabel, def.Name, 16, def.IsBoss ? Color.white : TextMain, TextAlignmentOptions.Center);
 
-            var axisLabel = MakeRT("AxisLabel", node);
-            axisLabel.anchorMin = new Vector2(0, 0);
-            axisLabel.anchorMax = new Vector2(1, 1);
-            axisLabel.offsetMin = new Vector2(8, 8);
-            axisLabel.offsetMax = new Vector2(-8, -120);
-            AddText(axisLabel, round.AxisTested, 11, TextDim, TextAlignmentOptions.Top);
+            var countLabel = MakeRT("CountLabel", card);
+            countLabel.anchorMin = new Vector2(0, 1);
+            countLabel.anchorMax = new Vector2(1, 1);
+            countLabel.pivot = new Vector2(0.5f, 1f);
+            countLabel.anchoredPosition = new Vector2(0, -144);
+            countLabel.sizeDelta = new Vector2(0, 30);
+            AddText(countLabel, "×" + group.Count, 22, CurrentColor, TextAlignmentOptions.Center);
 
-            if (current)
-            {
-                var marker = MakeRT("CurrentMarker", node);
-                marker.anchorMin = new Vector2(0.5f, 1f);
-                marker.anchorMax = new Vector2(0.5f, 1f);
-                marker.pivot = new Vector2(0.5f, 0f);
-                marker.anchoredPosition = new Vector2(0, 6);
-                marker.sizeDelta = new Vector2(30, 22);
-                AddText(marker, "▼", 18, CurrentColor, TextAlignmentOptions.Center);
-            }
+            // ★ 스펙은 카드에 적지 않고 툴팁으로 뺀다. 다섯 줄을 카드마다 박으면
+            //   칸이 숫자로 가득 차서 "무엇이 몇 마리"라는 첫 질문이 도로 안 보인다.
+            var hover = card.gameObject.AddComponent<HoverTooltipTrigger>();
+            hover.Describe = () => UnitStatText.ForEnemy(def);
+
+            var hint = MakeRT("HoverHint", card);
+            hint.anchorMin = new Vector2(0, 0);
+            hint.anchorMax = new Vector2(1, 0);
+            hint.pivot = new Vector2(0.5f, 0f);
+            hint.anchoredPosition = new Vector2(0, 8);
+            hint.sizeDelta = new Vector2(0, 20);
+            AddText(hint, "올려서 스펙 보기", 12, TextDim, TextAlignmentOptions.Center);
         }
 
-        /// <summary>이 라운드에 저작된 변형 중 하나라도 보스 적을 포함하면 참. RNG 없이 정적으로 판단한다.</summary>
-        private static bool RoundHasBoss(RoundDef round, GameData data)
+        /// <summary>초상이 색인돼 있으면 그걸, 없으면 몸통 그림을 쓴다.</summary>
+        private Sprite FindPortrait(EnemyTypeDef def)
         {
-            foreach (var variant in round.Variants)
-                foreach (var unit in variant.Units)
-                    if (data.EnemyTypes.TryGetValue(unit.Type, out var def) && def.IsBoss)
-                        return true;
+            if (_catalog == null) return null;
+            return _catalog.Find(def.Sprite + "/Faceset") ?? _catalog.Find(def.Sprite);
+        }
 
-            return false;
+        private readonly struct EnemyGroup
+        {
+            public readonly EnemyTypeDef Def;
+            public readonly int Count;
+
+            public EnemyGroup(EnemyTypeDef def, int count)
+            {
+                Def = def; Count = count;
+            }
         }
 
         private void OnStartBattle()

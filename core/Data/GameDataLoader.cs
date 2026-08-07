@@ -274,7 +274,8 @@ namespace DomoNinja.Core.Data
                     Int(o, "range", where, errors),
                     moveInterval,
                     (bool?)o["immobile"] ?? false,
-                    (bool?)o["isBoss"] ?? false);
+                    (bool?)o["isBoss"] ?? false,
+                    (string?)o["name"]);
             }
 
             return dict;
