@@ -42,6 +42,110 @@ namespace DomoNinja.Unity
             _sfxSlider.onValueChanged.AddListener(v => AudioManager.Instance?.SetSfxVolume(v));
             _bgmMuteButton.onClick.AddListener(() => AudioManager.Instance?.ToggleBgmMute());
             _sfxMuteButton.onClick.AddListener(() => AudioManager.Instance?.ToggleSfxMute());
+
+            NormalizeSlider(_bgmSlider);
+            NormalizeSlider(_sfxSlider);
+        }
+
+        /// <summary>막대 높이. 배경·채움이 <b>같은 높이</b>여야 한 줄로 읽힌다.</summary>
+        private const float BarHeight = 24f;
+
+        /// <summary>손잡이 높이. 막대보다 커야 잡을 곳으로 보인다.</summary>
+        private const float HandleHeight = 44f;
+
+        /// <summary>
+        /// 슬라이더 세 조각의 <b>비율을 원본 그림에 맞춘다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ 손잡이가 <b>세로로만 늘어나 뭉개져 있었다.</b> 씬에 앵커가
+        /// <c>(1,0)~(1,1)</c> 로 잡혀 슬라이더 높이만큼 늘어나고, 거기에 <c>sizeDelta.y=40</c> 이
+        /// 더해져 <b>13×11 그림이 24×84 로</b> 그려졌다 — 세로만 6.5배다.
+        /// 채움도 배경(24)의 두 배인 48 로 나와 막대가 두 겹으로 보였다.
+        /// </para>
+        /// <para>
+        /// ★ <b>씬이 아니라 코드에서 고친다.</b> 씬 파일은 손으로 병합이 안 되고 2인이 같이
+        /// 만진다(`19` §5.1) — 지금 팀원이 같은 씬을 건드리고 있을 수 있다.
+        /// 여기서 맞추면 나중에 슬라이더가 늘어도 같은 규칙을 탄다.
+        /// </para>
+        /// <para>
+        /// 손잡이 크기는 <b>원본 비율에서 계산</b>한다. 숫자를 박아두면 그림을 바꿀 때
+        /// 다시 어긋나고, 어긋난 걸 눈으로 찾기 어렵다.
+        /// </para>
+        /// </remarks>
+        private static void NormalizeSlider(Slider slider)
+        {
+            if (slider == null) return;
+
+            var bg = slider.transform.Find("Background") as RectTransform;
+            if (bg != null) SetHeightCentered(bg, BarHeight);
+
+            // 채움은 `Fill Area` 가 높이를 정하고, 채움 자체는 그 안에서 늘어난다.
+            // 채움의 sizeDelta.y 가 남아 있으면 그만큼 <b>더</b> 커진다 — 0 으로 눌러 붙인다.
+            var fill = slider.fillRect;
+            if (fill != null)
+            {
+                if (fill.parent is RectTransform fillArea) SetHeightCentered(fillArea, BarHeight);
+                fill.sizeDelta = new Vector2(fill.sizeDelta.x, 0f);
+            }
+
+            NormalizeHandle(slider.handleRect);
+        }
+
+        /// <summary>
+        /// 손잡이 그림을 <b>자식으로 옮겨</b> 비율을 지킨다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <c>Slider</c> 는 <c>UpdateVisuals</c> 에서 손잡이의 <b>세로 앵커를 0~1 로 되돌린다</b>
+        /// (값이 바뀔 때마다). 그래서 앵커를 가운데로 모아봐야 다음 프레임에 다시 늘어난다 —
+        /// 실제로 그렇게 고쳤다가 손잡이가 여전히 88px 로 나왔다.
+        /// <para>
+        /// 그래서 <b>손잡이는 늘어나게 두고</b>(잡는 판정 영역으로만 쓰고), 그림은 크기가 고정된
+        /// 자식에 옮긴다. 엔진이 부모를 어떻게 늘리든 그림은 원본 비율을 지킨다.
+        /// </para>
+        /// </remarks>
+        private static void NormalizeHandle(RectTransform handle)
+        {
+            if (handle == null) return;
+
+            var handleImage = handle.GetComponent<UImage>();
+            if (handleImage == null) return;
+
+            var sprite = handleImage.sprite;
+            float aspect = sprite != null && sprite.rect.height > 0
+                ? sprite.rect.width / sprite.rect.height
+                : 1f;
+
+            var knobTr = handle.Find("Knob") as RectTransform;
+            if (knobTr == null)
+            {
+                var go = new GameObject("Knob", typeof(RectTransform));
+                go.transform.SetParent(handle, false);
+                knobTr = (RectTransform)go.transform;
+                go.AddComponent<UImage>();
+            }
+
+            knobTr.anchorMin = new Vector2(0.5f, 0.5f);
+            knobTr.anchorMax = new Vector2(0.5f, 0.5f);
+            knobTr.pivot = new Vector2(0.5f, 0.5f);
+            knobTr.anchoredPosition = Vector2.zero;
+            knobTr.sizeDelta = new Vector2(HandleHeight * aspect, HandleHeight);
+
+            var knob = knobTr.GetComponent<UImage>();
+            knob.sprite = sprite;
+            knob.preserveAspect = true;
+            knob.raycastTarget = false;
+
+            // 부모는 잡는 영역으로만 남긴다 — 그림을 두 번 그리면 늘어난 쪽이 비쳐 보인다.
+            handleImage.enabled = false;
+        }
+
+        /// <summary>세로 가운데 정렬로 높이만 고정한다. 가로는 부모를 따라 늘어난 채로 둔다.</summary>
+        private static void SetHeightCentered(RectTransform rt, float height)
+        {
+            rt.anchorMin = new Vector2(rt.anchorMin.x, 0.5f);
+            rt.anchorMax = new Vector2(rt.anchorMax.x, 0.5f);
+            rt.sizeDelta = new Vector2(rt.sizeDelta.x, height);
         }
 
         private void OnEnable()
