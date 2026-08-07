@@ -124,6 +124,124 @@ namespace DomoNinja.Unity
             _catalog = Resources.Load<SpriteCatalog>(SpriteCatalog.ResourceName);
             BindTargetPicker();
             BuildIllustrationZone();
+            BuildRosterStrip();
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  출전 용병 띠 — 상점에서도 내 팀 상태가 보이게
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>용병 한 칸의 초상화. 갱신할 때 스프라이트·체력만 갈아끼운다.</summary>
+        private UImage[] _rosterFaces;
+        private TMP_Text[] _rosterHpLabels;
+        private HoverTooltipTrigger[] _rosterHovers;
+
+        private const int RosterStripSlots = 3;
+
+        /// <summary>
+        /// 상점 아래쪽에 <b>출전 3인의 초상화와 체력</b>을 상시로 깐다. 올리면 전체 스펙이 뜬다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "상점 페이지에서 용병 초상화로 현재 스펙도 보여주는 게 좋아 보임."
+        /// </para>
+        /// <para>
+        /// ★ 대상 선택창(<c>TargetPicker</c>)에도 초상화가 있지만 그건 <b>이미 사기로 정한 뒤</b>에
+        /// 뜬다. 무엇을 살지 <b>고르는 동안</b>에는 팀 상태가 화면에 없어서,
+        /// "체력이 간당간당한 애가 있었나"를 확인하려면 상점을 나갔다 와야 했다.
+        /// 사는 판단에 필요한 정보가 사는 화면에 없던 셈이다.
+        /// </para>
+        /// <para>
+        /// 씬을 건드리지 않고 코드로 세운다 (`19` §5.1 — 씬 파일은 손으로 병합이 안 된다).
+        /// </para>
+        /// </remarks>
+        private void BuildRosterStrip()
+        {
+            _rosterFaces = new UImage[RosterStripSlots];
+            _rosterHpLabels = new TMP_Text[RosterStripSlots];
+            _rosterHovers = new HoverTooltipTrigger[RosterStripSlots];
+
+            var strip = NewChild("RosterStrip", _board);
+            strip.anchorMin = new Vector2(0f, 0f);
+            strip.anchorMax = new Vector2(1f, 0f);
+            strip.pivot = new Vector2(0.5f, 0f);
+            strip.anchoredPosition = new Vector2(0f, 12f);
+            strip.sizeDelta = new Vector2(-40f, 108f);
+
+            const float slotWidth = 190f;
+            const float gap = 12f;
+            float totalWidth = RosterStripSlots * slotWidth + (RosterStripSlots - 1) * gap;
+
+            for (int i = 0; i < RosterStripSlots; i++)
+            {
+                var cell = NewChild("RosterSlot" + i, strip);
+                cell.anchorMin = new Vector2(0.5f, 0f);
+                cell.anchorMax = new Vector2(0.5f, 1f);
+                cell.pivot = new Vector2(0f, 0f);
+                cell.offsetMin = new Vector2(-totalWidth * 0.5f + i * (slotWidth + gap), 0f);
+                cell.offsetMax = new Vector2(cell.offsetMin.x + slotWidth, 0f);
+
+                var bg = cell.gameObject.AddComponent<UImage>();
+                bg.sprite = UITheme.Find("UI/Theme/inventory_cell");
+                bg.type = UImage.Type.Sliced;
+                bg.pixelsPerUnitMultiplier = 1f;
+
+                var face = NewChild("Face", cell);
+                face.anchorMin = new Vector2(0f, 0.5f);
+                face.anchorMax = new Vector2(0f, 0.5f);
+                face.pivot = new Vector2(0f, 0.5f);
+                face.anchoredPosition = new Vector2(10f, 0f);
+                face.sizeDelta = new Vector2(80f, 80f);
+                _rosterFaces[i] = face.gameObject.AddComponent<UImage>();
+                _rosterFaces[i].preserveAspect = true;
+
+                var hp = NewChild("HpLabel", cell);
+                hp.anchorMin = new Vector2(0f, 0f);
+                hp.anchorMax = new Vector2(1f, 1f);
+                hp.offsetMin = new Vector2(96f, 6f);
+                hp.offsetMax = new Vector2(-8f, -6f);
+                var hpLabel = hp.gameObject.AddComponent<TextMeshProUGUI>();
+                hpLabel.fontSize = 20f;
+                hpLabel.alignment = TextAlignmentOptions.Left;
+                hpLabel.color = Color.white;
+                hpLabel.raycastTarget = false;
+                _rosterHpLabels[i] = hpLabel;
+
+                _rosterHovers[i] = cell.gameObject.AddComponent<HoverTooltipTrigger>();
+            }
+        }
+
+        /// <summary>띠를 지금 런 상태로 맞춘다. 상점을 열 때·구매 직후 부른다.</summary>
+        private void RefreshRosterStrip(RunManager mgr)
+        {
+            if (_rosterFaces == null) return;
+
+            var deployed = mgr != null && mgr.CurrentRun != null ? mgr.CurrentRun.Deployed : null;
+
+            for (int i = 0; i < RosterStripSlots; i++)
+            {
+                bool has = deployed != null && i < deployed.Count;
+                _rosterFaces[i].transform.parent.gameObject.SetActive(has);
+                if (!has) continue;
+
+                var entry = deployed[i];
+                var def = mgr.Data.FindCharacter(entry.CharacterId);
+
+                _rosterFaces[i].sprite = def != null ? _catalog?.Find(def.Sprite) : null;
+                _rosterFaces[i].color = entry.IsAlive ? AliveSlotColor : DeadSlotColor;
+
+                _rosterHpLabels[i].text = entry.IsAlive
+                    ? $"{(def != null ? def.Name : entry.CharacterId)}\n<size=17>HP {entry.Hp} / {entry.MaxHp}</size>"
+                    : $"{(def != null ? def.Name : entry.CharacterId)}\n<size=17><color=#9A948C>사망</color></size>";
+
+                // ★ 문자열을 미리 굽지 않고 대리자로 넘긴다 — 이 띠는 구매 직후에도 갱신되는데,
+                //   그때 캡처한 값을 들고 있으면 툴팁만 옛 스펙을 계속 보여준다.
+                var captured = entry;
+                var capturedDef = def;
+                _rosterHovers[i].Describe = () => capturedDef == null
+                    ? null
+                    : UnitStatText.ForDeployedAlly(capturedDef, captured, mgr.Data);
+            }
         }
 
         /// <summary>
@@ -339,6 +457,10 @@ namespace DomoNinja.Unity
 
             if (_sellMode) RefreshSellSlots(run);
             else RefreshBuySlots(mgr, run);
+
+            // 구매·판매·리롤이 전부 여기로 돌아오므로 띠도 같이 갱신된다 —
+            // 산 직후에 체력/보유가 안 바뀐 것처럼 보이면 "샀는데 안 붙었나"로 읽힌다.
+            RefreshRosterStrip(mgr);
         }
 
         private void RefreshBuySlots(RunManager mgr, RunState run)
@@ -580,6 +702,16 @@ namespace DomoNinja.Unity
                 _targetSlots[i].Face.sprite = def != null ? _catalog?.Find(def.Sprite) : null;
                 _targetSlots[i].NameLabel.text = def != null ? def.Name : entry.CharacterId;
                 _targetSlots[i].StatusLabel.text = entry.IsAlive ? $"HP {entry.Hp}/{entry.MaxHp}" : "사망";
+
+                // 누구에게 붙일지 고르는 자리다 — 여기서 스펙을 못 보면 "누가 더 급한가"를
+                // 체력 한 줄만 보고 정하게 된다. 이미 산 것도 같이 보여야 중복 강화를 피한다.
+                var hover = _targetSlots[i].Button.gameObject.GetComponent<HoverTooltipTrigger>()
+                            ?? _targetSlots[i].Button.gameObject.AddComponent<HoverTooltipTrigger>();
+                var capturedEntry = entry;
+                var capturedDef = def;
+                hover.Describe = () => capturedDef == null
+                    ? null
+                    : UnitStatText.ForDeployedAlly(capturedDef, capturedEntry, mgr.Data);
             }
 
             _targetPicker.gameObject.SetActive(true);
