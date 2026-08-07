@@ -67,32 +67,47 @@ namespace DomoNinja.Unity.Editor
         /// 이 표가 그대로 돈다.
         /// </para>
         /// </remarks>
-        /// <summary>
-        /// 만들어 둘 전장 — <b>데이터에 실제로 있는 스테이지만.</b>
-        /// </summary>
+        /// <summary>기획상 스테이지 수(사용자 확인, D+7). 각 스테이지마다 일반·보스 전장을 둔다.</summary>
         /// <remarks>
         /// <para>
-        /// ★ 한 번 <c>S1</c>~<c>S6</c> 를 앞질러 만들었다가 되돌렸다. 스테이지 선택 화면에
-        /// 슬롯이 6칸 있길래 맞춘 것인데, <c>StageId</c> 가 채워진 건 <c>S1</c>·<c>S2</c> 뿐이라
-        /// <b>나머지 8개는 아무 데서도 안 불렸다.</b> 화면의 칸 수는 "만들 자리"지 "있는 것"이 아니다.
+        /// ⚠️ <b>데이터는 아직 <c>S1</c>·<c>S2</c> 뿐이다.</b> <c>S3</c>~<c>S6</c> 의 적 구성
+        /// (<c>encounters</c>)이 아직 없어서, 그 전장들은 <b>스테이지가 생기기 전까지는 안 불린다.</b>
+        /// 빈 채로 있어도 <see cref="BoardView.SetField"/> 가 건너뛰므로 화면은 안 깨진다.
         /// </para>
         /// <para>
-        /// 스테이지가 늘면 여기에 이름을 더하고 메뉴를 다시 돌리면 된다. 미리 만들어 두는 것이
-        /// 아끼는 건 <b>그때의 몇 초</b>뿐이고, 대신 저장소에 안 쓰는 파일이 남는다 —
-        /// 커밋 히스토리가 심사 대상이라 그쪽이 더 비싸다.
+        /// ★ 이 값을 <b>코드에도 데이터에도 물어보지 말 것.</b> 스테이지가 몇 개인가는 기획이다 —
+        /// 나는 이걸 두 번 틀렸다. 처음엔 스테이지 선택 화면의 <b>슬롯 6칸</b>을 보고 6개라 짐작해
+        /// 만들었고, 다음엔 <c>data/encounters*.json</c> 에 둘뿐인 걸 보고 2개라 짐작해 지웠다.
+        /// 화면의 칸 수도 현재 데이터도 <b>기획의 근거가 아니다.</b>
         /// </para>
         /// <para>
         /// 보스 전장은 각 스테이지 <b>R8</b> 에서 쓰인다(D+7 실측 — S1·S2 모두 8라운드가 보스).
+        /// 보스 없는 스테이지가 생기면 그 스테이지의 <c>_Boss</c> 는 안 불릴 뿐 문제가 되진 않는다.
         /// </para>
         /// </remarks>
-        private static readonly string[] FieldNames =
+        private const int StageCount = 6;
+
+        /// <summary>
+        /// 만들어 둘 전장 이름. <see cref="BoardView.SetField"/> 가 <b>구체적인 것부터</b> 찾는다.
+        /// </summary>
+        /// <remarks>
+        /// 접미사 없는 <c>BattleField</c> 는 스테이지 전용이 없을 때 쓰는 <b>폴백</b>이라
+        /// 12개와 별개다. 이게 있으면 아직 안 칠한 스테이지가 맨바닥 대신 기본 배경으로 나온다.
+        /// </remarks>
+        private static readonly string[] FieldNames = BuildFieldNames();
+
+        private static string[] BuildFieldNames()
         {
-            "BattleField",           // 전 스테이지 기본 (다른 게 없을 때)
-            "BattleField_S1",
-            "BattleField_S1_Boss",
-            "BattleField_S2",
-            "BattleField_S2_Boss",
-        };
+            var names = new List<string> { "BattleField" };   // 폴백 (스테이지 12개와 별개)
+
+            for (int i = 1; i <= StageCount; i++)
+            {
+                names.Add($"BattleField_S{i}");
+                names.Add($"BattleField_S{i}_Boss");
+            }
+
+            return names.ToArray();
+        }
 
         /// <summary>타일 한 변(px). 팩 전체가 16 이다.</summary>
         private const int TileSize = 16;
