@@ -26,6 +26,19 @@ namespace DomoNinja.Unity
         public const string Hit = "Sfx/hit";
         public const string Death = "Sfx/death";
 
+        /// <summary>
+        /// 무기 갈래별 공격음. <see cref="Attack"/> 은 <b>이 표에 없는 종류</b>(몬스터)가 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// 캐릭터 6종에 소리를 각각 주지 않고 <b>갈래로 묶은</b> 이유 —
+        /// 사무라이와 적영은 둘 다 날붙이라 다른 소리를 주면 <b>구분이 아니라 소음</b>이 된다.
+        /// 귀로 갈려야 하는 건 "누가" 가 아니라 "무엇으로" 다.
+        /// </remarks>
+        public const string AttackBlade = "Sfx/attack_blade";   // 카타나 · 사이
+        public const string AttackBlunt = "Sfx/attack_blunt";   // 봉
+        public const string AttackBow = "Sfx/attack_bow";       // 활
+        public const string AttackMagic = "Sfx/attack_magic";   // 마법봉 · 책
+
         // 결과 · 보상
         public const string Victory = "Sfx/victory";
         public const string Defeat = "Sfx/defeat";
