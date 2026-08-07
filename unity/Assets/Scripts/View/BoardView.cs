@@ -173,6 +173,78 @@ namespace DomoNinja.Unity.View
         /// "왜 여기 못 놓지"가 다시 버그처럼 보인다 — 바닥은 그 아래에 깔릴 뿐이다.
         /// </para>
         /// </remarks>
+        /// <summary>
+        /// 사람이 <b>타일 팔레트로 그린</b> 전장. 있으면 절차적 바닥 대신 이걸 쓴다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <c>Resources</c> 에서 <b>이름으로</b> 찾는다. 스테이지·보스마다 다른 전장을 쓸 수 있게
+        /// <b>구체적인 것부터</b> 훑고, 없으면 한 단계씩 일반적인 쪽으로 떨어진다 —
+        /// 그려둔 게 없어도 판이 맨바닥으로 보이면 안 된다.
+        /// </para>
+        /// <list type="number">
+        ///   <item><c>BattleField_{스테이지}_Boss</c> — 그 스테이지의 <b>보스 라운드</b> 전용</item>
+        ///   <item><c>BattleField_{스테이지}</c> — 그 스테이지 공용</item>
+        ///   <item><c>BattleField</c> — 전 스테이지 기본</item>
+        ///   <item>없으면 <see cref="BuildGround"/> 의 절차적 흙바닥</item>
+        /// </list>
+        /// <para>
+        /// ★ 무한 모드는 <b>여기에 아무것도 더 안 붙여도 된다.</b> 스테이지 id 를 순서대로
+        /// 돌려주기만 하면 이 표가 그대로 돈다 — 전장 선택 규칙을 모드별로 또 만들 이유가 없다.
+        /// </para>
+        /// </remarks>
+        private const string FieldPrefabPrefix = "BattleField";
+
+        private Transform _fieldRoot;
+
+        /// <summary>지금 깔린 전장이 어느 조합으로 뽑힌 것인지. 같은 값이면 다시 안 세운다.</summary>
+        private string _fieldKey;
+
+        /// <summary>
+        /// 이 라운드에 맞는 전장을 깐다. 라운드가 바뀔 때마다 부르면 된다.
+        /// </summary>
+        /// <param name="stageId">스테이지 id(<c>S1</c>..). <c>null</c> 이면 기본 전장.</param>
+        /// <param name="bossRound">보스가 나오는 라운드인가. 참이면 보스 전용 전장을 먼저 찾는다.</param>
+        public void SetField(string stageId, bool bossRound)
+        {
+            string key = $"{stageId}/{bossRound}";
+            if (_fieldKey == key && _fieldRoot != null) return;
+            _fieldKey = key;
+
+            if (_fieldRoot != null) Object.Destroy(_fieldRoot.gameObject);
+            _fieldRoot = null;
+
+            var prefab = FindFieldPrefab(stageId, bossRound);
+            if (prefab != null)
+            {
+                var field = Object.Instantiate(prefab, transform);
+                field.name = prefab.name;
+                // 프리팹이 이미 보드 원점 기준으로 놓여 있다 — 부모에 붙일 때 그 좌표를 지킨다.
+                field.transform.localPosition = prefab.transform.position;
+                _fieldRoot = field.transform;
+                return;
+            }
+
+            BuildGround();
+        }
+
+        private static GameObject FindFieldPrefab(string stageId, bool bossRound)
+        {
+            if (!string.IsNullOrEmpty(stageId))
+            {
+                if (bossRound)
+                {
+                    var boss = Resources.Load<GameObject>($"{FieldPrefabPrefix}_{stageId}_Boss");
+                    if (boss != null) return boss;
+                }
+
+                var stage = Resources.Load<GameObject>($"{FieldPrefabPrefix}_{stageId}");
+                if (stage != null) return stage;
+            }
+
+            return Resources.Load<GameObject>(FieldPrefabPrefix);
+        }
+
         private void BuildGround()
         {
             var tile = _catalog != null ? _catalog.Find(GroundTileKey) : null;
@@ -212,7 +284,8 @@ namespace DomoNinja.Unity.View
         /// <summary>격자. 아군 진영과 적 진영을 색으로 나눈다.</summary>
         private void BuildGrid()
         {
-            BuildGround();
+            // 기본 전장으로 시작한다. 스테이지가 정해지면 화면이 `SetField` 로 갈아끼운다.
+            SetField(null, false);
 
             var root = new GameObject("Grid").transform;
             root.SetParent(transform, false);
