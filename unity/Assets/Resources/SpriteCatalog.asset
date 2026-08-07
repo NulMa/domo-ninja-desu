@@ -527,8 +527,14 @@ MonoBehaviour:
     Sprite: {fileID: 21300000, guid: 59f921ddb51d8184683254487e41f063, type: 3}
   - Key: FX/Projectile/Arrow
     Sprite: {fileID: 21300000, guid: 59f921ddb51d8184683254487e41f063, type: 3}
-  - Key: FX/Projectile/EnergyBall
-    Sprite: {fileID: 21300000, guid: ba5632d2198b9c44cadaaa0f2facfd64, type: 3}
+  - Key: FX/Projectile/EnergyBall_0
+    Sprite: {fileID: -7585660988095454295, guid: ba5632d2198b9c44cadaaa0f2facfd64, type: 3}
+  - Key: FX/Projectile/EnergyBall_1
+    Sprite: {fileID: -3331487606584094558, guid: ba5632d2198b9c44cadaaa0f2facfd64, type: 3}
+  - Key: FX/Projectile/EnergyBall_2
+    Sprite: {fileID: 767724539417163884, guid: ba5632d2198b9c44cadaaa0f2facfd64, type: 3}
+  - Key: FX/Projectile/EnergyBall_3
+    Sprite: {fileID: -1559554707437419804, guid: ba5632d2198b9c44cadaaa0f2facfd64, type: 3}
   - Key: FX/Projectile/Kunai
     Sprite: {fileID: 21300000, guid: bf6a16bc24ae0b74da696dea3d558b18, type: 3}
   - Key: FX/Projectile/Shuriken

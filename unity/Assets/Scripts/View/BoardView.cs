@@ -1547,6 +1547,82 @@ namespace DomoNinja.Unity.View
             /// <summary>참이면 호를 그리며 휘두르고, 거짓이면 직선으로 날아간다.</summary>
             public bool IsSwing;
             public float BaseAngle;
+
+            public SpriteRenderer Renderer;
+            /// <summary>여러 장이면 날아가는 동안 넘긴다. 한 장이면 길이 1.</summary>
+            public Sprite[] Frames;
+            /// <summary>0 이 아니면 방향을 보는 대신 이 속도(도/초)로 돈다.</summary>
+            public float SpinPerSecond;
+            /// <summary>도는 것의 지금 각도(도).</summary>
+            public float Angle;
+        }
+
+        /// <summary>
+        /// 투사체 <b>그림 자체</b>가 어떻게 그려져 있는지. 그림에만 있는 정보라 코드가 갖고 있어야 한다.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>전에는 모든 투사체가 오른쪽을 보고 그려졌다고 가정했다.</b>
+        /// 실제로는 화살도 쿠나이도 <b>↗ 45° 대각선</b>으로 그려져 있어서, 오른쪽으로 쏜 화살이
+        /// 45° 들려 날아갔다. 사용자 지적 — *"표창은 상관 없지만 화살같은 경우엔 많이 신경쓰임"*.
+        /// <para>
+        /// 표창은 <b>각도를 안 맞추고 돌린다.</b> 던진 표창이 한 방향을 보고 가는 게 오히려 어색하다 —
+        /// "상관 없는 것"을 억지로 맞추는 대신 그 그림에 맞는 움직임을 준다.
+        /// </para>
+        /// <para>
+        /// 쓰이지 않는 <c>Kunai</c> 도 적어둔다. 표에 없으면 기본값(0°)으로 조용히 틀어지는데,
+        /// 그게 방금 화살에서 일어난 일이다.
+        /// </para>
+        /// </remarks>
+        private readonly struct ProjectileStyle
+        {
+            /// <summary>그림이 향하고 있는 각도(도). 0=오른쪽, 90=위.</summary>
+            public readonly float NativeAngle;
+
+            /// <summary>0 이 아니면 방향 대신 회전. 도/초.</summary>
+            public readonly float SpinPerSecond;
+
+            public ProjectileStyle(float nativeAngle, float spinPerSecond)
+            {
+                NativeAngle = nativeAngle;
+                SpinPerSecond = spinPerSecond;
+            }
+        }
+
+        private static ProjectileStyle StyleOf(string projectileKey)
+        {
+            switch (projectileKey)
+            {
+                case "FX/Projectile/Arrow": return new ProjectileStyle(45f, 0f);
+                case "FX/Projectile/Kunai": return new ProjectileStyle(45f, 0f);
+                case "FX/Projectile/Shuriken": return new ProjectileStyle(0f, 900f);
+                case "FX/Projectile/EnergyBall": return new ProjectileStyle(90f, 0f);
+                default: return new ProjectileStyle(0f, 0f);
+            }
+        }
+
+        /// <summary>
+        /// 투사체 그림을 가져온다. 이어 붙은 시트면 <c>_0</c> 부터 있는 만큼.
+        /// </summary>
+        /// <remarks>
+        /// ★ <b>장수를 여기 적지 않는다.</b> 몇 장으로 자를지는 <c>SpriteCatalogBuilder</c> 가
+        /// 시트 폭에서 역산하므로, 같은 숫자를 뷰에도 적으면 아트가 프레임을 늘렸을 때
+        /// <b>둘이 어긋나고 마지막 프레임이 조용히 빠진다.</b> 없어질 때까지 찾는 쪽이 맞다.
+        /// </remarks>
+        private Sprite[] LoadProjectileFrames(string projectileKey)
+        {
+            // 한 장짜리는 자르지 않아 키 그대로 색인돼 있다.
+            var single = _catalog.Find(projectileKey);
+            if (single != null) return new[] { single };
+
+            var frames = new List<Sprite>();
+            for (int i = 0; ; i++)
+            {
+                var frame = _catalog.Find($"{projectileKey}_{i}");
+                if (frame == null) break;
+                frames.Add(frame);
+            }
+
+            return frames.Count > 0 ? frames.ToArray() : null;
         }
 
         private readonly List<WeaponFx> _weaponFx = new List<WeaponFx>();
@@ -1618,22 +1694,28 @@ namespace DomoNinja.Unity.View
         /// </remarks>
         private void SpawnProjectile(string projectileKey, Vector3 from, Vector3 to)
         {
-            var sprite = _catalog.Find(projectileKey);
-            if (sprite == null) return;
+            var frames = LoadProjectileFrames(projectileKey);
+            if (frames == null) return;
+
+            var style = StyleOf(projectileKey);
 
             var go = new GameObject("ProjectileFx");
             go.transform.SetParent(transform, false);
 
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sprite;
+            sr.sprite = frames[0];
             sr.sortingOrder = -2;   // 유닛보다 뒤 — 휘두르기와 같은 층
 
-            var size = sprite.bounds.size;
+            var size = frames[0].bounds.size;
             float scale = size.x > 0f ? 0.42f / Mathf.Max(size.x, size.y) : 1f;
             go.transform.localScale = Vector3.one * scale;
 
+            // ★ 겨눈 각도에서 <b>그림이 원래 향하는 각도를 뺀다.</b> 그냥 겨눈 각도를 주면
+            //   45° 로 그려진 화살이 45° 더 들린다 — 전에 그렇게 날아갔다.
             var dir = to - from;
-            go.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            float aim = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            float angle = style.SpinPerSecond != 0f ? 0f : aim - style.NativeAngle;
+            go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
             go.transform.position = from + new Vector3(0f, 0f, 0.05f);   // 휘두르기와 같은 이유
 
             _weaponFx.Add(new WeaponFx
@@ -1644,6 +1726,10 @@ namespace DomoNinja.Unity.View
                 From = from,
                 To = to,
                 IsSwing = false,
+                Renderer = sr,
+                Frames = frames,
+                SpinPerSecond = style.SpinPerSecond,
+                Angle = angle,
             });
         }
 
@@ -1677,6 +1763,20 @@ namespace DomoNinja.Unity.View
                 else
                 {
                     fx.Transform.position = Vector3.Lerp(fx.From, fx.To, t) + new Vector3(0f, 0f, 0.05f);
+
+                    // 표창처럼 방향을 안 맞추는 것은 대신 돈다.
+                    if (fx.SpinPerSecond != 0f)
+                    {
+                        fx.Angle += fx.SpinPerSecond * deltaTime;
+                        fx.Transform.rotation = Quaternion.Euler(0f, 0f, fx.Angle);
+                    }
+
+                    // 이어 붙은 시트면 날아가는 동안 프레임을 넘긴다.
+                    if (fx.Frames != null && fx.Frames.Length > 1 && fx.Renderer != null)
+                    {
+                        int frame = Mathf.Clamp((int)(t * fx.Frames.Length), 0, fx.Frames.Length - 1);
+                        fx.Renderer.sprite = fx.Frames[frame];
+                    }
                 }
             }
         }

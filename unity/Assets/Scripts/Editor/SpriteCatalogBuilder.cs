@@ -70,6 +70,11 @@ namespace DomoNinja.Unity.Editor
             ["FX/Hit/Hunter/SpriteSheet"] = 32,
             ["FX/Hit/NinjaMageBlack/SpriteSheet"] = 32,
             ["FX/Hit/Shaman/SpriteSheet"] = 32,
+
+            // ★ 투사체인데 한 장이 아니다. 64×16 = 16px 프레임 4장이 이어 붙은 띠라
+            //   Single 로 두면 **구슬 4개가 가로로 늘어선 채** 날아간다.
+            //   파일 크기만 보면 "큰 스프라이트" 와 구분이 안 돼서 눈으로 열어보기 전엔 안 드러났다.
+            ["FX/Projectile/EnergyBall"] = 16,
         };
 
         /// <summary>
