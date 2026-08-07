@@ -92,6 +92,9 @@ namespace DomoNinja.Unity
             //   알아야 보스 전용 전장을 쓸 수 있고, 그건 변형을 뽑아봐야 안다.
             _boardView.SetField(mgr.CurrentRun.StageId, HasBoss(mgr.Data, _pendingVariant));
 
+            // 무기 연출은 **고른 빌드**가 정한다 — 라운드마다 다시 계산한다(상점에서 스킬을 사면 바뀐다).
+            _boardView.RangedTypeIds = BuildRangedTypeIds(mgr);
+
             var aliveIds = new List<string>();
             foreach (var entry in mgr.CurrentRun.Deployed)
                 if (entry.IsAlive) aliveIds.Add(entry.CharacterId);
@@ -100,6 +103,56 @@ namespace DomoNinja.Unity
                 _placementController = _boardView.gameObject.AddComponent<PlacementController>();
 
             _placementController.Setup(_boardView, aliveIds, _lastPlacement, _pendingVariant.Units);
+        }
+
+        /// <summary>
+        /// 투사체를 쓰는 유닛 종류를 모은다 — <b>기본 사거리 + 산 액티브 스킬</b>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): *"적영 같은 경우엔 근거리는 검, 표창 찍으면 표창만."*
+        /// 무기를 정하는 건 공격 순간의 거리가 아니라 <b>고른 빌드</b>다 —
+        /// 표창을 산 적영은 적이 붙어도 표창을 던져야 한다.
+        /// </para>
+        /// <para>
+        /// 판정 근거는 둘 다 데이터에 있다:
+        /// <c>characters.json</c> 의 기본 <c>range</c>(C1~C3 은 1, C4~C6 은 3~5)와
+        /// 액티브 스킬 효과의 <c>setRange</c>(`C3-B 표창` → 4, `C4-A 저격` → 7).
+        /// <b>숫자를 코드에 박지 않는다</b> — 밸런스가 사거리를 바꾸면 연출도 따라온다.
+        /// </para>
+        /// </remarks>
+        private static HashSet<string> BuildRangedTypeIds(RunManager mgr)
+        {
+            var set = new HashSet<string>();
+            var run = mgr.CurrentRun;
+            if (run == null || mgr.Data == null) return set;
+
+            foreach (var entry in run.Deployed)
+            {
+                var def = mgr.Data.FindCharacter(entry.CharacterId);
+                if (def == null) continue;
+
+                int range = def.Range;
+
+                var active = entry.ActiveSkillId != null ? mgr.Data.FindSkill(entry.ActiveSkillId) : null;
+                if (active != null) range = Mathf.Max(range, SetRangeOf(active));
+
+                if (range > 1) set.Add(entry.CharacterId);
+            }
+
+            return set;
+        }
+
+        /// <summary>스킬 효과에서 <c>setRange</c> 를 찾는다. 없으면 0 — 기본 사거리가 그대로 쓰인다.</summary>
+        private static int SetRangeOf(SkillDef skill)
+        {
+            int best = 0;
+            foreach (var token in skill.Effects)
+            {
+                var value = token?["setRange"];
+                if (value != null) best = Mathf.Max(best, (int)value);
+            }
+            return best;
         }
 
         /// <summary>이번에 뽑힌 편성에 보스가 있는가. <b>저작된 변형 전체가 아니라 뽑힌 것</b>만 본다.</summary>

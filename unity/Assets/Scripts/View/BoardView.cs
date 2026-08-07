@@ -1231,13 +1231,22 @@ namespace DomoNinja.Unity.View
             return WeaponOf(actor.TypeId)?.Sound;
         }
 
-        /// <summary>이 거리를 넘으면 투사체를 날린다. 붙어 있으면 휘두른다.</summary>
+        /// <summary>
+        /// 투사체를 쓰는 유닛 종류. <b>화면 쪽이 런 상태를 보고 채운다.</b>
+        /// </summary>
         /// <remarks>
-        /// ★ <b>사거리를 데이터에서 읽지 않고 실제 거리로 판단한다.</b> 로그의 <c>UnitSpec</c> 에는
-        /// 사거리가 없고, 있더라도 <b>스킬이 사거리를 바꾼다</b> — 적영의 `표창` 은 1을 4로 늘린다.
-        /// 지금 두 유닛이 얼마나 떨어져 있는지가 그 모든 경우를 이미 반영한 값이다.
+        /// <para>
+        /// ★ 처음엔 <b>공격 순간의 거리</b>로 갈랐다. 그러면 적영이 `표창`(사거리 1→4)을 산 뒤에도
+        /// <b>적이 붙으면 사이를 휘두른다.</b> 사용자 지적 — *"적영 같은 경우엔 근거리는 검,
+        /// 표창 찍으면 표창만"*. 무기를 정하는 건 지금 거리가 아니라 <b>고른 빌드</b>다.
+        /// </para>
+        /// <para>
+        /// 기본 사거리(<c>characters.json</c>)와 액티브 스킬의 <c>setRange</c> 를 같이 봐야 알 수 있는데,
+        /// 둘 다 <b>런 상태</b>라 뷰가 알 수 없다 — 그래서 화면이 채워준다.
+        /// 비어 있으면(관전 뷰) 전부 근접으로 친다.
+        /// </para>
         /// </remarks>
-        private const float ThrowDistance = 1.6f;
+        public HashSet<string> RangedTypeIds { get; set; }
 
         private void PlayWeaponFx(int actorId, int targetId)
         {
@@ -1249,15 +1258,14 @@ namespace DomoNinja.Unity.View
             var from = actor.Root.transform.position;
             bool hasTarget = _units.TryGetValue(targetId, out var target) && target.Root != null;
 
-            // 표적이 없는 광역 공격은 진영 방향으로 짧게 휘두른다.
+            // 표적이 없는 광역 공격은 진영 방향으로 낸다.
             var to = hasTarget
                 ? target.Root.transform.position
                 : from + new Vector3(actor.IsAlly ? 1f : -1f, 0f, 0f);
 
-            if (Vector3.Distance(from, to) > ThrowDistance)
-                SpawnProjectile(spec.Value.Projectile, from, to);
-            else
-                SpawnSwing(spec.Value.Weapon, from, to);
+            bool ranged = RangedTypeIds != null && RangedTypeIds.Contains(actor.TypeId);
+            if (ranged) SpawnProjectile(spec.Value.Projectile, from, to);
+            else SpawnSwing(spec.Value.Weapon, from, to);
         }
 
         /// <summary>
