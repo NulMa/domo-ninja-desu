@@ -92,6 +92,9 @@ namespace DomoNinja.Unity.View
             public Vector3 MoveFrom;
             public Vector3 MoveTarget;
             public float MoveLeft;
+
+            /// <summary>승리 환호가 시작될 때 서 있던 높이. 뛰었다가 여기로 돌아온다.</summary>
+            public float CheerBaseY;
         }
 
         /// <summary>화면에 재생 중인 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
@@ -823,9 +826,79 @@ namespace DomoNinja.Unity.View
         /// <summary>마우스가 유닛 중심에서 이 거리(월드) 안에 있으면 그 유닛으로 친다. 칸이 1 이라 절반이 경계다.</summary>
         private const float HoverRadius = 0.45f;
 
-        private void Update() => Hovered = FindHovered();
+        private void Update()
+        {
+            Hovered = FindHovered();
+            TickCheer();
+        }
 
         private void OnDisable() => Hovered = default;
+
+        // ─────────────────────────────────────────────────────────────
+        //  승리 환호 — 전투가 "끝났다"는 신호
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>환호가 남은 시간(초). 0 이면 아무것도 안 한다.</summary>
+        private float _cheerLeft;
+
+        /// <summary>환호 총 길이. <see cref="StartVictoryCheer"/> 를 부른 쪽이 이만큼은 기다려야 한다.</summary>
+        public const float VictoryCheerSeconds = 0.9f;
+
+        private const float CheerHopHeight = 0.18f;
+        private const float CheerHops = 3f;
+
+        /// <summary>
+        /// 살아남은 아군을 <b>몇 번 뛰게</b> 한다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 지시(사용자): "전투 끝났을 때 간단한 전투 승리 연출. 현재는 이기자마자 팝업이
+        /// 올라와서 전투 종료가 실감이 안 남."
+        /// </para>
+        /// <para>
+        /// ★ 원인은 연출이 없어서가 아니라 <b>마지막 적이 죽은 프레임에 판이 바로 지워지기</b>
+        /// 때문이다(<c>PlayRoundRoutine</c> 이 재생이 끝나자마자 <see cref="Clear"/> 를 부른다).
+        /// 그래서 "이겼다"를 볼 시간 자체가 없었다 — 새 연출을 얹기 전에 <b>판을 잠깐 두는 것</b>이
+        /// 먼저다. 환호는 그 시간에 무엇을 볼지를 채울 뿐이다.
+        /// </para>
+        /// <para>
+        /// 스프라이트가 아니라 <see cref="UnitView.Root"/> 를 올린다 — 스프라이트 로컬 좌표는
+        /// 절차적 공격 연출(돌진)이 쓰고 있어서, 같은 채널을 두 곳에서 만지면 섞인다.
+        /// </para>
+        /// </remarks>
+        public void StartVictoryCheer()
+        {
+            // ★ 서 있는 자리를 지금 기억한다. `MoveTarget` 을 기준으로 삼으면 **한 번도 안 움직인
+            //   유닛은 그 값이 (0,0,0)** 이라 환호가 시작되는 순간 판 원점으로 순간이동한다.
+            foreach (var kv in _units)
+            {
+                var unit = kv.Value;
+                if (unit.Root != null) unit.CheerBaseY = unit.Root.transform.position.y;
+            }
+
+            _cheerLeft = VictoryCheerSeconds;
+        }
+
+        private void TickCheer()
+        {
+            if (_cheerLeft <= 0f) return;
+
+            _cheerLeft -= Time.deltaTime;
+            float t = Mathf.Clamp01(1f - _cheerLeft / VictoryCheerSeconds);
+
+            // 끝으로 갈수록 잦아든다 — 뚝 끊기면 마지막 프레임에 유닛이 순간이동한 것처럼 보인다.
+            float damping = 1f - t;
+            float hop = Mathf.Abs(Mathf.Sin(t * Mathf.PI * CheerHops)) * CheerHopHeight * damping;
+
+            foreach (var kv in _units)
+            {
+                var unit = kv.Value;
+                if (unit.Root == null || unit.IsDead || !unit.IsAlly) continue;
+
+                var p = unit.Root.transform.position;
+                unit.Root.transform.position = new Vector3(p.x, unit.CheerBaseY + hop, p.z);
+            }
+        }
 
         /// <remarks>
         /// 콜라이더를 붙여 <c>Physics2D</c> 로 쏘지 않는다 — 유닛에 물리를 달면

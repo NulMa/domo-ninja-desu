@@ -218,7 +218,17 @@ namespace DomoNinja.Unity
                 while (_replayer.IsPlaying) yield return null;
             }
 
-            // 재생이 끝나면 다음 화면(상점/결과)으로 넘어가기 전에 보드를 비운다 —
+            // ★ 전에는 여기서 곧장 Clear() 했다. 그래서 **마지막 적이 죽은 그 프레임에 판이
+            //   사라지고** 승리 팝업이 올라왔다 — "이겼다"를 볼 시간이 아예 없어서
+            //   전투가 끝난 실감이 안 났다(사용자 지적).
+            //   판을 잠깐 두고, 그 시간에 살아남은 아군이 뛴다.
+            if (outcome != null && outcome.Won)
+            {
+                _boardView.StartVictoryCheer();
+                yield return new WaitForSeconds(BoardView.VictoryCheerSeconds);
+            }
+
+            // 다음 화면(상점/결과)으로 넘어가기 전에 보드를 비운다 —
             // 안 비우면 world-space 유닛 스프라이트가 그 화면 위에 그대로 남아 겹쳐 보인다.
             _boardView.Clear();
 

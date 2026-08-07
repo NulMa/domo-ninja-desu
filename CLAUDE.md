@@ -147,6 +147,7 @@ NHN 채용 연계형 해커톤 **NAN 2026 (Next AI Network 2026)** 의 사전과
 | `docs/21_트러블슈팅.md` | 해결된 환경 문제 + **원인이 아니었던 것**. Unity MCP·Python·GitHub·gitignore |
 | `docs/22_팀원_세팅.md` | **팀원이 저장소 받아 AI 세팅하는 절차.** git config·Unity·MCP 승인·작업 규칙 |
 | `docs/23_이벤트로그_포맷.md` | **★ core↔unity 유일한 경계면(`H1`). v1 동결. 이벤트 표·재생 규칙·더미 로그** |
+| `docs/24_스킬연출_계획.md` | 스킬별 효과음·투사체 **계획만(미구현)**. 로그 포맷을 건드려야 하는 이유와 `SkillCast` 안 |
 | `docs/commit-highlights.md` | **제출물 ④ 5.2 대표 커밋 후보. 인용 가치가 생기면 그 자리에서 적는다** |
 | `docs/submit/` | **PDF 3종의 원본 `.md` + 운영 규칙. D+7~9에 채운다** |
 | `docs/ai-log/README.md` | **AI 지시 원문 아카이브 규약(`D-05`). 작업할 때마다 여기 기록** |
