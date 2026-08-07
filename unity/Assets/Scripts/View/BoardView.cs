@@ -32,9 +32,9 @@ namespace DomoNinja.Unity.View
         private SpriteCatalog _catalog;
         private Transform _unitRoot;
 
-        /// <summary>범용 타격 이펙트 프레임(4장, "FX/Hit/SpriteSheet_0.."). 첫 사용 때 카탈로그에서 찾아 캐싱한다.</summary>
-        private Sprite[] _hitFxFrames;
-        private bool _hitFxFramesLoaded;
+        /// <summary>타격 이펙트 프레임 캐시. 키는 카탈로그 베이스 키("FX/Hit/Samurai/SpriteSheet" 등) —
+        /// 공격자 종류마다 다른 그림을 쓰므로(<see cref="HitFxSpecFor"/>) 하나가 아니라 사전으로 캐싱한다.</summary>
+        private readonly Dictionary<string, Sprite[]> _hitFxFrameCache = new Dictionary<string, Sprite[]>();
         private readonly List<HitFx> _hitFxInstances = new List<HitFx>();
 
         /// <summary>
@@ -59,6 +59,8 @@ namespace DomoNinja.Unity.View
             public bool IsDead;
             public int MaxHp;
             public bool IsAlly;
+            /// <summary>유닛 종류(`C1`.. · 몬스터/보스 typeId). 공격자별 타격 이펙트를 고를 때 쓴다.</summary>
+            public string TypeId;
 
             // ── 도트 애니메이션(캐릭터·보스 한정, `D-77`). 없으면(몬스터 등) 전부 null 이고
             //    초상 스프라이트가 그대로 정지 화면으로 남는다 — TickAnimations 가 건드리지 않는다.
@@ -87,11 +89,13 @@ namespace DomoNinja.Unity.View
             public float MoveLeft;
         }
 
-        /// <summary>화면에 재생 중인 범용 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
+        /// <summary>화면에 재생 중인 타격 이펙트 1개. 유닛에 안 매여 있다 — 재생이 끝나면 스스로 사라진다.</summary>
         private sealed class HitFx
         {
             public Transform Transform;
             public SpriteRenderer Renderer;
+            /// <summary>이 인스턴스가 재생 중인 프레임 배열. 공격자마다 달라 인스턴스별로 들고 있는다.</summary>
+            public Sprite[] Frames;
             public int FrameIndex;
             public float FrameTimer;
         }
@@ -280,6 +284,7 @@ namespace DomoNinja.Unity.View
                 Outline = outline,
                 MaxHp = spec.MaxHp,
                 IsAlly = spec.Team == 0,
+                TypeId = spec.TypeId,
                 IdleFrames = idleFrames,
                 AttackFrames = attackFrames,
                 IdleFrameSeconds = idleFrameSeconds,
@@ -802,10 +807,12 @@ namespace DomoNinja.Unity.View
         private const float PunchLungeDistance = 0.14f;
 
         /// <summary>피격.</summary>
-        public void FlashDamage(int unitId)
+        /// <param name="actorId">때린 쪽 유닛. 종류별 타격 이펙트를 고르는 데만 쓴다(<see cref="HitFxSpecFor"/>) —
+        /// 못 찾거나 -1(자해 등 공격자가 없는 피해)이면 범용 이펙트로 떨어진다.</param>
+        public void FlashDamage(int unitId, int actorId = -1)
         {
             Flash(unitId, DamageTint);
-            SpawnHitFx(unitId);
+            SpawnHitFx(unitId, actorId);
         }
 
         /// <summary>회복. <b>피격과 반드시 달라야 한다</b> — 둘 다 체력 숫자만 바꾸면 화면에서 같은 사건이 된다.</summary>
@@ -843,37 +850,71 @@ namespace DomoNinja.Unity.View
         private const float HitFxSize = 0.9f;
 
         /// <summary>
-        /// 대상이 맞는 순간 범용 타격 이펙트를 잠깐 띄운다. 무기 종류를 구분하지 않는다 — 캐릭터
-        /// 모서리에 무기 아이콘을 상시로 붙였던 이전 방식은 자리를 너무 차지해 뺐다(D+6).
+        /// 캐릭터 6종 → 테마에 맞는 타격 이펙트 카탈로그 키 + 프레임 수. 무기 배지 때 쓰던 것과
+        /// 같은 매핑을 재활용한다(사무라이→카타나 slash, 수도승→봉 회전, 적영→사이 발톱,
+        /// 사냥꾼→활 관통, 주술사·무녀→마법진). 몬스터·보스·매핑 밖 typeId는 <c>null</c> —
+        /// 호출부가 범용 이펙트(<see cref="DefaultHitFxKey"/>)로 떨어진다.
+        /// </summary>
+        private static (string Key, int Frames)? HitFxSpecFor(string typeId)
+        {
+            switch (typeId)
+            {
+                case "C1": return ("FX/Hit/Samurai/SpriteSheet", 4);
+                case "C2": return ("FX/Hit/Monk/SpriteSheet", 4);
+                case "C3": return ("FX/Hit/NinjaRed/SpriteSheet", 4);
+                case "C4": return ("FX/Hit/Hunter/SpriteSheet", 4);
+                case "C5": return ("FX/Hit/NinjaMageBlack/SpriteSheet", 6);
+                case "C6": return ("FX/Hit/Shaman/SpriteSheet", 4);
+                default: return null;
+            }
+        }
+
+        /// <summary>범용 타격 이펙트(몬스터·보스, 그리고 캐릭터 전용 그림을 못 찾았을 때 쓰는 대체).</summary>
+        private const string DefaultHitFxKey = "FX/Hit/SpriteSheet";
+        private const int DefaultHitFxFrames = 4;
+
+        /// <summary>
+        /// 대상이 맞는 순간 공격자 테마에 맞는 타격 이펙트를 잠깐 띄운다. 캐릭터 모서리에 무기
+        /// 아이콘을 상시로 붙였던 이전 방식은 자리를 너무 차지해 뺐고(D+6), 그 자리에 있던 무기별
+        /// 구분을 여기로 옮겼다 — "무엇으로 때렸나"가 상시 배지 대신 타격 순간에만 드러난다.
         /// </summary>
         /// <remarks>
         /// 유닛에 안 매인 독립 오브젝트다. 대상이 죽어 사라져도 이펙트는 재생을 끝까지 마친다 —
         /// 죽인 마지막 타격이 화면에서 잘려 보이면 "왜 안 맞았지"로 읽힌다.
         /// </remarks>
-        private void SpawnHitFx(int unitId)
+        private void SpawnHitFx(int unitId, int actorId)
         {
             if (!_units.TryGetValue(unitId, out var unit) || unit.Root == null) return;
+            if (_catalog == null) return;
 
-            if (!_hitFxFramesLoaded)
+            string key = DefaultHitFxKey;
+            int frameCount = DefaultHitFxFrames;
+            if (_units.TryGetValue(actorId, out var attacker) && attacker.TypeId != null)
             {
-                _hitFxFrames = _catalog != null ? LoadFrames(_catalog, "FX/Hit/SpriteSheet", 4) : null;
-                _hitFxFramesLoaded = true;
+                var spec = HitFxSpecFor(attacker.TypeId);
+                if (spec.HasValue) (key, frameCount) = spec.Value;
             }
-            if (_hitFxFrames == null) return;
+
+            if (!_hitFxFrameCache.TryGetValue(key, out var frames))
+            {
+                frames = LoadFrames(_catalog, key, frameCount);
+                _hitFxFrameCache[key] = frames; // 못 찾아도 null 로 캐싱 — 매번 다시 찾지 않는다.
+            }
+            if (frames == null) return;
 
             var go = new GameObject("HitFx");
             go.transform.SetParent(_unitRoot, false);
             go.transform.position = unit.Root.transform.position;
 
             var renderer = go.AddComponent<SpriteRenderer>();
-            renderer.sprite = _hitFxFrames[0];
+            renderer.sprite = frames[0];
             renderer.sortingOrder = 5;
 
             var size = renderer.sprite.bounds.size;
             float scale = size.x > 0 ? HitFxSize / Mathf.Max(size.x, size.y) : 1f;
             go.transform.localScale = Vector3.one * scale;
 
-            _hitFxInstances.Add(new HitFx { Transform = go.transform, Renderer = renderer });
+            _hitFxInstances.Add(new HitFx { Transform = go.transform, Renderer = renderer, Frames = frames });
         }
 
         /// <summary>타격 이펙트를 시간에 따라 진행하고, 다 돌면 스스로 없앤다. 재생기가 매 프레임 부른다.</summary>
@@ -888,14 +929,14 @@ namespace DomoNinja.Unity.View
                 fx.FrameTimer -= HitFxFrameSeconds;
                 fx.FrameIndex++;
 
-                if (fx.FrameIndex >= _hitFxFrames.Length)
+                if (fx.FrameIndex >= fx.Frames.Length)
                 {
                     Object.Destroy(fx.Transform.gameObject);
                     _hitFxInstances.RemoveAt(i);
                     continue;
                 }
 
-                fx.Renderer.sprite = _hitFxFrames[fx.FrameIndex];
+                fx.Renderer.sprite = fx.Frames[fx.FrameIndex];
             }
         }
 

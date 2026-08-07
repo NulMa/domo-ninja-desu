@@ -104,7 +104,7 @@ namespace DomoNinja.Unity.View
                 //   화면에 아무 차이가 없었다 — 영상에서 회복이 회복으로 안 읽힌다.
                 case EventKind.Damage:
                     _board.SetHp(e.TargetId, e.Aux);
-                    _board.FlashDamage(e.TargetId);
+                    _board.FlashDamage(e.TargetId, e.ActorId);
                     break;
 
                 case EventKind.Heal:

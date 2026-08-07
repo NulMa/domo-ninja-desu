@@ -37,8 +37,8 @@ namespace DomoNinja.Unity.Editor
         private static readonly string[] Preferred = { "Faceset", "Idle", "Idle40x40", "Walk" };
 
         /// <summary>
-        /// 보드 전투 애니메이션(캐릭터 6 + 보스 2, Idle/Attack)과 범용 타격 이펙트(FX/Hit)에 쓰는
-        /// 시트. 값은 정사각 프레임 한 변(px).
+        /// 보드 전투 애니메이션(캐릭터 6 + 보스 2, Idle/Attack)과 타격 이펙트(FX/Hit — 범용 1종 +
+        /// 캐릭터별 테마 6종)에 쓰는 시트. 값은 정사각 프레임 한 변(px).
         /// </summary>
         /// <remarks>
         /// 키는 <c>Assets/Sprite</c> 기준 확장자 없는 상대 경로 — 파일형 색인 키와 같은 형식이다.
@@ -64,6 +64,12 @@ namespace DomoNinja.Unity.Editor
             ["Actor/Boss/GiantFrog/Idle40x40"] = 40,
             ["Actor/Boss/GiantFrog/Attack"] = 40,
             ["FX/Hit/SpriteSheet"] = 32,
+            ["FX/Hit/Samurai/SpriteSheet"] = 32,
+            ["FX/Hit/Monk/SpriteSheet"] = 32,
+            ["FX/Hit/NinjaRed/SpriteSheet"] = 32,
+            ["FX/Hit/Hunter/SpriteSheet"] = 32,
+            ["FX/Hit/NinjaMageBlack/SpriteSheet"] = 32,
+            ["FX/Hit/Shaman/SpriteSheet"] = 32,
         };
 
         /// <summary>

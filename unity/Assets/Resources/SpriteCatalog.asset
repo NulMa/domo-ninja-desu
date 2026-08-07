@@ -447,6 +447,70 @@ MonoBehaviour:
     Sprite: {fileID: 244629415248885162, guid: 1e980aab9e9b592449f430bc3d9d5385, type: 3}
   - Key: FX/Hit
     Sprite: {fileID: 5546671543968653177, guid: f92758126ef70bc458bf5876d1986209, type: 3}
+  - Key: FX/Hit/Hunter
+    Sprite: {fileID: 5546671543968653177, guid: 050a07e00e9fbee41aaa049750db49d1, type: 3}
+  - Key: FX/Hit/Hunter/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: 050a07e00e9fbee41aaa049750db49d1, type: 3}
+  - Key: FX/Hit/Hunter/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: 050a07e00e9fbee41aaa049750db49d1, type: 3}
+  - Key: FX/Hit/Hunter/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: 050a07e00e9fbee41aaa049750db49d1, type: 3}
+  - Key: FX/Hit/Hunter/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: 050a07e00e9fbee41aaa049750db49d1, type: 3}
+  - Key: FX/Hit/Monk
+    Sprite: {fileID: 5546671543968653177, guid: b7e3415dec5981c48a843a7e61766f97, type: 3}
+  - Key: FX/Hit/Monk/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: b7e3415dec5981c48a843a7e61766f97, type: 3}
+  - Key: FX/Hit/Monk/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: b7e3415dec5981c48a843a7e61766f97, type: 3}
+  - Key: FX/Hit/Monk/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: b7e3415dec5981c48a843a7e61766f97, type: 3}
+  - Key: FX/Hit/Monk/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: b7e3415dec5981c48a843a7e61766f97, type: 3}
+  - Key: FX/Hit/NinjaMageBlack
+    Sprite: {fileID: 5546671543968653177, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaMageBlack/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaMageBlack/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaMageBlack/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaMageBlack/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaMageBlack/SpriteSheet_4
+    Sprite: {fileID: -689520407193891599, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaMageBlack/SpriteSheet_5
+    Sprite: {fileID: 160890277334083914, guid: 2ccc1587a06450249a29bd94d10743f1, type: 3}
+  - Key: FX/Hit/NinjaRed
+    Sprite: {fileID: 5546671543968653177, guid: 70c376a08bda6bf478d47e55d3016e2f, type: 3}
+  - Key: FX/Hit/NinjaRed/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: 70c376a08bda6bf478d47e55d3016e2f, type: 3}
+  - Key: FX/Hit/NinjaRed/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: 70c376a08bda6bf478d47e55d3016e2f, type: 3}
+  - Key: FX/Hit/NinjaRed/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: 70c376a08bda6bf478d47e55d3016e2f, type: 3}
+  - Key: FX/Hit/NinjaRed/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: 70c376a08bda6bf478d47e55d3016e2f, type: 3}
+  - Key: FX/Hit/Samurai
+    Sprite: {fileID: 5546671543968653177, guid: bb6de794a20dee947b3909231331c45c, type: 3}
+  - Key: FX/Hit/Samurai/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: bb6de794a20dee947b3909231331c45c, type: 3}
+  - Key: FX/Hit/Samurai/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: bb6de794a20dee947b3909231331c45c, type: 3}
+  - Key: FX/Hit/Samurai/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: bb6de794a20dee947b3909231331c45c, type: 3}
+  - Key: FX/Hit/Samurai/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: bb6de794a20dee947b3909231331c45c, type: 3}
+  - Key: FX/Hit/Shaman
+    Sprite: {fileID: 5546671543968653177, guid: 1c8aa8696324ae240ab991c2dc4319b2, type: 3}
+  - Key: FX/Hit/Shaman/SpriteSheet_0
+    Sprite: {fileID: 5546671543968653177, guid: 1c8aa8696324ae240ab991c2dc4319b2, type: 3}
+  - Key: FX/Hit/Shaman/SpriteSheet_1
+    Sprite: {fileID: 8755591262435691780, guid: 1c8aa8696324ae240ab991c2dc4319b2, type: 3}
+  - Key: FX/Hit/Shaman/SpriteSheet_2
+    Sprite: {fileID: -3459558614108198297, guid: 1c8aa8696324ae240ab991c2dc4319b2, type: 3}
+  - Key: FX/Hit/Shaman/SpriteSheet_3
+    Sprite: {fileID: 659797372610145418, guid: 1c8aa8696324ae240ab991c2dc4319b2, type: 3}
   - Key: FX/Hit/SpriteSheet_0
     Sprite: {fileID: 5546671543968653177, guid: f92758126ef70bc458bf5876d1986209, type: 3}
   - Key: FX/Hit/SpriteSheet_1
