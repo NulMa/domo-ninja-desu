@@ -400,7 +400,9 @@ namespace DomoNinja.Unity.View
         {
             var root = new GameObject("ShieldBar");
             root.transform.SetParent(parent, false);
-            root.transform.localPosition = new Vector3(0f, 0.44f, -0.1f);
+            // 체력 막대를 발밑으로 내린 만큼(`BarBaseY`) 이쪽도 머리 위로 대칭 이동한다 — 0.44 에선
+            // 막대(높이 0.165)의 아래끝이 +0.36 이라 그림 윗부분(+0.4까지)을 물고 있었다.
+            root.transform.localPosition = new Vector3(0f, -BarBaseY, -0.1f);
 
             float height = HpBarHeight * 0.75f;
             AddQuad(root.transform, "ShieldTrack", new Color(0.12f, 0.14f, 0.17f),
@@ -459,6 +461,27 @@ namespace DomoNinja.Unity.View
         private const float HpBarHeight = 0.22f;
 
         /// <summary>
+        /// 체력·보호막 막대를 유닛의 <b>발밑 바깥</b>에 둘 높이.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// 유닛 그림은 <c>CellSize * 0.8</c> 로 맞춰지므로 칸 중심 기준 <b>−0.4 ~ +0.4</b> 를 차지한다.
+        /// 막대가 −0.38 에 있었는데 막대 높이가 0.22 라 <b>−0.49 ~ −0.27</b> 을 덮었다 —
+        /// 그림의 아래쪽 몸통을 정확히 가린 것이다.
+        /// </para>
+        /// <para>
+        /// ★ 그래서 <b>도트 애니메이션을 넣었는데 머리만 움직이는 것처럼 보였다.</b> 이 팩의 Idle 은
+        /// 정면/뒤통수 두 포즈를 오가는 그림이라 <b>차이가 어깨선 아래에서 가장 크게 난다</b> —
+        /// 하필 막대가 덮고 있던 자리다. 연출이 없는 게 아니라 <b>가려져 있었다.</b>
+        /// </para>
+        /// <para>
+        /// 그림 아래끝(−0.4)에서 막대 절반(0.11)과 여백(0.04)만큼 더 내린다. 칸(±0.5)을 조금
+        /// 넘지만 <see cref="ToWorld"/> 의 칸 간격이 1 이라 아랫줄 그림(−0.4 부터 시작)과는 안 겹친다.
+        /// </para>
+        /// </remarks>
+        private const float BarBaseY = -0.55f;
+
+        /// <summary>
         /// 체력 막대. <b>빈 칸(트랙) 위에 채움을 얹는다.</b>
         /// </summary>
         /// <remarks>
@@ -477,7 +500,7 @@ namespace DomoNinja.Unity.View
         {
             var root = new GameObject("HpBar");
             root.transform.SetParent(parent, false);
-            root.transform.localPosition = new Vector3(0f, -0.38f, -0.1f);
+            root.transform.localPosition = new Vector3(0f, BarBaseY, -0.1f);
 
             var trackSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniUnder") : null;
             var fillSprite = _catalog != null ? _catalog.Find("UI/Bar/LifeBarMiniProgress") : null;

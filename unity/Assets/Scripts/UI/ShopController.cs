@@ -217,7 +217,7 @@ namespace DomoNinja.Unity
             label.alignment = alignment;
             label.color = Color.white;
             label.raycastTarget = false;
-            label.enableWordWrapping = true;
+            label.textWrappingMode = TextWrappingModes.Normal;
             label.overflowMode = TextOverflowModes.Truncate;
             return label;
         }
