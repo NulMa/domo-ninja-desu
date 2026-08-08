@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UImage = UnityEngine.UI.Image;
@@ -27,6 +28,86 @@ namespace DomoNinja.Unity
             button.onClick.AddListener(OnTap);
 
             BuildSettingsButton();
+            BuildCollectionNotice();
+        }
+
+        private const string NoticeName = "TitleCollectionNotice";
+
+        /// <summary>
+        /// 수집 고지를 <b>타이틀 하단</b>에 한 줄 둔다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>설정에도 같은 고지가 있는데 여기 또 두는 이유는 순서다.</b>
+        /// 수집은 첫 플레이부터 시작되는데 설정은 그 뒤에 열린다 — 설정에만 있으면
+        /// 고지가 항상 <b>사후</b>가 되고, 대부분은 설정을 아예 안 연다.
+        /// <b>고지는 수집보다 먼저 보여야 한다.</b> 타이틀은 누구나 반드시 거치는 유일한 화면이라
+        /// 그 자리에서 순서가 바로잡힌다. (`25` §5 — 원문도 *"설정 화면 또는 타이틀 하단"* 이다)
+        /// </para>
+        /// <para>
+        /// ★ <b><c>raycastTarget</c> 을 끈다.</b> 타이틀은 화면 전체가 버튼이라(§<see cref="Awake"/>)
+        /// 켜두면 <b>이 글자 위를 탭했을 때만 게임이 시작되지 않는다.</b> 원인을 찾기 어려운 종류의 버그다.
+        /// </para>
+        /// <para>
+        /// 실제로 보내고 있을 때만 띄운다 — 안 보내는데 "수집됩니다"가 떠 있으면 화면이 거짓말을 한다.
+        /// </para>
+        /// </remarks>
+        private void BuildCollectionNotice()
+        {
+            if (transform.Find(NoticeName) != null) return;
+
+            var config = Resources.Load<TelemetryConfig>(TelemetryConfig.ResourceName);
+            if (config == null || !config.HasEndpoint) return;
+
+            var go = new GameObject(NoticeName, typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            go.transform.SetAsLastSibling();
+
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 18f);
+            rt.sizeDelta = new Vector2(1000f, 32f);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.text = "플레이 기록(고른 캐릭터·스킬·클리어 여부)이 밸런스 확인용으로 익명 수집됩니다.";
+            label.fontSize = 17f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = new Color(1f, 1f, 1f, 0.55f);
+            label.raycastTarget = false;
+
+            ApplySceneFont(label);
+        }
+
+        /// <summary>
+        /// 씬에 이미 쓰이는 TMP 폰트를 물려받는다.
+        /// </summary>
+        /// <remarks>
+        /// TMP 기본 폰트는 라틴 문자만 들고 있어서, 폰트를 안 물려주면 <b>한글이 네모로 나온다.</b>
+        /// 타이틀 안에 글자가 없을 수도 있으므로 씬 전체에서도 한 번 찾는다.
+        /// </remarks>
+        private void ApplySceneFont(TMP_Text label)
+        {
+            TMP_Text source = null;
+
+            foreach (var t in GetComponentsInChildren<TMP_Text>(true))
+            {
+                if (t != label) { source = t; break; }
+            }
+
+            if (source == null)
+            {
+                foreach (var t in FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    if (t != label) { source = t; break; }
+                }
+            }
+
+            if (source == null) return;
+
+            label.font = source.font;
+            label.fontSharedMaterial = source.fontSharedMaterial;
         }
 
         /// <summary>
