@@ -1,0 +1,20 @@
+{
+  // Worker 이름이 곧 URL 이다 — https://domo-telemetry.jungwt524.workers.dev
+  "name": "domo-telemetry",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-08",
+
+  // ⚠️ database_id 는 `npx wrangler d1 create domo-runs` 가 출력하는 값으로 교체한다.
+  //    이 값은 비밀이 아니다(바인딩된 계정에서만 접근 가능) — 저장소에 커밋해도 된다.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "domo-runs",
+      "database_id": "89c6f07d-51a2-469c-a5c4-d2b8cafef34e"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}
