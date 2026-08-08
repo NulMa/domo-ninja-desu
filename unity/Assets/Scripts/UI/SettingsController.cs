@@ -45,6 +45,64 @@ namespace DomoNinja.Unity
 
             NormalizeSlider(_bgmSlider);
             NormalizeSlider(_sfxSlider);
+
+            BuildCollectionNotice();
+        }
+
+        private const string NoticeName = "CollectionNotice";
+
+        /// <summary>
+        /// 무엇을 기록하는지 <b>한 줄로 밝힌다</b> (`25` §5 개인정보).
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>실제로 보내고 있을 때만 띄운다.</b> 엔드포인트가 비어 있으면 아무것도 안 나가는데
+        /// 그때도 "기록합니다"가 떠 있으면 <b>화면이 거짓말을 한다.</b> 고지는 상태를 따라가야지
+        /// 계획을 따라가면 안 된다.
+        /// </para>
+        /// <para>
+        /// ★ <b>씬이 아니라 코드에서 만든다.</b> 씬 파일은 손으로 병합이 안 되고 2인이 같이
+        /// 만진다(`19` §5.1) — 슬라이더를 코드에서 고친 것과 같은 이유다.
+        /// </para>
+        /// <para>
+        /// <c>Panel</c> 안이 아니라 <b>팝업 루트 바닥</b>에 붙인다. Panel 은 760×320 고정이고
+        /// 이미 네 줄이 차 있어서, 거기 한 줄을 더 넣으면 닫기 버튼과 겹칠 자리를 눈으로 맞춰야 한다.
+        /// </para>
+        /// </remarks>
+        private void BuildCollectionNotice()
+        {
+            if (transform.Find(NoticeName) != null) return;
+
+            var config = Resources.Load<TelemetryConfig>(TelemetryConfig.ResourceName);
+            if (config == null || !config.HasEndpoint) return;
+
+            var go = new GameObject(NoticeName, typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            go.transform.SetAsLastSibling();
+
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0.5f, 0f);
+            rt.anchorMax = new Vector2(0.5f, 0f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.anchoredPosition = new Vector2(0f, 28f);
+            rt.sizeDelta = new Vector2(980f, 48f);
+
+            var label = go.AddComponent<TextMeshProUGUI>();
+            label.text =
+                "이 게임은 밸런스 확인을 위해 런 결과(고른 캐릭터·스킬·클리어 여부)만 익명으로 기록합니다.\n" +
+                "개인정보는 수집하지 않습니다.";
+            label.fontSize = 18f;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = new Color(1f, 1f, 1f, 0.6f);
+            label.raycastTarget = false;
+
+            // 한글이 나오려면 이미 쓰이고 있는 폰트를 그대로 물려받아야 한다.
+            // TMP 기본 폰트는 라틴 문자만 들고 있어서 새로 만든 라벨은 네모로 나온다.
+            if (_bgmValueLabel != null)
+            {
+                label.font = _bgmValueLabel.font;
+                label.fontSharedMaterial = _bgmValueLabel.fontSharedMaterial;
+            }
         }
 
         /// <summary>막대 높이. 배경·채움이 <b>같은 높이</b>여야 한 줄로 읽힌다.</summary>

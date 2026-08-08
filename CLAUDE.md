@@ -79,7 +79,12 @@ NHN 채용 연계형 해커톤 **NAN 2026 (Next AI Network 2026)** 의 사전과
 >
 > 🔗 https://nulma.github.io/domo-ninja-desu/ (`gh-pages` `83e7240`) · `main` `f904895`
 >
-> 🔴 **D+9 는 `25_운영측정_계획.md` §6 부터.** 시작 전 필요한 것은 Cloudflare 계정 하나.
+> 🟢 **운영 측정 배선 완료 (D+8).** `25` §6-1~3 — Worker+D1 배포·Unity 클라이언트·수집 고지.
+> 🔗 https://domo-telemetry.jungwt524.workers.dev (`/ingest` · `/stats`) · 적재 0건
+>
+> 🔴 **D+9 는 `25` §6-4·6-5 (기술 문서 자리 · 대조표)부터.**
+> 그 전에 **한 판 끝까지 돌려 전송 경로를 닫을 것** — 부트스트랩과 payload 계약은 봤지만
+> **실제 런 종료 시 전송은 아직 아무도 안 봤다.** `curl .../stats?app_ver=d8-pre-retune` 이 확인법.
 >
 > 🔴 **`M1` 이 S2 에서 미달이다 — D+8 에 스테이지별로 처음 재봤다.**
 >

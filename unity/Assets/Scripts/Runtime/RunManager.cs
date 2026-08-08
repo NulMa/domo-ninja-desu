@@ -55,6 +55,23 @@ namespace DomoNinja.Unity
         /// <summary>데이터 로드가 끝나면(성공/실패 여부와 무관하게) 한 번 호출된다.</summary>
         public event Action? DataLoaded;
 
+        /// <summary>
+        /// 런이 끝났다. <c>(런 상태, 클리어 여부, 이긴 라운드 수)</c> — <b><see cref="RunState"/> 가 비워지기 전에</b> 부른다.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// <b>static 인 이유</b> — 구독자(<see cref="Telemetry"/>)가 씬보다 먼저 뜬다.
+        /// 인스턴스 이벤트로 두면 "누가 먼저 <c>Awake</c> 하는가"에 구독이 걸리고,
+        /// 그건 재현이 어려운 방식으로 조용히 어긋난다.
+        /// </para>
+        /// <para>
+        /// ★ <b>여기서 나가는 방향은 한 쪽뿐이다.</b> <see cref="RunManager"/> 는 누가 듣는지 모르고,
+        /// 듣는 쪽은 런을 바꿀 수 없다. <c>IEventSink</c> 를 쓰기 전용으로 둔 것과 같은 이유다(`23` §1) —
+        /// <b>측정이 게임을 못 건드리는 것을 약속이 아니라 구조로 만든다.</b>
+        /// </para>
+        /// </remarks>
+        public static event Action<RunState, bool, int>? RunEnded;
+
         private RunEngine? _engine;
         private DeterministicRandom? _encounterRng;
         private DeterministicRandom? _shopRng;
@@ -197,6 +214,18 @@ namespace DomoNinja.Unity
             LastRunCleared = cleared;
             LastRunRoundsWon = _roundsWon;
             LastRunCurrencyEarned = earned;
+
+            // ★ CurrentRun 을 비우기 전에 알린다 — 로스터·아이템이 여기 말고는 남는 곳이 없다.
+            //   try/catch 를 씌우는 이유: 구독자가 무엇을 하든 런 마감은 끝까지 가야 한다.
+            //   측정 때문에 스테이지 언락이 안 되는 일은 있어서는 안 된다.
+            try
+            {
+                RunEnded?.Invoke(CurrentRun, cleared, _roundsWon);
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[RunManager] RunEnded 구독자 예외(무시) — {e.Message}");
+            }
 
             // ★ D-68 — 스테이지는 지금 S1/S2 둘뿐이라 다음 스테이지를 이렇게 정한다.
             //   스테이지가 늘어나면 economy.json 쪽에 순서 정보를 두고 거기서 읽어야 한다.
