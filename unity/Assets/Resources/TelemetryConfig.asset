@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: TelemetryConfig
   m_EditorClassIdentifier: DomoNinja.Unity::DomoNinja.Unity.TelemetryConfig
   _endpoint: https://domo-telemetry.jungwt524.workers.dev
-  _appVersion: d8-pre-retune
+  _appVersion: d8

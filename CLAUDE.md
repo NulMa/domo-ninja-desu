@@ -79,18 +79,17 @@ NHN 채용 연계형 해커톤 **NAN 2026 (Next AI Network 2026)** 의 사전과
 >
 > 🔗 https://nulma.github.io/domo-ninja-desu/ (`gh-pages` `aff2fb5`) · `main` `c51a571`
 >
-> 배포본에 **운영 측정이 들어가 있다** — 이 빌드부터 도는 판이 `app_ver=d8-pre-retune` 으로 쌓인다.
+> 배포본에 **운영 측정이 들어가 있다** — 이 빌드부터 도는 판이 `app_ver=d8` 으로 쌓인다.
 >
 > 🟢 **운영 측정 배선 완료 (D+8).** `25` §6-1~3 — Worker+D1 배포·Unity 클라이언트·수집 고지.
 > 🔗 https://domo-telemetry.jungwt524.workers.dev (`/ingest` · `/stats`) · 적재 0건
 >
-> 🔴 **D+9 는 `25` §6-4·6-5 (기술 문서 자리 · 대조표)부터.**
-> 그 전에 **한 판 돌려 전송 경로를 닫을 것** — 부트스트랩과 payload 계약은 봤지만
-> **실제 런 종료 시 전송은 아직 아무도 안 봤다.** 웹 빌드는 필요 없다(에디터도 보낸다).
-> 후퇴가 가장 빠르다 — `RetreatButton` 도 같은 `EndRun` 을 부른다.
-> 확인: `curl .../stats?app_ver=d8-pre-retune-editor`
+> ✅ **전송 경로는 에디터·웹 빌드 양쪽에서 실제 런으로 닫혔다** (테스트 행은 지웠다).
+> 확인법: 한 판 돌리고 `curl .../stats?app_ver=d8` — 후퇴로도 된다(`RetreatButton` 도 `EndRun` 을 부른다).
 >
-> ⚠️ **`app_ver` 이 두 통이다.** 웹 빌드 = `d8-pre-retune` / 에디터 = `d8-pre-retune-editor`.
+> 🔴 **D+9 는 `25` §6-4·6-5 (기술 문서 자리 · 대조표)부터.** 대조표는 **표본이 쌓여야** 만든다.
+>
+> ⚠️ **`app_ver` 이 두 통이다.** 웹 빌드 = `d8` / 에디터 = `d8-editor`.
 > 안 나누면 `M1` 이 **심사자의 클리어율이 아니라 개발자의 클리어율**이 된다. 대조표에 필터 필수.
 >
 > 🔴 **`M1` 이 S2 에서 미달이다 — D+8 에 스테이지별로 처음 재봤다.**
