@@ -77,7 +77,9 @@ NHN 채용 연계형 해커톤 **NAN 2026 (Next AI Network 2026)** 의 사전과
 
 > **현재 위치 (2026-08-08 / D+8):** **전투 연출까지 끝났고 웹에 올라가 있다.** 남은 건 제출물(영상·문서 3종)과 밸런스 재튜닝.
 >
-> 🔗 https://nulma.github.io/domo-ninja-desu/ (`gh-pages` `83e7240`) · `main` `f904895`
+> 🔗 https://nulma.github.io/domo-ninja-desu/ (`gh-pages` `aff2fb5`) · `main` `c51a571`
+>
+> 배포본에 **운영 측정이 들어가 있다** — 이 빌드부터 도는 판이 `app_ver=d8-pre-retune` 으로 쌓인다.
 >
 > 🟢 **운영 측정 배선 완료 (D+8).** `25` §6-1~3 — Worker+D1 배포·Unity 클라이언트·수집 고지.
 > 🔗 https://domo-telemetry.jungwt524.workers.dev (`/ingest` · `/stats`) · 적재 0건
