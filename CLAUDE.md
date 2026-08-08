@@ -83,8 +83,13 @@ NHN 채용 연계형 해커톤 **NAN 2026 (Next AI Network 2026)** 의 사전과
 > 🔗 https://domo-telemetry.jungwt524.workers.dev (`/ingest` · `/stats`) · 적재 0건
 >
 > 🔴 **D+9 는 `25` §6-4·6-5 (기술 문서 자리 · 대조표)부터.**
-> 그 전에 **한 판 끝까지 돌려 전송 경로를 닫을 것** — 부트스트랩과 payload 계약은 봤지만
-> **실제 런 종료 시 전송은 아직 아무도 안 봤다.** `curl .../stats?app_ver=d8-pre-retune` 이 확인법.
+> 그 전에 **한 판 돌려 전송 경로를 닫을 것** — 부트스트랩과 payload 계약은 봤지만
+> **실제 런 종료 시 전송은 아직 아무도 안 봤다.** 웹 빌드는 필요 없다(에디터도 보낸다).
+> 후퇴가 가장 빠르다 — `RetreatButton` 도 같은 `EndRun` 을 부른다.
+> 확인: `curl .../stats?app_ver=d8-pre-retune-editor`
+>
+> ⚠️ **`app_ver` 이 두 통이다.** 웹 빌드 = `d8-pre-retune` / 에디터 = `d8-pre-retune-editor`.
+> 안 나누면 `M1` 이 **심사자의 클리어율이 아니라 개발자의 클리어율**이 된다. 대조표에 필터 필수.
 >
 > 🔴 **`M1` 이 S2 에서 미달이다 — D+8 에 스테이지별로 처음 재봤다.**
 >
