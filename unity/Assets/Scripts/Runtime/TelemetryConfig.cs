@@ -34,8 +34,32 @@ namespace DomoNinja.Unity
 
         public string Endpoint => _endpoint.Trim();
 
-        public string AppVersion =>
-            string.IsNullOrWhiteSpace(_appVersion) ? Application.version : _appVersion.Trim();
+        /// <summary>
+        /// 데이터 묶음의 이름표. <b>에디터에서 돈 판은 <c>-editor</c> 가 붙어 따로 쌓인다.</b>
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// ★ <b>이게 없으면 개발용 플레이가 실측에 섞인다.</b> 전송은 에디터에서도 그대로 나가므로,
+        /// UI 를 붙이며 도는 판·밸런스를 보며 도는 판이 전부 같은 통에 들어간다.
+        /// 그러면 <c>M1</c> 은 <b>심사자의 클리어율이 아니라 개발자의 클리어율</b>이 되고,
+        /// 그 순간 `25` §1 이 만들려던 대조표의 값이 통째로 사라진다.
+        /// </para>
+        /// <para>
+        /// 끄지 않고 <b>이름을 나누는</b> 쪽을 골랐다 — 꺼버리면 에디터에서 전송 경로를 확인할 방법이 없어진다.
+        /// <b>섞이는 것이 문제지 보내는 것이 문제가 아니다.</b>
+        /// </para>
+        /// </remarks>
+        public string AppVersion
+        {
+            get
+            {
+                string baseVersion = string.IsNullOrWhiteSpace(_appVersion)
+                    ? Application.version
+                    : _appVersion.Trim();
+
+                return Application.isEditor ? baseVersion + "-editor" : baseVersion;
+            }
+        }
 
         /// <summary>보낼 곳이 있는가. <b>없는 게 정상 상태다</b> — 그때는 로컬 로그만 남는다.</summary>
         public bool HasEndpoint => !string.IsNullOrWhiteSpace(_endpoint);
