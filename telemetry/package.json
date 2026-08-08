@@ -1,0 +1,15 @@
+{
+  "name": "domo-telemetry",
+  "private": true,
+  "version": "1.0.0",
+  "description": "domo-ninja-desu 운영 측정 엔드포인트 (Cloudflare Worker + D1)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute domo-runs --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute domo-runs --remote --file=./schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.120.0"
+  }
+}

@@ -82,6 +82,20 @@ tune/*.db
 tune/*.db-journal
 tune/*.db-wal
 
+# --- Cloudflare Worker (telemetry) -----------------------------
+
+node_modules/
+
+# wrangler 로컬 상태 — 로컬 D1 sqlite 파일이 여기 들어간다.
+# 커밋하면 개발 중 테스트 런이 실측 데이터인 척 저장소에 남는다.
+.wrangler/
+telemetry/.dev.vars
+
+# ★ Cloudflare API 토큰이 여기 들어간다. public 저장소다 — 한 번 올라가면
+#   히스토리에서 지우려면 rewrite 가 필요하고 그건 09_커밋_규약.md 와 정면 충돌한다.
+.env
+.env.*
+
 # --- OS / 편집기 ----------------------------------------------
 
 .DS_Store
